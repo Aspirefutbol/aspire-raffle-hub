@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-// Only PUBLIC values live here. The service-role key is deliberately absent:
-// application code never needs it (see docs/architecture.md §4).
+// Only PUBLIC values live here. The service-role key is read solely by the
+// server-only lib/supabase/admin.ts (see docs/architecture.md §4).
 const publicEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(20),
