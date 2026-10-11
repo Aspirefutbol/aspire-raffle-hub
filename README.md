@@ -16,6 +16,7 @@ Product spec: [docs/Raffle-Hub-Developer-Blueprint.pdf](docs/Raffle-Hub-Develope
 | [roles-permissions.md](docs/roles-permissions.md) | Role catalog, permission matrix, enforcement layers |
 | [roster-system.md](docs/roster-system.md) | Roster model, add-player flows, import wizard, duplicate rules |
 | [build-plan.md](docs/build-plan.md) | Phase plan and status |
+| [AUDIT.md](docs/AUDIT.md) | Audit trail: events recorded, enforcement, gaps, extension plan |
 
 ## Stack
 
