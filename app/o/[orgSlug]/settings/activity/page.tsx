@@ -21,7 +21,9 @@ const CATEGORIES: Record<string, string> = {
   GUARDIAN: "Guardians",
   IMPORT: "Imports",
   MEMBER: "Members & roles",
+  INVITATION: "Invitations",
   ORGANIZATION: "Organization",
+  CAMPAIGN: "Campaigns",
 };
 
 function entityHref(orgSlug: string, type: string, id: string | null): string | null {
@@ -46,12 +48,12 @@ export default async function ActivityPage({ params, searchParams }: {
   const supabase = await createClient();
   let query = supabase
     .from("audit_events")
-    .select("id, action, entity_type, entity_id, actor_id, occurred_at, changed_fields, after_data, metadata", { count: "exact" })
+    .select("id, action, entity_type, entity_id, actor_id, occurred_at, changed_fields, before_data, after_data, metadata", { count: "exact" })
     .eq("organization_id", ctx.organization.id)
     .order("occurred_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   if (sp.category && sp.category in CATEGORIES) {
-    query = sp.category === "MEMBER" ? query.in("action", ["MEMBER_ADDED", "ROLE_CHANGED", "MEMBER_STATUS_CHANGED"]) : query.like("action", `${sp.category}\\_%`);
+    query = sp.category === "MEMBER" ? query.in("action", ["MEMBER_ADDED", "ROLE_CHANGED", "ROLE_GRANTED", "ROLE_REVOKED", "MEMBER_STATUS_CHANGED"]) : query.like("action", `${sp.category}\\_%`);
   }
   const { data: events, count, error } = await query;
   if (error) throw new Error(error.message);
@@ -70,6 +72,7 @@ export default async function ActivityPage({ params, searchParams }: {
     const meta = (e.metadata ?? {}) as Record<string, unknown>;
     if (typeof after.first_name === "string") return `${after.first_name} ${String(after.last_name ?? "")}`.trim();
     if (typeof after.name === "string") return after.name;
+    if (typeof after.email === "string") return after.email;
     if (typeof meta.file_name === "string") return meta.file_name;
     if (e.entity_type === "players" && e.entity_id) return playerName.get(e.entity_id) ?? "";
     return "";
@@ -106,8 +109,12 @@ export default async function ActivityPage({ params, searchParams }: {
                 const meta = (e.metadata ?? {}) as Record<string, unknown>;
                 const detail =
                   e.action.endsWith("_UPDATED") ? describeChangedFields(e.changed_fields)
-                  : e.action === "ROLE_CHANGED" ? `→ ${String(((e.after_data ?? {}) as Record<string, unknown>).role_key ?? "").replace(/_/g, " ").toLowerCase()}`
+                  : e.action === "ROLE_CHANGED" || e.action === "ROLE_GRANTED" || e.action === "ROLE_REVOKED"
+                    ? String((((e.action === "ROLE_REVOKED" ? e.before_data : e.after_data) ?? {}) as Record<string, unknown>).role_key ?? "").replace(/_/g, " ").toLowerCase()
+                  : e.action.endsWith("_STATUS_CHANGED") ? `${String(((e.before_data ?? {}) as Record<string, unknown>).status ?? "?")} → ${String(((e.after_data ?? {}) as Record<string, unknown>).status ?? "?")}`
+                  : e.action === "ORGANIZATION_PROTECTED_CHANGED" ? describeChangedFields(e.changed_fields)
                   : meta.import_id ? "via import" : null;
+                const reason = typeof meta.reason === "string" ? meta.reason : null;
                 return (
                   <TR key={e.id}>
                     <TD className="whitespace-nowrap text-xs text-muted">{formatDateTime(e.occurred_at, ctx.organization.timezone)}</TD>
@@ -115,7 +122,7 @@ export default async function ActivityPage({ params, searchParams }: {
                     <TD className="max-w-48 truncate">
                       {href ? <Link href={href} className="text-ink-soft hover:text-brand-700">{name || "View"}</Link> : <span className="text-ink-soft">{name || "—"}</span>}
                     </TD>
-                    <TD className="hidden max-w-64 truncate text-xs text-muted md:table-cell">{detail ?? ""}</TD>
+                    <TD className="hidden max-w-64 truncate text-xs text-muted md:table-cell">{[detail, reason && `“${reason}”`].filter(Boolean).join(" · ")}</TD>
                     <TD className="whitespace-nowrap text-xs text-ink-soft">{e.actor_id ? (actorName.get(e.actor_id) ?? "Team member") : "System"}</TD>
                   </TR>
                 );

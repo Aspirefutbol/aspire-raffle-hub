@@ -14,7 +14,8 @@ export interface OrgContext {
     legalName: string | null;
     timezone: string;
   };
-  role: RoleKey | null;
+  /** All roles the user holds here (SUPER_ADMIN for platform admins without membership). */
+  roles: RoleKey[];
   permissions: ReadonlySet<Permission>;
 }
 
@@ -43,29 +44,20 @@ export const getOrgContext = cache(async (slug: string): Promise<OrgContext | nu
     .maybeSingle();
   if (!org) return null;
 
-  const [{ data: perms, error: permsError }, { data: membership }] = await Promise.all([
+  const [{ data: perms, error: permsError }, { data: roleKeys, error: rolesError }] = await Promise.all([
     supabase.rpc("my_org_permissions", { p_organization_id: org.id }),
-    supabase
-      .from("organization_members")
-      .select("role_key")
-      .eq("organization_id", org.id)
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .maybeSingle(),
+    supabase.rpc("my_org_roles", { p_organization_id: org.id }),
   ]);
   if (permsError) throw new Error(`Could not load permissions: ${permsError.message}`);
+  if (rolesError) throw new Error(`Could not load roles: ${rolesError.message}`);
 
-  const roleKey = membership?.role_key;
-  const role: RoleKey | null = user.isPlatformAdmin
-    ? "SUPER_ADMIN"
-    : roleKey && isOrganizationRole(roleKey)
-      ? roleKey
-      : null;
+  const roles: RoleKey[] = (roleKeys ?? []).filter(isOrganizationRole);
+  if (user.isPlatformAdmin && roles.length === 0) roles.push("SUPER_ADMIN");
 
   return {
     user,
     organization: { id: org.id, name: org.name, slug: org.slug, legalName: org.legal_name, timezone: org.timezone },
-    role,
+    roles,
     permissions: new Set((perms ?? []).filter(isPermission)),
   };
 });

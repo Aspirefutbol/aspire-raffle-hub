@@ -9,6 +9,7 @@ import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { Sheet } from "@/components/ui/sheet";
+import { HouseholdPicker } from "./household-picker";
 import { cn } from "@/lib/cn";
 import { useActionRunner } from "@/lib/hooks/use-action-runner";
 import { createPlayer } from "@/lib/roster/actions";
@@ -33,10 +34,9 @@ const EMPTY: FormIn = {
 };
 
 /** "+ Add Player" button + side sheet. Required: first name, last name, team. */
-export function AddPlayerButton({ orgSlug, teams, households, defaultTeamId, variant = "primary", label: buttonLabel = "Add Player" }: {
+export function AddPlayerButton({ orgSlug, teams, defaultTeamId, variant = "primary", label: buttonLabel = "Add Player" }: {
   orgSlug: string;
   teams: Option[];
-  households: Option[];
   defaultTeamId?: string;
   variant?: "primary" | "secondary";
   label?: string;
@@ -52,7 +52,6 @@ export function AddPlayerButton({ orgSlug, teams, households, defaultTeamId, var
         open={open}
         onClose={() => setOpen(false)}
         teams={teams}
-        households={households}
         defaultTeamId={defaultTeamId}
       />
     </>
@@ -64,7 +63,6 @@ type SheetProps = {
   open: boolean;
   onClose: () => void;
   teams: Option[];
-  households: Option[];
   defaultTeamId?: string;
 };
 
@@ -73,7 +71,7 @@ export function AddPlayerSheet(props: SheetProps) {
   return props.open ? <AddPlayerForm {...props} /> : null;
 }
 
-function AddPlayerForm({ orgSlug, onClose, teams, households, defaultTeamId }: SheetProps) {
+function AddPlayerForm({ orgSlug, onClose, teams, defaultTeamId }: SheetProps) {
   const router = useRouter();
   const { run, pending } = useActionRunner();
   const [more, setMore] = useState(false);
@@ -85,6 +83,8 @@ function AddPlayerForm({ orgSlug, onClose, teams, households, defaultTeamId }: S
   });
   const { register, handleSubmit, reset, setError, setFocus, control, setValue, formState: { errors } } = form;
   const householdMode = useWatch({ control, name: "household.mode" });
+  const household = useWatch({ control, name: "household" });
+  const householdId = household?.mode === "existing" ? household.id : undefined;
   const guardianMode = useWatch({ control, name: "guardian.mode" });
 
   const onSubmit = handleSubmit((values, event) => {
@@ -198,10 +198,12 @@ function AddPlayerForm({ orgSlug, onClose, teams, households, defaultTeamId }: S
               />
               {householdMode === "existing" && (
                 <Field label="Household" htmlFor="household_id" error={err("household.id")}>
-                  <Select id="household_id" {...register("household.id")}>
-                    <option value="">Choose a household…</option>
-                    {households.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
-                  </Select>
+                  <HouseholdPicker
+                    id="household_id"
+                    orgSlug={orgSlug}
+                    value={householdId ?? ""}
+                    onChange={(hid) => setValue("household", { mode: "existing", id: hid }, { shouldValidate: true })}
+                  />
                 </Field>
               )}
               {householdMode === "new" && (
@@ -273,7 +275,7 @@ function Segmented({ name, value, options, onChange }: {
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-[0.4rem] px-3 py-1 text-sm",
+            "rounded-[0.4rem] px-3 py-1 pointer-coarse:py-2.5 text-sm",
             value === o.value ? "bg-surface font-medium text-ink shadow-card" : "text-muted hover:text-ink",
           )}
         >

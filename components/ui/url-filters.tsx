@@ -60,13 +60,13 @@ export function SearchInput({ param = "q", placeholder = "Search…", className 
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-9 w-full rounded-control border border-line-strong bg-surface pr-8 pl-8 text-sm shadow-card placeholder:text-muted/70 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+        className="h-9 pointer-coarse:h-11 pointer-coarse:text-base w-full rounded-control border border-line-strong bg-surface pr-8 pl-8 text-sm shadow-card placeholder:text-muted/70 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange("")}
-          className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-muted hover:text-ink"
+          className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 pointer-coarse:p-2.5 text-muted hover:text-ink"
           aria-label="Clear search"
         >
           <X className="size-3.5" />
@@ -91,7 +91,7 @@ export function FilterSelect({ param, label, options, allLabel = "All", classNam
       value={params.get(param) ?? ""}
       onChange={(e) => setParam(param, e.target.value || null)}
       className={cn(
-        "h-9 rounded-control border border-line-strong bg-surface px-2.5 pr-8 text-sm text-ink-soft shadow-card focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none",
+        "h-9 pointer-coarse:h-11 pointer-coarse:text-base rounded-control border border-line-strong bg-surface px-2.5 pr-8 text-sm text-ink-soft shadow-card focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none",
         className,
       )}
     >

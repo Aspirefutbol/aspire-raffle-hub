@@ -17,7 +17,7 @@ import { describeAction, describeChangedFields } from "@/lib/audit/describe";
 import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
 import { age, formatDate, formatDateTime, fullName } from "@/lib/format";
 import { label } from "@/lib/roster/constants";
-import { getPlayerProfile, listHouseholdOptions, listTeamOptions } from "@/lib/roster/queries";
+import { getPlayerProfile, listTeamOptions } from "@/lib/roster/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Player" };
@@ -29,10 +29,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ orgSlug
   if (!/^[0-9a-f-]{36}$/i.test(playerId)) notFound();
 
   const canWrite = can(ctx, "roster.write");
-  const [profile, teams, households] = await Promise.all([
+  const [profile, teams] = await Promise.all([
     getPlayerProfile(ctx, playerId),
     listTeamOptions(ctx.organization.id),
-    canWrite ? listHouseholdOptions(ctx.organization.id) : Promise.resolve([]),
   ]);
   if (!profile) notFound();
   const { player, guardians, history, activity } = profile;
@@ -172,7 +171,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ orgSlug
             playerId={player.id}
             playerLastName={player.last_name!}
             household={player.household_id && player.household_name ? { id: player.household_id, name: player.household_name } : null}
-            households={households}
+           
             canWrite={canWrite && !archived}
           />
 

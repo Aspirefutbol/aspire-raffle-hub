@@ -2,10 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { type ActionResult, describeDbError, fail, ok, orgAction } from "@/lib/actions";
-import { ROLE_LABELS } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { id } from "@/lib/validation";
-import { memberRoleSchema, memberStatusSchema, organizationSchema, seasonSchema } from "./schemas";
+import { organizationSchema, seasonSchema } from "./schemas";
 
 function refresh(orgSlug: string) {
   revalidatePath(`/o/${orgSlug}`, "layout");
@@ -46,33 +45,5 @@ export async function setCurrentSeason(orgSlug: string, seasonId: unknown): Prom
     if (error) return fail(describeDbError(error));
     refresh(orgSlug);
     return ok(undefined, "Current season updated");
-  });
-}
-
-export async function changeMemberRole(orgSlug: string, input: unknown): Promise<ActionResult> {
-  return orgAction(orgSlug, "members.manage", memberRoleSchema, input, async (ctx, data) => {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("organization_members")
-      .update({ role_key: data.role_key })
-      .eq("id", data.member_id)
-      .eq("organization_id", ctx.organization.id);
-    if (error) return fail(describeDbError(error));
-    refresh(orgSlug);
-    return ok(undefined, `Role changed to ${ROLE_LABELS[data.role_key]}`);
-  });
-}
-
-export async function setMemberStatus(orgSlug: string, input: unknown): Promise<ActionResult> {
-  return orgAction(orgSlug, "members.manage", memberStatusSchema, input, async (ctx, data) => {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("organization_members")
-      .update({ status: data.status })
-      .eq("id", data.member_id)
-      .eq("organization_id", ctx.organization.id);
-    if (error) return fail(describeDbError(error));
-    refresh(orgSlug);
-    return ok(undefined, data.status === "active" ? "Member reactivated" : "Member suspended");
   });
 }

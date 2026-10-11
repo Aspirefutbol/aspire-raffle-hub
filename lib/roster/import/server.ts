@@ -1,31 +1,23 @@
 import "server-only";
 import type { Json } from "@/lib/database/types.gen";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import type { ServerSupabase } from "@/lib/supabase/server";
 import { isTargetField, type ColumnMapping } from "./fields";
 import { applyMapping } from "./map";
 import { runImportPipeline, type PipelineRowInput } from "./pipeline";
 import { type ExistingGuardian, type MatchType, parseRowData, type Resolution, type RosterPlayer, type RowData, type TeamRef } from "./types";
 
-const PAGE = 1000; // PostgREST max rows per request
-
-/** Reads every row of a query by paging with range(). */
-async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
-  const out: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1);
-    if (error) throw new Error(error.message);
-    out.push(...(data ?? []));
-    if (!data || data.length < PAGE) return out;
-  }
-}
-
 export async function loadPipelineContext(supabase: ServerSupabase, orgId: string) {
   const [teams, players, guardians] = await Promise.all([
-    supabase
-      .from("teams")
-      .select("id, name, team_code, seasons(is_current)")
-      .eq("organization_id", orgId)
-      .eq("status", "active"),
+    fetchAll((from, to) =>
+      supabase
+        .from("teams")
+        .select("id, name, team_code, seasons(is_current)")
+        .eq("organization_id", orgId)
+        .eq("status", "active")
+        .order("id")
+        .range(from, to),
+    ),
     fetchAll((from, to) =>
       supabase
         .from("players")
@@ -45,9 +37,7 @@ export async function loadPipelineContext(supabase: ServerSupabase, orgId: strin
         .range(from, to),
     ),
   ]);
-  if (teams.error) throw new Error(teams.error.message);
-
-  const teamRefs: TeamRef[] = teams.data.map((t) => ({ id: t.id, name: t.name, team_code: t.team_code, current: Boolean(t.seasons?.is_current) }));
+  const teamRefs: TeamRef[] = teams.map((t) => ({ id: t.id, name: t.name, team_code: t.team_code, current: Boolean(t.seasons?.is_current) }));
   const roster: RosterPlayer[] = players.map((p) => ({
     id: p.id,
     first_name: p.first_name,

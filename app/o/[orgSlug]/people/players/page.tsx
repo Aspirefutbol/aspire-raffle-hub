@@ -12,8 +12,6 @@ import { Pagination } from "@/components/ui/pagination";
 import { FilterSelect, SearchInput } from "@/components/ui/url-filters";
 import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
 import {
-  listDuplicatePairs,
-  listHouseholdOptions,
   listPlayers,
   listSeasons,
   listTeamOptions,
@@ -47,16 +45,15 @@ export default async function PlayersPage({ params, searchParams }: {
   const status = STATUSES.includes(sp.status as PlayerStatusFilter) ? (sp.status as PlayerStatusFilter) : "active";
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
-  const [result, teams, seasons, households, pairs] = await Promise.all([
+  const [result, teams, seasons] = await Promise.all([
     listPlayers(orgId, { q: sp.q, team: sp.team, season: sp.season, status, issue, importId: sp.import && /^[0-9a-f-]{36}$/i.test(sp.import) ? sp.import : undefined, page }),
     listTeamOptions(orgId),
     listSeasons(orgId),
-    canWrite ? listHouseholdOptions(orgId) : Promise.resolve([]),
-    issue === "duplicates" ? listDuplicatePairs(orgId) : Promise.resolve([]),
   ]);
 
   const byId = new Map(result.rows.map((r) => [r.id, r]));
-  const pairViews = pairs.flatMap((p) => {
+  const duplicateReasons = new Map(result.pairs.flatMap((p) => [[p.player_a_id, p.reason], [p.player_b_id, p.reason]]));
+  const pairViews = result.pairs.flatMap((p) => {
     const a = byId.get(p.player_a_id);
     const b = byId.get(p.player_b_id);
     if (!a?.id || !b?.id || !a.first_name || !b.first_name || !a.last_name || !b.last_name) return [];
@@ -79,7 +76,7 @@ export default async function PlayersPage({ params, searchParams }: {
         actions={
           canWrite && (
             <>
-              <AddPlayerButton orgSlug={orgSlug} teams={teams} households={households} defaultTeamId={sp.team && sp.team !== "none" ? sp.team : undefined} />
+              <AddPlayerButton orgSlug={orgSlug} teams={teams} defaultTeamId={sp.team && sp.team !== "none" ? sp.team : undefined} />
               {can(ctx, "roster.import") && (
                 <ButtonLink href={`${base}/import`} variant="secondary" icon={<Upload className="size-4" />}>Import</ButtonLink>
               )}
@@ -139,7 +136,7 @@ export default async function PlayersPage({ params, searchParams }: {
                   first_name: r.first_name,
                   last_name: r.last_name,
                   archived: Boolean(r.archived_at),
-                  note: issue === "duplicates" ? result.duplicateReasons.get(r.id) : undefined,
+                  note: issue === "duplicates" ? duplicateReasons.get(r.id) : undefined,
                 }]
               : [],
           )}
@@ -154,7 +151,7 @@ export default async function PlayersPage({ params, searchParams }: {
                 ) : canWrite ? (
                   <>
                     <ButtonLink href={`${base}/import`} icon={<Upload className="size-4" />}>Import players</ButtonLink>
-                    <AddPlayerButton orgSlug={orgSlug} teams={teams} households={households} variant="secondary" />
+                    <AddPlayerButton orgSlug={orgSlug} teams={teams} variant="secondary" />
                   </>
                 ) : undefined
               }

@@ -12,7 +12,7 @@ import { can, requireOrgContext } from "@/lib/auth/org-context";
 import { buildActionItems, getRosterOverview } from "@/lib/dashboard/overview";
 import { formatRelative } from "@/lib/format";
 import { IMPORT_STATUS } from "@/lib/roster/import/status";
-import { listHouseholdOptions, listTeamOptions } from "@/lib/roster/queries";
+import { listTeamOptions } from "@/lib/roster/queries";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -24,10 +24,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ orgS
   const canWrite = can(ctx, "roster.write");
   const canImport = can(ctx, "roster.import");
 
-  const [overview, teams, households] = await Promise.all([
+  const [overview, teams] = await Promise.all([
     getRosterOverview(ctx.organization.id),
     canWrite ? listTeamOptions(ctx.organization.id) : Promise.resolve([]),
-    canWrite ? listHouseholdOptions(ctx.organization.id) : Promise.resolve([]),
   ]);
   const actions = buildActionItems(overview, base, canImport);
   const issues = overview.unassigned_players + overview.possible_duplicates + overview.households_missing_contact + overview.players_without_guardian;
@@ -39,7 +38,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ orgS
         description={ctx.organization.name}
         actions={
           <>
-            {canWrite && <AddPlayerButton orgSlug={orgSlug} teams={teams} households={households} />}
+            {canWrite && <AddPlayerButton orgSlug={orgSlug} teams={teams} />}
             {canImport && (
               <ButtonLink href={`${base}/people/players/import`} variant="secondary" icon={<Upload className="size-4" />}>
                 Import Players

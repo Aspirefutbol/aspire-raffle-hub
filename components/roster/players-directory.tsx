@@ -70,7 +70,7 @@ export function PlayersDirectory({ orgSlug, players, teams, canWrite, emptyState
           className="sticky top-14 z-10 flex flex-wrap items-center gap-2 border-b border-brand-200 bg-brand-50 px-4 py-2 lg:top-0"
         >
           <span className="text-sm font-medium text-brand-800">{pluralize(selected.size, "player")} selected</span>
-          <button type="button" onClick={clear} className="rounded p-1 text-brand-700 hover:bg-brand-100" aria-label="Clear selection">
+          <button type="button" onClick={clear} className="rounded p-1 pointer-coarse:p-3 text-brand-700 hover:bg-brand-100" aria-label="Clear selection">
             <X className="size-4" />
           </button>
           <div className="ml-auto flex flex-wrap items-center gap-2">

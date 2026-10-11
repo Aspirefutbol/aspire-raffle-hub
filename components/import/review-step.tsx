@@ -255,7 +255,7 @@ export function ReviewStep({ orgSlug, importId, rows, summary, matched, teams, h
             </p>
           </div>
           <div className="flex flex-wrap gap-2 sm:ml-auto">
-            <a href={onRemap} className="inline-flex h-9 items-center gap-1.5 rounded-control px-3 text-sm font-medium text-ink-soft hover:bg-canvas">
+            <a href={onRemap} className="inline-flex h-9 pointer-coarse:h-11 items-center gap-1.5 rounded-control px-3 text-sm font-medium text-ink-soft hover:bg-canvas">
               <ArrowLeft aria-hidden className="size-4" /> Columns
             </a>
             <ConfirmButton size="md" variant="ghost" confirmLabel="Cancel import?" disabled={pending} onConfirm={() => run(() => cancelImport(orgSlug, importId))}>

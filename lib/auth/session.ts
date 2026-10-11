@@ -56,3 +56,17 @@ export const getMyOrganizations = cache(async (): Promise<OrganizationSummary[]>
   if (error) throw new Error(`Could not load organizations: ${error.message}`);
   return data;
 });
+
+/**
+ * Turns the signed-in user's pending invitations (matching their verified
+ * email exactly) into memberships. Safe to call on every sign-in.
+ */
+export async function acceptPendingInvitations(): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("accept_my_invitations");
+  if (error) {
+    console.error("[accept_my_invitations]", error.message);
+    return 0;
+  }
+  return data ?? 0;
+}

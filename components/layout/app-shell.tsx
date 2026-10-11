@@ -50,7 +50,7 @@ export function AppShell({ base, navItems, showPlatform, footer, children }: {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-control p-2 text-ink-soft hover:bg-canvas"
+          className="rounded-control p-2 pointer-coarse:p-3 text-ink-soft hover:bg-canvas"
           aria-label="Open navigation"
           aria-expanded={open}
         >
@@ -65,7 +65,7 @@ export function AppShell({ base, navItems, showPlatform, footer, children }: {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 rounded-control p-1.5 text-muted hover:bg-canvas"
+              className="absolute top-3 right-3 rounded-control p-1.5 pointer-coarse:p-3 text-muted hover:bg-canvas"
               aria-label="Close navigation"
             >
               <X className="size-5" />

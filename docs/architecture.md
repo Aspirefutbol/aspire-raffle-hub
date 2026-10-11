@@ -64,7 +64,7 @@ components/
   layout/                                     Sidebar, mobile nav, org switcher
   roster/, import/, settings/, platform/      Feature components
 lib/
-  supabase/                                   server / browser / proxy clients (no service role)
+  supabase/                                   server / browser / proxy clients; admin.ts (server-only, auth admin ops)
   auth/                                       session + organization context, permission guards
   permissions/                                permission keys + role catalog (mirrors DB)
   roster/                                     roster domain: validation schemas, queries, actions
@@ -93,9 +93,14 @@ Browser ──► proxy.ts (refresh Supabase session cookie; redirect anonymous 
 
 - **Never trust the UI.** Hidden buttons are UX only. Every mutation re-checks
   permissions in the server action *and* RLS enforces them in Postgres.
-- **The service-role key is never used by the app.** It is read only by
-  `scripts/seed-dev.mjs`. `lib/supabase/*` only uses the publishable/anon key
-  plus the user's session.
+- **The service-role key is never used for data access.** One narrow, server-only
+  exception: `lib/supabase/admin.ts` uses it for two Supabase Auth admin
+  operations that have no user-level equivalent — exact (case-insensitive) email
+  → user-id lookup (`auth_user_id_by_email`, executable by `service_role` only)
+  and sending invitation emails (`inviteUserByEmail`). Membership and invitation
+  rows are always written with the *user's* client, so RLS and the grant rules
+  still apply. Everything else uses the publishable key plus the user's session.
+  `scripts/seed-dev.mjs` (local only) is the only other service-role user.
 - **Tenant isolation** is enforced three ways: RLS (`organization_id` checked on
   every row), composite foreign keys on `(id, organization_id)` (a row cannot
   reference another tenant's row), and URL-scoped org context (`/o/[orgSlug]`)
@@ -167,17 +172,36 @@ From the request and blueprint §37–42:
 
 ## 9. Assumptions
 
-1. One role per member per organization in Phase 1; granular per-permission
-   grants come from `role_permissions` and can later be overridden per member.
+1. A member holds one or more roles per organization (`organization_member_roles`);
+   permissions are the union. Granular per-member overrides are not planned yet.
 2. A player has at most one *current* team. History is preserved via
    `team_memberships`. (Guest-playing on two teams at once is out of scope.)
 3. "Season" for a player is the season of their current team; unassigned
    players have no season.
 4. CSV is the Phase 1 import format. Excel users export to CSV; native `.xlsx`
    is deferred (the common parser has a security history — evaluate before adding).
-5. Member invitations need the service role and an email flow, so Phase 1 creates
-   users via the seed script or the Supabase dashboard. Settings shows members
-   and allows role changes.
+5. Members are added in-app (Settings → Members): an existing account is added
+   immediately; a new email gets an `organization_invitations` row plus an invite
+   email, accepted automatically on first sign-in with that confirmed email.
+   Public self-signup is disabled.
 6. Duplicate detection compares against the organization's roster in memory
    (fine to several thousand players). The `pg_trgm` index is in place for a
    database-side candidate search when needed.
+
+## 10. Hardening phase (Phase 0) additions
+
+- **Platform vs organization scope.** Protected organization fields (slug, status,
+  jurisdiction profile, platform config) change only through
+  `platform_update_organization` (platform admins, reason required). See
+  `docs/roles-permissions.md`.
+- **Campaign lifecycle.** `DRAFT → READY → ACTIVE → CLOSED → DRAWN → ARCHIVED`
+  (plus `READY → DRAFT`, `DRAFT → ARCHIVED`). Status changes only via
+  `transition_campaign` (permission + reason + readiness checks); ticket-critical
+  fields lock at activation (`guard_campaign_write`). Mirrored in `lib/campaigns/lifecycle.ts`.
+- **Ledgers.** Append-only, hash-chained `campaign_events`, `ticket_events`,
+  `money_events` (the latter two prepared for later phases, written only by
+  `SECURITY DEFINER` functions). See `docs/AUDIT.md`.
+- **Scale.** Lists that could exceed PostgREST's 1,000-row cap are counted,
+  filtered and paginated in SQL (`list_households`, `list_org_members`,
+  `list_possible_duplicates`, `team_player_counts`) or paged with `fetchAll`.
+- **Testing & deployment.** CI, e2e and the staging pipeline are described in `docs/deployment.md`.

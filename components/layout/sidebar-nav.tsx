@@ -82,7 +82,7 @@ function NavLink({ href, active, children, onNavigate }: {
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-sm transition-colors",
+        "flex items-center gap-2.5 rounded-control px-2.5 py-1.5 pointer-coarse:py-3 text-sm transition-colors",
         active ? "bg-brand-50 font-medium text-brand-700" : "text-ink-soft hover:bg-canvas hover:text-ink",
       )}
     >

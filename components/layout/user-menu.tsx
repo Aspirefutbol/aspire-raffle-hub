@@ -14,7 +14,7 @@ export function UserMenu({ name, email, roleLabel }: { name: string | null; emai
       <form action="/auth/signout" method="post">
         <button
           type="submit"
-          className="rounded-control p-1.5 text-muted hover:bg-canvas hover:text-ink"
+          className="rounded-control p-1.5 pointer-coarse:p-3 text-muted hover:bg-canvas hover:text-ink"
           aria-label="Sign out"
           title="Sign out"
         >

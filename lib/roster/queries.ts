@@ -3,6 +3,7 @@ import { cache } from "react";
 import type { OrgContext } from "@/lib/auth/org-context";
 import { can } from "@/lib/auth/org-context";
 import type { Tables } from "@/lib/database/types.gen";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 
 export const PAGE_SIZE = 50;
@@ -50,26 +51,28 @@ export async function listTeams(
   opts: { includeArchived?: boolean; seasonId?: string | null; q?: string } = {},
 ): Promise<TeamRow[]> {
   const supabase = await createClient();
-  let query = supabase
-    .from("teams")
-    .select("*, seasons(name)")
-    .eq("organization_id", orgId)
-    .order("name");
-  if (!opts.includeArchived) query = query.is("archived_at", null);
-  if (opts.seasonId) query = query.eq("season_id", opts.seasonId);
-  if (opts.q) query = query.ilike("name", likePattern(opts.q));
-
-  const [teams, memberships] = await Promise.all([
-    query,
-    supabase.from("team_memberships").select("team_id").eq("organization_id", orgId).is("ended_at", null),
+  const [teams, counts] = await Promise.all([
+    fetchAll((from, to) => {
+      let query = supabase
+        .from("teams")
+        .select("*, seasons(name)")
+        .eq("organization_id", orgId)
+        .order("name")
+        .order("id");
+      if (!opts.includeArchived) query = query.is("archived_at", null);
+      if (opts.seasonId) query = query.eq("season_id", opts.seasonId);
+      if (opts.q) query = query.ilike("name", likePattern(opts.q));
+      return query.range(from, to);
+    }),
+    // Counted in SQL: one row per team, never truncated by max_rows.
+    fetchAll((from, to) => supabase.rpc("team_player_counts", { p_organization_id: orgId }).range(from, to)),
   ]);
-  const counts = new Map<string, number>();
-  for (const m of unwrap(memberships, "team memberships")) counts.set(m.team_id, (counts.get(m.team_id) ?? 0) + 1);
+  const countByTeam = new Map(counts.map((c) => [c.team_id, Number(c.player_count)]));
 
-  return unwrap(teams, "teams").map(({ seasons, ...t }) => ({
+  return teams.map(({ seasons, ...t }) => ({
     ...t,
     season_name: seasons?.name ?? null,
-    player_count: counts.get(t.id) ?? 0,
+    player_count: countByTeam.get(t.id) ?? 0,
   }));
 }
 
@@ -142,23 +145,35 @@ export async function listPlayers(orgId: string, filters: PlayerFilters) {
   if (filters.season) query = query.eq("season_id", filters.season);
   if (filters.importId) query = query.eq("source_import_id", filters.importId);
 
-  let duplicateReasons = new Map<string, string>();
   if (filters.issue === "unassigned") query = query.is("team_id", null);
   if (filters.issue === "no-guardian") query = query.is("primary_guardian_id", null);
-  if (filters.issue === "duplicates") {
-    const pairs = await listDuplicatePairs(orgId);
-    duplicateReasons = new Map(pairs.flatMap((p) => [[p.player_a_id, p.reason], [p.player_b_id, p.reason]]));
-    query = query.in("id", duplicateReasons.size ? [...duplicateReasons.keys()] : ["00000000-0000-0000-0000-000000000000"]);
-  }
+  if (filters.issue === "duplicates") return listDuplicatePlayers(orgId, page);
 
   const { data, count, error } = await query;
   if (error) throw new Error(`Could not load players: ${error.message}`);
-  return { rows: data ?? [], total: count ?? 0, page, pageSize: PAGE_SIZE, duplicateReasons };
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: PAGE_SIZE, pairs: [] as DuplicatePair[] };
 }
 
-export async function listDuplicatePairs(orgId: string) {
+export const DUPLICATE_PAGE_SIZE = 25;
+export type DuplicatePair = { player_a_id: string; player_b_id: string; reason: string };
+
+/** Duplicate review is paginated by pair in SQL; only this page's players are loaded. */
+async function listDuplicatePlayers(orgId: string, page: number) {
   const supabase = await createClient();
-  return unwrap(await supabase.rpc("possible_duplicate_players", { p_organization_id: orgId }), "possible duplicates");
+  const result = unwrap(
+    await supabase.rpc("list_possible_duplicates", {
+      p_organization_id: orgId,
+      p_limit: DUPLICATE_PAGE_SIZE,
+      p_offset: (page - 1) * DUPLICATE_PAGE_SIZE,
+    }),
+    "possible duplicates",
+  ) as { total: number; pairs: { a: string; b: string; reason: string }[] };
+  const pairs: DuplicatePair[] = result.pairs.map((p) => ({ player_a_id: p.a, player_b_id: p.b, reason: p.reason }));
+  const ids = [...new Set(pairs.flatMap((p) => [p.player_a_id, p.player_b_id]))];
+  const rows = ids.length
+    ? unwrap(await supabase.from("player_directory").select("*").eq("organization_id", orgId).in("id", ids), "players")
+    : [];
+  return { rows, total: result.total, page, pageSize: DUPLICATE_PAGE_SIZE, pairs };
 }
 
 export async function getPlayerProfile(ctx: OrgContext, playerId: string) {
@@ -207,40 +222,39 @@ export async function getPlayerProfile(ctx: OrgContext, playerId: string) {
 
 export type HouseholdIssue = "no-contact";
 
+type HouseholdListRow = {
+  id: string;
+  name: string;
+  city: string | null;
+  region: string | null;
+  archived_at: string | null;
+  has_contact: boolean;
+  players: { id: string; first_name: string; last_name: string; preferred_name: string | null }[];
+  guardians: { id: string; first_name: string; last_name: string; email: string | null; phone: string | null; is_primary_contact: boolean }[];
+};
+
+/** Filtering (including derived contact completeness), counting and paging all happen in SQL. */
 export async function listHouseholds(orgId: string, filters: { q?: string; issue?: HouseholdIssue; page?: number; archived?: boolean }) {
   const supabase = await createClient();
   const page = Math.max(1, filters.page ?? 1);
-  let query = supabase
-    .from("households")
-    .select(
-      "id, name, city, region, archived_at, created_at, players!players_household_id_organization_id_fkey(id, first_name, last_name, preferred_name, archived_at), guardians!guardians_household_id_organization_id_fkey(id, first_name, last_name, email, phone, is_primary_contact, archived_at)",
-      { count: "exact" },
-    )
-    .eq("organization_id", orgId)
-    .order("name")
-    .order("id");
-  query = filters.archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
-  if (filters.q) query = query.ilike("name", likePattern(filters.q));
-
-  const { data, error } = await query;
-  if (error) throw new Error(`Could not load households: ${error.message}`);
-
-  // Contact completeness is derived, so filter + paginate after shaping.
-  const shaped = (data ?? []).map((h) => {
-    const guardians = h.guardians.filter((g) => !g.archived_at);
-    const players = h.players.filter((p) => !p.archived_at);
-    return {
-      ...h,
-      guardians,
-      players,
-      hasContact: guardians.some((g) => g.email || g.phone),
-      primary: guardians.find((g) => g.is_primary_contact) ?? guardians[0] ?? null,
-    };
-  });
-  const filtered = filters.issue === "no-contact" ? shaped.filter((h) => !h.hasContact) : shaped;
+  const result = unwrap(
+    await supabase.rpc("list_households", {
+      p_organization_id: orgId,
+      p_q: filters.q ?? undefined,
+      p_issue: filters.issue ?? undefined,
+      p_archived: Boolean(filters.archived),
+      p_limit: PAGE_SIZE,
+      p_offset: (page - 1) * PAGE_SIZE,
+    }),
+    "households",
+  ) as { total: number; rows: HouseholdListRow[] };
   return {
-    rows: filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    total: filtered.length,
+    rows: result.rows.map((h) => ({
+      ...h,
+      hasContact: h.has_contact,
+      primary: h.guardians.find((g) => g.is_primary_contact) ?? h.guardians[0] ?? null,
+    })),
+    total: result.total,
     page,
     pageSize: PAGE_SIZE,
   };
@@ -270,14 +284,12 @@ export async function getHousehold(orgId: string, householdId: string) {
   return { household, players: unwrap(players, "household players"), guardians: unwrap(guardians, "guardians") };
 }
 
-/** Small lists for pickers in sheets. */
-export async function listHouseholdOptions(orgId: string) {
+/** Household search for pickers (replaces loading every household into a <select>). */
+export async function searchHouseholds(orgId: string, q: string) {
   const supabase = await createClient();
-  const rows = unwrap(
-    await supabase.from("households").select("id, name").eq("organization_id", orgId).is("archived_at", null).order("name").limit(2000),
-    "households",
-  );
-  return rows.map((h) => ({ value: h.id, label: h.name }));
+  let query = supabase.from("households").select("id, name, city").eq("organization_id", orgId).is("archived_at", null).order("name").limit(15);
+  if (q.trim()) query = query.ilike("name", likePattern(q.trim()));
+  return unwrap(await query, "households");
 }
 
 export async function searchGuardians(orgId: string, q: string) {

@@ -15,6 +15,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Multi-record writes go in Postgres functions (`supabase/migrations/*`), called via `rpc()`; supabase-js has no client transactions.
 - Audit events are written by DB triggers. Don't write `audit_events` from app code.
 - Never hard-delete roster or fundraising rows; archive (`archived_at`).
-- The app never uses the service-role key. Only `scripts/seed-dev.mjs` does.
+- The service-role key is used only by `scripts/seed-dev.mjs` (local) and `lib/supabase/admin.ts` (server-only: exact email lookup + invitation emails). Never use it for data reads/writes.
+- Protected org fields (slug, status, jurisdiction_profile, platform_config) are platform-admin only, via `platform_update_organization`.
+- Campaign status changes only through `transition_campaign`; ledger tables (`campaign_events`, `ticket_events`, `money_events`, `audit_events`) are append-only and hash-chained.
+- Members hold multiple roles (`organization_member_roles`); check permissions, never role names. Keep `lib/permissions/index.ts` in sync (tests enforce it).
+- Before pushing: `npm run check`, `npx supabase test db`, and `npm run test:e2e` against a seeded local stack (see `docs/deployment.md`).
 - Schema change → new migration → `npx supabase db reset` → `npm run db:types` → `npx supabase test db`.
 - Phase 1 deliberately has no tickets, sales, payments or checkout (Texas CREA offline-payment model).

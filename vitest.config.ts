@@ -1,7 +1,12 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
-  test: { include: ["lib/**/*.test.ts"], environment: "node" },
-});
+  test: {
+    include: ["lib/**/*.test.ts"],
+    environment: "node",
+    // Makes .env.local values (local Supabase URL/keys) available to DB-backed tests.
+    env: loadEnv(mode, process.cwd(), ""),
+  },
+}));

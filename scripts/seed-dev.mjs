@@ -63,9 +63,13 @@ async function seedOrganization({ org, members, season, teams, households, playe
 
   for (const m of members) {
     const userId = await ensureUser(m.email, m.fullName);
-    await must(
-      db.from("organization_members").insert({ organization_id: orgId, user_id: userId, role_key: m.role }),
+    const member = await must(
+      db.from("organization_members").insert({ organization_id: orgId, user_id: userId }).select("id").single(),
       `add member ${m.email}`,
+    );
+    await must(
+      db.from("organization_member_roles").insert(m.roles.map((role_key) => ({ organization_id: orgId, member_id: member.id, role_key }))),
+      `grant roles to ${m.email}`,
     );
     await must(db.from("profiles").update({ last_organization_id: orgId }).eq("id", userId), "set last org");
   }
@@ -160,8 +164,10 @@ await seedOrganization({
     jurisdiction_profile: "TEXAS_CREA_OFFLINE_PAYMENT",
   },
   members: [
-    { email: "admin@aspire.test", fullName: "Alex Admin", role: "ORGANIZATION_ADMIN" },
-    { email: "auditor@aspire.test", fullName: "Avery Auditor", role: "AUDITOR" },
+    { email: "admin@aspire.test", fullName: "Alex Admin", roles: ["ORGANIZATION_ADMIN", "DIRECTOR"] },
+    { email: "auditor@aspire.test", fullName: "Avery Auditor", roles: ["AUDITOR"] },
+    // Multi-role example: a parent who is also a team manager.
+    { email: "coach@aspire.test", fullName: "Casey Coach", roles: ["TEAM_CAPTAIN", "PARTICIPANT_FAMILY"] },
   ],
   season: { name: "2026–27", starts_on: "2026-08-01", ends_on: "2027-07-31" },
   teams: [
@@ -266,7 +272,7 @@ await seedOrganization({
     organization_type: "nonprofit",
     timezone: "America/New_York",
   },
-  members: [{ email: "admin@northside.test", fullName: "Nora Northside", role: "ORGANIZATION_ADMIN" }],
+  members: [{ email: "admin@northside.test", fullName: "Nora Northside", roles: ["ORGANIZATION_ADMIN", "DIRECTOR"] }],
   season: { name: "2026", starts_on: "2026-01-01", ends_on: "2026-12-31" },
   teams: [{ name: "U12 Girls", age_group: "U12", gender_division: "girls", team_code: "U12G" }],
   households: [],
@@ -279,7 +285,8 @@ await seedOrganization({
 console.log(`
 Development accounts (password: ${password})
   ${superAdminEmail.padEnd(28)} SUPER_ADMIN (all organizations)
-  ${"admin@aspire.test".padEnd(28)} ORGANIZATION_ADMIN — Aspire Sports Group
+  ${"admin@aspire.test".padEnd(28)} ORGANIZATION_ADMIN + DIRECTOR — Aspire Sports Group
   ${"auditor@aspire.test".padEnd(28)} AUDITOR (read-only) — Aspire Sports Group
-  ${"admin@northside.test".padEnd(28)} ORGANIZATION_ADMIN — Northside Youth Soccer
+  ${"coach@aspire.test".padEnd(28)} TEAM_CAPTAIN + PARTICIPANT_FAMILY — Aspire Sports Group
+  ${"admin@northside.test".padEnd(28)} ORGANIZATION_ADMIN + DIRECTOR — Northside Youth Soccer
 `);

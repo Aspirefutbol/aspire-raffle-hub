@@ -56,7 +56,7 @@ export function OrgSwitcher({ current, organizations }: { current: OrganizationS
               role="option"
               aria-selected={org.id === current.id}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink-soft hover:bg-canvas"
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 pointer-coarse:py-3 text-sm text-ink-soft hover:bg-canvas"
             >
               <Building2 aria-hidden className="size-4 text-muted" />
               <span className="flex-1 truncate">{org.name}</span>

@@ -34,7 +34,7 @@ export default async function OrgLayout({ children, params }: {
       footer={
         <>
           <OrgSwitcher current={ctx.organization} organizations={organizations} />
-          <UserMenu name={ctx.user.fullName} email={ctx.user.email} roleLabel={ctx.role ? ROLE_LABELS[ctx.role] : null} />
+          <UserMenu name={ctx.user.fullName} email={ctx.user.email} roleLabel={ctx.roles.length ? ctx.roles.map((r) => ROLE_LABELS[r]).join(" · ") : null} />
         </>
       }
     >

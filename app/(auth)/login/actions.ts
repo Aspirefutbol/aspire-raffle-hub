@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { safeNextPath } from "@/lib/auth/redirect";
@@ -38,13 +37,18 @@ export async function sendMagicLink(_prev: LoginState, formData: FormData): Prom
   const email = String(formData.get("email") ?? "");
   if (!parsed.success) return { error: parsed.error.issues[0]?.message, email };
 
-  const origin = publicEnv().NEXT_PUBLIC_SITE_URL ?? `https://${(await headers()).get("host")}`;
+  const origin = publicEnv().NEXT_PUBLIC_SITE_URL;
+  if (!origin) {
+    // Never build auth links from the Host header (spoofable).
+    return { error: "Sign-in links aren’t configured on this server.", email };
+  }
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
     options: {
       shouldCreateUser: false, // accounts are provisioned by an organization, not self-signup
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNextPath(parsed.data.next))}`,
+      // Email template appends &token_hash=…&type=magiclink (verified server-side in /auth/confirm).
+      emailRedirectTo: `${origin.replace(/\/$/, "")}/auth/confirm?next=${encodeURIComponent(safeNextPath(parsed.data.next))}`,
     },
   });
   // Same message whether or not the account exists (no account enumeration).

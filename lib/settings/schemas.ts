@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { ORGANIZATION_ROLES } from "@/lib/permissions";
-import { id, optionalEmail, optionalPhone, optionalText, requiredText } from "@/lib/validation";
+import { optionalEmail, optionalPhone, optionalText, requiredText } from "@/lib/validation";
 
 export const TIMEZONES = [
   "America/New_York",
@@ -35,5 +34,3 @@ export const seasonSchema = z
   })
   .refine((s) => !s.starts_on || !s.ends_on || s.starts_on < s.ends_on, { message: "End date must be after the start date.", path: ["ends_on"] });
 
-export const memberRoleSchema = z.object({ member_id: id, role_key: z.enum(ORGANIZATION_ROLES) });
-export const memberStatusSchema = z.object({ member_id: id, status: z.enum(["active", "suspended"]) });

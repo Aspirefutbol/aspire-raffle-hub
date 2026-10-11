@@ -413,3 +413,10 @@ export async function lookupPlayers(orgSlug: string, input: unknown) {
     return ok(await searchPlayers(ctx.organization.id, data.q ?? "", data));
   });
 }
+
+export async function lookupHouseholds(orgSlug: string, q: unknown) {
+  return orgAction(orgSlug, "roster.read", optionalText(80), q, async (ctx, query) => {
+    const { searchHouseholds } = await import("./queries");
+    return ok(await searchHouseholds(ctx.organization.id, query ?? ""));
+  });
+}

@@ -25,17 +25,42 @@ export type Database = {
           Tables: {
             "audit_events": {
                   Row: {
-                    "action": string,"actor_id": string | null,"after_data": Json | null,"before_data": Json | null,"changed_fields": (string)[],"entity_id": string | null,"entity_type": string,"id": string,"metadata": NonNullable<Json>,"occurred_at": string,"organization_id": string | null
+                    "action": string,"actor_id": string | null,"after_data": Json | null,"before_data": Json | null,"chain_pos": number,"changed_fields": (string)[],"entity_id": string | null,"entity_type": string,"id": string,"metadata": NonNullable<Json>,"occurred_at": string,"organization_id": string | null,"prev_hash": string,"row_hash": string
                   }
                   Insert: {
-                    "action": string,"actor_id"?: string | null,"after_data"?: Json | null,"before_data"?: Json | null,"changed_fields"?: (string)[],"entity_id"?: string | null,"entity_type": string,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id"?: string | null
+                    "action": string,"actor_id"?: string | null,"after_data"?: Json | null,"before_data"?: Json | null,"chain_pos": number,"changed_fields"?: (string)[],"entity_id"?: string | null,"entity_type": string,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id"?: string | null,"prev_hash": string,"row_hash": string
                   }
                   Update: {
-                    "action"?: string,"actor_id"?: string | null,"after_data"?: Json | null,"before_data"?: Json | null,"changed_fields"?: (string)[],"entity_id"?: string | null,"entity_type"?: string,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id"?: string | null
+                    "action"?: string,"actor_id"?: string | null,"after_data"?: Json | null,"before_data"?: Json | null,"chain_pos"?: number,"changed_fields"?: (string)[],"entity_id"?: string | null,"entity_type"?: string,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id"?: string | null,"prev_hash"?: string,"row_hash"?: string
                   }
                   Relationships: [
                     {
       foreignKeyName: "audit_events_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"campaign_events": {
+                  Row: {
+                    "actor_id": string | null,"campaign_id": string,"chain_pos": number,"event_type": string,"from_status": string | null,"id": string,"metadata": NonNullable<Json>,"occurred_at": string,"organization_id": string,"prev_hash": string,"reason": string | null,"row_hash": string,"to_status": string | null
+                  }
+                  Insert: {
+                    "actor_id"?: string | null,"campaign_id": string,"chain_pos"?: number,"event_type": string,"from_status"?: string | null,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id": string,"prev_hash"?: string,"reason"?: string | null,"row_hash"?: string,"to_status"?: string | null
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"campaign_id"?: string,"chain_pos"?: number,"event_type"?: string,"from_status"?: string | null,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id"?: string,"prev_hash"?: string,"reason"?: string | null,"row_hash"?: string,"to_status"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_events_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "campaign_events_organization_id_fkey"
       columns: ["organization_id"]
 isOneToOne: false
       referencedRelation: "organizations"
@@ -93,13 +118,13 @@ isOneToOne: false
                   ]
                 },"campaigns": {
                   Row: {
-                    "archived_at": string | null,"campaign_type": string,"created_at": string,"created_by": string | null,"draw_at": string | null,"id": string,"jurisdiction_mode": string | null,"name": string,"organization_id": string,"sales_close_at": string | null,"season_id": string | null,"settings": NonNullable<Json>,"starts_at": string | null,"status": string,"timezone": string | null,"updated_at": string,"updated_by": string | null
+                    "activated_at": string | null,"activated_by": string | null,"archived_at": string | null,"archived_by": string | null,"campaign_type": string,"closed_at": string | null,"closed_by": string | null,"created_at": string,"created_by": string | null,"default_allocation": number | null,"description": string | null,"draw_at": string | null,"drawn_at": string | null,"drawn_by": string | null,"family_target_tickets": number | null,"goal_amount_cents": number | null,"id": string,"jurisdiction_mode": string | null,"name": string,"operator_address": Json | null,"operator_legal_name": string | null,"organization_id": string,"rules_text": string | null,"rules_version": number,"sales_close_at": string | null,"season_id": string | null,"settings": NonNullable<Json>,"starts_at": string | null,"status": string,"support_email": string | null,"support_phone": string | null,"ticket_prefix": string | null,"ticket_price_cents": number | null,"timezone": string | null,"updated_at": string,"updated_by": string | null,"campaign_locked_fields": Json | null
                   }
                   Insert: {
-                    "archived_at"?: string | null,"campaign_type"?: string,"created_at"?: string,"created_by"?: string | null,"draw_at"?: string | null,"id"?: string,"jurisdiction_mode"?: string | null,"name": string,"organization_id": string,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"closed_at"?: string | null,"closed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name": string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id": string,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "archived_at"?: string | null,"campaign_type"?: string,"created_at"?: string,"created_by"?: string | null,"draw_at"?: string | null,"id"?: string,"jurisdiction_mode"?: string | null,"name"?: string,"organization_id"?: string,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"closed_at"?: string | null,"closed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name"?: string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id"?: string,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -259,15 +284,102 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"organization_members": {
+                },"money_events": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"organization_id": string,"role_key": string,"role_scope": string,"status": string,"updated_at": string,"updated_by": string | null,"user_id": string
+                    "actor_id": string | null,"amount_cents": number,"approved_by": string | null,"batch_ref": string | null,"campaign_id": string,"chain_pos": number,"event_type": string,"id": string,"metadata": NonNullable<Json>,"occurred_at": string,"organization_id": string,"participant_id": string | null,"payment_method": string | null,"prev_hash": string,"reason": string | null,"reverses_event_id": string | null,"row_hash": string
                   }
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"organization_id": string,"role_key": string,"role_scope"?: string,"status"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                    "actor_id"?: string | null,"amount_cents": number,"approved_by"?: string | null,"batch_ref"?: string | null,"campaign_id": string,"chain_pos"?: number,"event_type": string,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id": string,"participant_id"?: string | null,"payment_method"?: string | null,"prev_hash"?: string,"reason"?: string | null,"reverses_event_id"?: string | null,"row_hash"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"organization_id"?: string,"role_key"?: string,"role_scope"?: string,"status"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                    "actor_id"?: string | null,"amount_cents"?: number,"approved_by"?: string | null,"batch_ref"?: string | null,"campaign_id"?: string,"chain_pos"?: number,"event_type"?: string,"id"?: string,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id"?: string,"participant_id"?: string | null,"payment_method"?: string | null,"prev_hash"?: string,"reason"?: string | null,"reverses_event_id"?: string | null,"row_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "money_events_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "money_events_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "money_events_participant_id_fkey"
+      columns: ["participant_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "money_events_reverses_event_id_fkey"
+      columns: ["reverses_event_id"]
+isOneToOne: false
+      referencedRelation: "money_events"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"organization_invitations": {
+                  Row: {
+                    "accepted_at": string | null,"accepted_by": string | null,"created_at": string,"email": string,"expires_at": string,"id": string,"invited_by": string | null,"last_sent_at": string | null,"organization_id": string,"revoked_at": string | null,"role_keys": (string)[],"send_count": number,"status": string,"updated_at": string
+                  }
+                  Insert: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"created_at"?: string,"email": string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"last_sent_at"?: string | null,"organization_id": string,"revoked_at"?: string | null,"role_keys": (string)[],"send_count"?: number,"status"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"last_sent_at"?: string | null,"organization_id"?: string,"revoked_at"?: string | null,"role_keys"?: (string)[],"send_count"?: number,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "organization_invitations_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"organization_member_roles": {
+                  Row: {
+                    "granted_at": string,"granted_by": string | null,"member_id": string,"organization_id": string,"role_key": string,"role_scope": string
+                  }
+                  Insert: {
+                    "granted_at"?: string,"granted_by"?: string | null,"member_id": string,"organization_id": string,"role_key": string,"role_scope"?: string
+                  }
+                  Update: {
+                    "granted_at"?: string,"granted_by"?: string | null,"member_id"?: string,"organization_id"?: string,"role_key"?: string,"role_scope"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "organization_member_roles_member_id_organization_id_fkey"
+      columns: ["member_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "organization_members"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "organization_member_roles_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "organization_member_roles_role_key_role_scope_fkey"
+      columns: ["role_key","role_scope"]
+isOneToOne: false
+      referencedRelation: "roles"
+      referencedColumns: ["key","scope"]
+    }
+                  ]
+                },"organization_members": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"organization_id": string,"status": string,"updated_at": string,"updated_by": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"organization_id": string,"status"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"organization_id"?: string,"status"?: string,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -276,36 +388,30 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "organizations"
       referencedColumns: ["id"]
-    },{
-      foreignKeyName: "organization_members_role_key_role_scope_fkey"
-      columns: ["role_key","role_scope"]
-isOneToOne: false
-      referencedRelation: "roles"
-      referencedColumns: ["key","scope"]
     }
                   ]
                 },"organizations": {
                   Row: {
-                    "address_line1": string | null,"address_line2": string | null,"archived_at": string | null,"city": string | null,"country": string,"created_at": string,"created_by": string | null,"id": string,"jurisdiction_profile": string | null,"legal_name": string | null,"name": string,"organization_type": string,"postal_code": string | null,"region": string | null,"settings": NonNullable<Json>,"slug": string,"status": string,"support_email": string | null,"support_phone": string | null,"timezone": string,"updated_at": string,"updated_by": string | null
+                    "address_line1": string | null,"address_line2": string | null,"archived_at": string | null,"city": string | null,"country": string,"created_at": string,"created_by": string | null,"id": string,"jurisdiction_profile": string | null,"legal_name": string | null,"name": string,"organization_type": string,"platform_config": NonNullable<Json>,"postal_code": string | null,"region": string | null,"settings": NonNullable<Json>,"slug": string,"status": string,"support_email": string | null,"support_phone": string | null,"timezone": string,"updated_at": string,"updated_by": string | null
                   }
                   Insert: {
-                    "address_line1"?: string | null,"address_line2"?: string | null,"archived_at"?: string | null,"city"?: string | null,"country"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"jurisdiction_profile"?: string | null,"legal_name"?: string | null,"name": string,"organization_type"?: string,"postal_code"?: string | null,"region"?: string | null,"settings"?: NonNullable<Json>,"slug": string,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "address_line1"?: string | null,"address_line2"?: string | null,"archived_at"?: string | null,"city"?: string | null,"country"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"jurisdiction_profile"?: string | null,"legal_name"?: string | null,"name": string,"organization_type"?: string,"platform_config"?: NonNullable<Json>,"postal_code"?: string | null,"region"?: string | null,"settings"?: NonNullable<Json>,"slug": string,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "address_line1"?: string | null,"address_line2"?: string | null,"archived_at"?: string | null,"city"?: string | null,"country"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"jurisdiction_profile"?: string | null,"legal_name"?: string | null,"name"?: string,"organization_type"?: string,"postal_code"?: string | null,"region"?: string | null,"settings"?: NonNullable<Json>,"slug"?: string,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "address_line1"?: string | null,"address_line2"?: string | null,"archived_at"?: string | null,"city"?: string | null,"country"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"jurisdiction_profile"?: string | null,"legal_name"?: string | null,"name"?: string,"organization_type"?: string,"platform_config"?: NonNullable<Json>,"postal_code"?: string | null,"region"?: string | null,"settings"?: NonNullable<Json>,"slug"?: string,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     
                   ]
                 },"permissions": {
                   Row: {
-                    "category": string,"description": string,"key": string
+                    "category": string,"description": string,"key": string,"scope": string
                   }
                   Insert: {
-                    "category": string,"description"?: string,"key": string
+                    "category": string,"description"?: string,"key": string,"scope"?: string
                   }
                   Update: {
-                    "category"?: string,"description"?: string,"key"?: string
+                    "category"?: string,"description"?: string,"key"?: string,"scope"?: string
                   }
                   Relationships: [
                     
@@ -572,6 +678,31 @@ isOneToOne: false
       referencedColumns: ["id","organization_id"]
     }
                   ]
+                },"ticket_events": {
+                  Row: {
+                    "actor_id": string | null,"campaign_id": string,"chain_pos": number,"event_type": string,"id": string,"idempotency_key": string | null,"metadata": NonNullable<Json>,"occurred_at": string,"organization_id": string,"participant_id": string | null,"prev_hash": string,"reason": string | null,"replaces_ticket_id": string | null,"row_hash": string,"ticket_id": string
+                  }
+                  Insert: {
+                    "actor_id"?: string | null,"campaign_id": string,"chain_pos"?: number,"event_type": string,"id"?: string,"idempotency_key"?: string | null,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id": string,"participant_id"?: string | null,"prev_hash"?: string,"reason"?: string | null,"replaces_ticket_id"?: string | null,"row_hash"?: string,"ticket_id": string
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"campaign_id"?: string,"chain_pos"?: number,"event_type"?: string,"id"?: string,"idempotency_key"?: string | null,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"organization_id"?: string,"participant_id"?: string | null,"prev_hash"?: string,"reason"?: string | null,"replaces_ticket_id"?: string | null,"row_hash"?: string,"ticket_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ticket_events_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "ticket_events_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -603,7 +734,13 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "add_players_to_household":
+            "accept_my_invitations":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"add_organization_member":
+{ Args: { "p_organization_id": string,"p_reason"?: string,"p_roles": (string)[],"p_user_id": string }; Returns: string
+                           },
+"add_players_to_household":
 { Args: { "p_household_id": string,"p_organization_id": string,"p_player_ids": (string)[] }; Returns: number
                            },
 "archive_team":
@@ -612,8 +749,29 @@ isOneToOne: false
 "assert_org_permission":
 { Args: { "p_organization_id": string,"p_permission": string }; Returns: undefined
                            },
+"audit_context":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"auth_user_id_by_email":
+{ Args: { "p_email": string }; Returns: string
+                           },
 "bulk_set_player_team":
 { Args: { "p_organization_id": string,"p_player_ids": (string)[],"p_team_id": string }; Returns: number
+                           },
+"campaign_locked_fields":
+{ Args: { "c": Database["public"]['Tables']["campaigns"]['Row'] }; Returns: Json
+                           },
+"campaign_readiness":
+{ Args: { "p_campaign_id": string }; Returns: (string)[]
+                           },
+"campaign_transition_allowed":
+{ Args: { "p_from": string,"p_to": string }; Returns: boolean
+                           },
+"can_assign_role":
+{ Args: { "p_organization_id": string,"p_role_key": string }; Returns: boolean
+                           },
+"chain_payload":
+{ Args: { "p_row": Json }; Returns: string
                            },
 "commit_player_import":
 { Args: { "p_import_id": string }; Returns: Json
@@ -624,8 +782,14 @@ isOneToOne: false
 "create_player":
 { Args: { "p_guardian"?: Json,"p_household"?: Json,"p_organization_id": string,"p_player": Json,"p_team_id"?: string }; Returns: string
                            },
+"escape_like":
+{ Args: { "p_text": string }; Returns: string
+                           },
 "has_org_permission":
 { Args: { "p_organization_id": string,"p_permission": string }; Returns: boolean
+                           },
+"has_platform_permission":
+{ Args: { "p_permission": string }; Returns: boolean
                            },
 "is_org_member":
 { Args: { "p_organization_id": string }; Returns: boolean
@@ -633,13 +797,36 @@ isOneToOne: false
 "is_platform_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"list_households":
+{ Args: { "p_archived"?: boolean,"p_issue"?: string,"p_limit"?: number,"p_offset"?: number,"p_organization_id": string,"p_q"?: string }; Returns: Json
+                           },
+"list_org_members":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_organization_id": string,"p_q"?: string }; Returns: Json
+                           },
+"list_possible_duplicates":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_organization_id": string }; Returns: Json
+                           },
 "my_org_permissions":
 { Args: { "p_organization_id": string }; Returns: (string)[]
+                           },
+"my_org_roles":
+{ Args: { "p_organization_id": string }; Returns: (string)[]
+                           },
+"platform_organization_summaries":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "created_at": string,"id": string,"jurisdiction_profile": string,"member_count": number,"name": string,"organization_type": string,"pending_invitations": number,"player_count": number,"slug": string,"status": string
+            }[]
+                           },
+"platform_update_organization":
+{ Args: { "p_changes": Json,"p_organization_id": string,"p_reason": string }; Returns: undefined
                            },
 "possible_duplicate_players":
 { Args: { "p_organization_id": string }; Returns: {
               "player_a_id": string,"player_b_id": string,"reason": string
             }[]
+                           },
+"revoke_invitation":
+{ Args: { "p_invitation_id": string,"p_reason"?: string }; Returns: undefined
                            },
 "roster_overview":
 { Args: { "p_organization_id": string }; Returns: Json
@@ -647,11 +834,20 @@ isOneToOne: false
 "save_import_validation":
 { Args: { "p_column_mapping"?: Json,"p_import_id": string,"p_mapping_id"?: string,"p_rows": Json,"p_summary": Json }; Returns: undefined
                            },
+"set_audit_reason":
+{ Args: { "p_reason": string }; Returns: undefined
+                           },
 "set_current_season":
 { Args: { "p_organization_id": string,"p_season_id": string }; Returns: undefined
                            },
 "set_household_primary_contact":
 { Args: { "p_guardian_id": string,"p_organization_id": string }; Returns: undefined
+                           },
+"set_member_roles":
+{ Args: { "p_member_id": string,"p_reason"?: string,"p_roles": (string)[] }; Returns: undefined
+                           },
+"set_member_status":
+{ Args: { "p_member_id": string,"p_reason"?: string,"p_status": string }; Returns: undefined
                            },
 "set_player_team":
 { Args: { "p_organization_id": string,"p_player_id": string,"p_team_id": string }; Returns: boolean
@@ -661,6 +857,29 @@ isOneToOne: false
                            },
 "shares_org_with":
 { Args: { "p_user_id": string }; Returns: boolean
+                           },
+"team_player_counts":
+{ Args: { "p_organization_id": string }; Returns: {
+              "player_count": number,"team_id": string
+            }[]
+                           },
+"transition_campaign":
+{ Args: { "p_campaign_id": string,"p_reason"?: string,"p_to": string }; Returns: string
+                           },
+"verify_audit_chain":
+{ Args: { "p_organization_id": string }; Returns: {
+              "first_bad_pos": number,"head_hash": string,"ok": boolean,"rows_checked": number
+            }[]
+                           },
+"verify_campaign_ledgers":
+{ Args: { "p_campaign_id": string }; Returns: {
+              "first_bad_pos": number,"head_hash": string,"ledger": string,"ok": boolean,"rows_checked": number
+            }[]
+                           },
+"verify_hash_chain":
+{ Args: { "p_partition": string,"p_partition_col": string,"p_table": string }; Returns: {
+              "first_bad_pos": number,"head_hash": string,"ok": boolean,"rows_checked": number
+            }[]
                            }
           }
           Enums: {

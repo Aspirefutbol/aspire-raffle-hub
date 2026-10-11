@@ -13,6 +13,7 @@ import { ConfirmButton } from "@/components/ui/confirm-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { Sheet } from "@/components/ui/sheet";
+import { HouseholdPicker } from "./household-picker";
 import { formatPhone } from "@/lib/format";
 import { useActionRunner } from "@/lib/hooks/use-action-runner";
 import {
@@ -169,12 +170,11 @@ export function PlayerTeamControl({ orgSlug, playerId, teamId, teams, disabled }
 
 // ── Household ────────────────────────────────────────────────────────────────
 
-export function PlayerHouseholdCard({ orgSlug, playerId, playerLastName, household, households, canWrite }: {
+export function PlayerHouseholdCard({ orgSlug, playerId, playerLastName, household, canWrite }: {
   orgSlug: string;
   playerId: string;
   playerLastName: string;
   household: { id: string; name: string } | null;
-  households: Option[];
   canWrite: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -184,7 +184,7 @@ export function PlayerHouseholdCard({ orgSlug, playerId, playerLastName, househo
   const { run, pending } = useActionRunner();
 
   const openSheet = () => {
-    setMode(households.length ? "existing" : "new");
+    setMode("existing");
     setExisting("");
     setName(`${playerLastName} Household`);
     setOpen(true);
@@ -236,15 +236,12 @@ export function PlayerHouseholdCard({ orgSlug, playerId, playerLastName, househo
       >
         <div className="space-y-4">
           <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="radio" checked={mode === "existing"} onChange={() => setMode("existing")} disabled={!households.length} /> Existing household</label>
-            <label className="flex items-center gap-2"><input type="radio" checked={mode === "new"} onChange={() => setMode("new")} /> New household</label>
+            <label className="flex min-h-11 items-center gap-2"><input type="radio" className="size-5" checked={mode === "existing"} onChange={() => setMode("existing")} /> Existing household</label>
+            <label className="flex min-h-11 items-center gap-2"><input type="radio" className="size-5" checked={mode === "new"} onChange={() => setMode("new")} /> New household</label>
           </div>
           {mode === "existing" ? (
             <Field label="Household" htmlFor="set_hh">
-              <Select id="set_hh" value={existing} onChange={(e) => setExisting(e.target.value)}>
-                <option value="">Choose a household…</option>
-                {households.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
-              </Select>
+              <HouseholdPicker id="set_hh" orgSlug={orgSlug} value={existing} onChange={setExisting} />
             </Field>
           ) : (
             <Field label="Household name" htmlFor="new_hh">
@@ -366,7 +363,7 @@ function MenuItem({ children, icon, onClick, danger, disabled }: {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-canvas disabled:opacity-50 ${danger ? "text-red-700" : "text-ink-soft"}`}
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 pointer-coarse:py-3 text-left text-sm hover:bg-canvas disabled:opacity-50 ${danger ? "text-red-700" : "text-ink-soft"}`}
     >
       {icon}
       {children}

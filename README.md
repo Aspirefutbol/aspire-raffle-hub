@@ -61,20 +61,11 @@ Migrations live in `supabase/migrations/`.
 - Push to a hosted project with `npx supabase db push`.
 - After schema changes, regenerate types with `npm run db:types`.
 
-## Deployment (Netlify or Vercel)
+## Deployment
 
-1. Create a Supabase project and run `npx supabase link` then `npx supabase db push`.
-2. In Supabase Auth settings, set the Site URL and add `https://<your-domain>/auth/callback` as a redirect URL.
-3. Set environment variables on the host:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   - `NEXT_PUBLIC_SITE_URL`
-4. Deploy. Both platforms detect Next.js automatically (Netlify uses its Next.js runtime).
+See [`docs/deployment.md`](docs/deployment.md) for CI, the staging pipeline
+(hosted Supabase + Netlify) and first-admin setup.
 
-**Never** configure `SUPABASE_SECRET_KEY` (service role) in the web app's environment. Only the dev seed script reads it.
-
-### Creating the first real admin
-Invitations arrive in a later phase. Until then:
-1. Create the user in the Supabase dashboard (Authentication → Users).
-2. Add yourself to `platform_admins` with the SQL editor.
-3. Sign in, open **Platform**, and create the organization with that user's email as first admin.
+`SUPABASE_SECRET_KEY` is server-only. The web app uses it solely in
+`lib/supabase/admin.ts` to look up accounts by exact email and send invitation
+emails; it must never be exposed with a `NEXT_PUBLIC_` prefix.

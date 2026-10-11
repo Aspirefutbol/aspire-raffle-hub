@@ -1,15 +1,13 @@
-import { History, Scale } from "lucide-react";
+import { ChevronRight, History, Scale, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MappingsCard } from "@/components/settings/mappings-card";
-import { MembersCard, type MemberRow } from "@/components/settings/members-card";
 import { OrganizationForm } from "@/components/settings/organization-form";
 import { SeasonsCard } from "@/components/settings/seasons-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { can, requireOrgContext } from "@/lib/auth/org-context";
-import { isOrganizationRole } from "@/lib/permissions";
 import { listSeasons } from "@/lib/roster/queries";
 import { TIMEZONES } from "@/lib/settings/schemas";
 import { createClient } from "@/lib/supabase/server";
@@ -22,35 +20,17 @@ export default async function SettingsPage({ params }: { params: Promise<{ orgSl
   const supabase = await createClient();
   const orgId = ctx.organization.id;
 
-  const [{ data: org }, seasons, members, mappings] = await Promise.all([
+  const [{ data: org }, seasons, mappings, memberCount] = await Promise.all([
     supabase.from("organizations").select("*").eq("id", orgId).single(),
     listSeasons(orgId),
-    can(ctx, "members.read")
-      ? supabase.from("organization_members").select("id, user_id, role_key, status").eq("organization_id", orgId).order("created_at")
-      : Promise.resolve({ data: [], error: null }),
     can(ctx, "roster.import")
       ? supabase.from("import_mappings").select("id, name, mapping, last_used_at, created_at").eq("organization_id", orgId).order("name")
       : Promise.resolve({ data: [], error: null }),
+    can(ctx, "members.read")
+      ? supabase.from("organization_members").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "active")
+      : Promise.resolve({ count: null }),
   ]);
   if (!org) throw new Error("Organization not found");
-
-  const userIds = (members.data ?? []).map((m) => m.user_id);
-  const { data: profiles } = userIds.length
-    ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
-    : { data: [] };
-  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
-  const memberRows: MemberRow[] = (members.data ?? []).flatMap((m) =>
-    isOrganizationRole(m.role_key)
-      ? [{
-          id: m.id,
-          name: profileById.get(m.user_id)?.full_name || profileById.get(m.user_id)?.email || "Unknown user",
-          email: profileById.get(m.user_id)?.email ?? "",
-          role_key: m.role_key,
-          status: m.status,
-          isSelf: m.user_id === ctx.user.id,
-        }]
-      : [],
-  );
 
   const tz = (TIMEZONES as readonly string[]).includes(org.timezone) ? (org.timezone as (typeof TIMEZONES)[number]) : "America/Chicago";
 
@@ -80,7 +60,18 @@ export default async function SettingsPage({ params }: { params: Promise<{ orgSl
               />
             </CardBody>
           </Card>
-          {can(ctx, "members.read") && <MembersCard orgSlug={orgSlug} members={memberRows} canManage={can(ctx, "members.manage")} />}
+          {can(ctx, "members.read") && (
+            <Link href={`/o/${orgSlug}/settings/members`} className="flex min-h-14 items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 shadow-card hover:border-brand-300">
+              <Users aria-hidden className="size-4 text-muted" />
+              <span className="flex-1">
+                <span className="block text-sm font-medium text-ink">Members & roles · {memberCount.count ?? 0}</span>
+                <span className="block text-xs text-muted">
+                  {can(ctx, "members.manage") ? "Add or invite people, assign multiple roles, suspend access" : "See who has access and their roles"}
+                </span>
+              </span>
+              <ChevronRight aria-hidden className="size-4 text-muted" />
+            </Link>
+          )}
         </div>
         <div className="space-y-4">
           <SeasonsCard

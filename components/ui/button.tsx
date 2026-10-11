@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "subtle";
-type Size = "sm" | "md";
+type Size = "sm" | "md" | "lg";
 
 const base =
   "inline-flex items-center justify-center gap-1.5 rounded-control font-medium whitespace-nowrap transition-colors " +
@@ -18,9 +18,12 @@ const variants: Record<Variant, string> = {
   danger: "border border-red-200 bg-surface text-red-700 hover:bg-red-50",
 };
 
+// Touch devices (pointer: coarse) always get at least 44px targets (blueprint §41).
+// lg (48px) is the default for phone-first seller and buyer flows.
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-2.5 text-sm",
-  md: "h-9 px-3.5 text-sm",
+  sm: "h-8 px-2.5 text-sm pointer-coarse:h-11 pointer-coarse:px-3.5",
+  md: "h-9 px-3.5 text-sm pointer-coarse:h-11 pointer-coarse:px-4",
+  lg: "h-12 px-5 text-base",
 };
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {

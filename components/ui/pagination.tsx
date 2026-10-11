@@ -10,8 +10,8 @@ export function Pagination({ page, pageSize, total, hrefFor }: {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
-  const linkCls = "inline-flex size-8 items-center justify-center rounded-control border border-line-strong bg-surface hover:bg-canvas";
-  const disabledCls = "inline-flex size-8 items-center justify-center rounded-control border border-line text-line-strong";
+  const linkCls = "inline-flex size-8 pointer-coarse:size-11 items-center justify-center rounded-control border border-line-strong bg-surface hover:bg-canvas";
+  const disabledCls = "inline-flex size-8 pointer-coarse:size-11 items-center justify-center rounded-control border border-line text-line-strong";
   return (
     <nav aria-label="Pagination" className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-xs text-muted">
       <span className="tabular">

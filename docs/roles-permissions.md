@@ -3,76 +3,120 @@
 ## Model
 
 ```
-platform_admins ─────────────► SUPER_ADMIN (every organization, every permission)
+platform_admins ──► SUPER_ADMIN ──► platform permissions (platform.*)
+                                   + implicit support access to every org permission
 
-organization_members ─ role_key ─► roles ─► role_permissions ─► permissions
-   (one role per user per org)
+organization_members ─┬─ organization_member_roles ─► roles ─► role_permissions ─► permissions
+  (one per user/org)  └─ status: active | suspended | removed
+                         (a member holds ONE OR MORE roles; permissions are the union)
 ```
 
-- **Roles** are a global catalog (`roles`). Scope is `platform` or `organization`.
-- **Permissions** are granular keys (`permissions`). Code and RLS check
-  permissions, **never role names**, so roles can be re-shaped without touching
-  application code.
-- **`has_org_permission(org_id, key)`** is the single authorization primitive,
-  used by RLS policies, database functions and (through `my_org_permissions`)
-  the application.
+- **Roles** are a global catalog (`roles`) with a `scope`: `platform` or `organization`.
+- **Permissions** are granular keys (`permissions`), also scoped. A trigger
+  (`guard_role_permission_scope`) prevents granting a platform permission to an
+  organization role, or the reverse.
+- Code and RLS check **permissions, never role names**, so roles can be reshaped
+  (or new ones added) with a migration and no app changes.
+- **`has_org_permission(org, key)`** is the organization primitive: true when the
+  user is an *active* member of an *active* organization and any of their roles
+  grants `key`, or when they are a platform admin. **`has_platform_permission(key)`**
+  is the platform primitive.
+- Members of a **suspended or archived organization** lose all access.
 
-## Roles
+## Platform Admin vs Organization Admin
 
-| Role | Scope | Phase 1 status | Purpose |
-|---|---|---|---|
-| `SUPER_ADMIN` | platform | **Active** | Platform operator. Access to every organization; creates organizations. Granted via `platform_admins` (service role only). |
-| `ORGANIZATION_ADMIN` | organization | **Active** | Full control of one organization. |
-| `CAMPAIGN_MANAGER` | organization | Catalogued | Runs campaigns; reads roster. |
-| `FINANCE_ADMIN` | organization | Catalogued | Reconciliation/financial exports (blueprint §4). |
-| `TEAM_CAPTAIN` | organization | Catalogued, no grants | Team-scoped visibility once campaigns exist. |
-| `AUDITOR` | organization | Active (read-only) | Read roster, members, audit log. No writes (blueprint §4 "Auditor/Read-only"). |
-| `PARTICIPANT_FAMILY` | organization | Catalogued, no grants | Family/seller access scoped to their household (self-registration phase). |
+| Capability | Platform Admin (`SUPER_ADMIN`) | Organization Admin |
+|---|:-:|:-:|
+| Create organizations | ✓ | |
+| See every organization (`/platform`) | ✓ | |
+| Change **slug, status, jurisdiction profile, platform config** | ✓ (reason required, audited as `ORGANIZATION_PROTECTED_CHANGED`) | ✗ (blocked by trigger, even via the API) |
+| Suspend / archive an organization | ✓ | ✗ |
+| Name, legal name, address, timezone, support contact | ✓ | ✓ |
+| Seasons, saved import mappings | ✓ | ✓ |
+| Add / invite members, assign roles | ✓ (any role) | ✓ (only roles whose permissions they hold) |
+| Grant `DIRECTOR` | ✓ | only if also a Director |
+| Manage platform admins | ✓ (`platform.admins`, SQL only for now) | ✗ |
 
-## Permissions
+Protected organization fields are enforced by `guard_organization_protected_fields`
+(raises `42501` unless the caller is a platform admin or a server-side process with
+no JWT). Platform admins change them through `platform_update_organization(org,
+changes, reason)`, which accepts only `slug`, `status`, `jurisdiction_profile`,
+`platform_config` and requires a reason of at least 5 characters.
 
-| Key | ORG_ADMIN | CAMPAIGN_MGR | FINANCE | AUDITOR | CAPTAIN | FAMILY |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|
-| `organization.manage` | ✓ | | | | | |
-| `members.read` | ✓ | ✓ | | ✓ | | |
-| `members.manage` | ✓ | | | | | |
-| `roster.read` | ✓ | ✓ | ✓ | ✓ | | |
-| `roster.write` | ✓ | | | | | |
-| `roster.import` | ✓ | | | | | |
-| `audit.read` | ✓ | | | ✓ | | |
-| `campaigns.read` | ✓ | ✓ | ✓ | ✓ | | |
-| `campaigns.manage` | ✓ | ✓ | | | | |
+## Organization roles
 
-SUPER_ADMIN implicitly holds every permission in every organization.
+| Role | Label | Purpose |
+|---|---|---|
+| `DIRECTOR` | Director | Governance: activates and closes out campaigns, approves write-offs, certifies drawings. |
+| `ORGANIZATION_ADMIN` | Organization Admin | Day-to-day operations: roster, members, settings, campaigns, corrections. |
+| `CAMPAIGN_MANAGER` | Campaign Manager | Sets up and runs campaigns; reads the roster. |
+| `FINANCE_ADMIN` | Finance Admin | Records turn-ins and reconciles seller funds; exports. |
+| `TEAM_CAPTAIN` | Team Manager / Captain | Team-level follow-up (team-scoped grants arrive with campaigns). |
+| `AUDITOR` | Auditor (read-only) | Read-only: roster, members, campaigns, activity log, exports. |
+| `PARTICIPANT_FAMILY` | Seller / Family | Sells tickets for their player(s) once campaigns launch. |
+
+Typical combinations: **Organization Admin + Director** (small clubs), **Director +
+Finance Admin**, **Team Manager + Seller**, **Auditor + Finance Admin**.
+
+## Permission matrix
+
+| Permission | Director | Org Admin | Campaign Mgr | Finance | Captain | Auditor | Seller/Family |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `organization.manage` | | ✓ | | | | | |
+| `members.read` | ✓ | ✓ | ✓ | | | ✓ | |
+| `members.manage` | | ✓ | | | | | |
+| `roster.read` | ✓ | ✓ | ✓ | ✓ | | ✓ | |
+| `roster.write` | | ✓ | | | | | |
+| `roster.import` | | ✓ | | | | | |
+| `audit.read` | ✓ | ✓ | | | | ✓ | |
+| `campaigns.read` | ✓ | ✓ | ✓ | ✓ | | ✓ | |
+| `campaigns.manage` (draft, edit, ready, close) | | ✓ | ✓ | | | | |
+| `campaigns.activate` (activate, drawn, archive) | ✓ | | | | | | |
+| `tickets.issue` *(ticket phase)* | | ✓ | | | | | ✓ |
+| `tickets.void` *(ticket phase)* | | ✓ | ✓ | | | | |
+| `reconciliation.manage` *(money phase)* | | ✓ | | ✓ | | | |
+| `adjustments.approve` *(money phase)* | ✓ | | | | | | |
+| `drawing.manage` *(drawing phase)* | | ✓ | ✓ | | | | |
+| `drawing.certify` *(drawing phase)* | ✓ | | | | | | |
+| `exports.run` | ✓ | ✓ | | ✓ | | ✓ | |
+
+Platform permissions (`platform.organizations`, `platform.admins`) belong only to
+`SUPER_ADMIN`. Separation of duties: activating a campaign, approving adjustments
+and certifying a drawing need `DIRECTOR`; the operational admin can prepare but
+not activate unless they also hold Director.
+
+## Grant rules (`can_assign_role`)
+
+A user may grant or revoke a role only if they hold `members.manage` **and every
+permission that role grants** (platform admins may grant anything). So an
+Organization Admin can assign every role except Director; an Admin + Director can
+assign Director. The same rule is mirrored in `canAssignRole()` for the UI.
+
+Guardrails (deferred constraint triggers):
+- every organization keeps at least one active Organization Admin;
+- you can't suspend yourself;
+- role changes go through `set_member_roles(member, roles[], reason)` /
+  `add_organization_member(org, user, roles[], reason)` and emit `ROLE_GRANTED`,
+  `ROLE_REVOKED` and `MEMBER_*` audit events carrying the reason.
 
 ## Enforcement layers
 
-1. **Database (authoritative).** RLS on every table, e.g.
-   `players`: select requires `roster.read`; insert/update require `roster.write`;
-   no delete grant. `audit_events` has no write policy at all. Transactional
-   functions call `assert_org_permission` before doing anything.
-2. **Server (clear errors, defense in depth).** Every server action resolves the
-   org context and calls `requirePermission(ctx, key)` before touching data.
-   Pages call `requirePermission` / `can(ctx, key)` to decide what renders.
-3. **UI (convenience only).** Buttons for actions the user can't perform are
-   hidden or disabled. This is never relied upon for security.
+1. **Database (authoritative).** RLS on every table via `has_org_permission`;
+   transactional functions call `assert_org_permission`; `SECURITY DEFINER`
+   functions check permissions explicitly against `auth.uid()`.
+2. **Server.** Every server action goes through `orgAction(slug, permission, …)`
+   which resolves the membership and checks the permission before touching data.
+3. **UI.** Hides or disables what the user can't do. Never relied on.
 
-## Guardrails
-
-- The last active ORGANIZATION_ADMIN of an organization cannot be demoted,
-  suspended or removed (database trigger).
-- Platform roles cannot be assigned through `organization_members` (composite FK
-  to `roles(key, scope)`).
-- Role changes emit `ROLE_CHANGED` audit events automatically.
+The TypeScript mirror (`lib/permissions/index.ts`) is checked against the
+migrations (`catalog.test.ts`) and against the live database (`catalog.db.test.ts`).
 
 ## Extending
 
-Adding a permission (e.g. `tickets.issue` in the sales phase):
+1. Migration: insert into `permissions` (with `scope`) and `role_permissions`, or a new `roles` row.
+2. Add it to `lib/permissions/index.ts` (`PERMISSIONS`, `ROLE_PERMISSIONS`, labels).
+3. RLS policies on new tables use `has_org_permission(organization_id, '<key>')`.
+4. `npm test` fails until the TS mirror and the database agree.
 
-1. Migration: `insert into permissions …; insert into role_permissions …`.
-2. Add the key to `lib/permissions/index.ts` (`PERMISSIONS`).
-3. Write RLS policies on the new tables using `has_org_permission(organization_id, 'tickets.issue')`.
-
-Scoped roles (team captain → own team; family → own household) will add
-policies that join through `team_memberships` / `guardians.profile_id`, without
-changing the organization-wide model above.
+Scoped roles (captain → own team, family → own household) will add policies that
+join through `team_memberships` / `guardians.profile_id` without changing this model.

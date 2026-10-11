@@ -65,9 +65,13 @@ Updates that change nothing except `updated_at`/`updated_by` are not logged.
 | `PLAYER_GUARDIAN_LINKED` / `_UNLINKED` / `_UPDATED` | `player_guardians` trigger | `players` / player id | `guardian_id`, `relationship`, `is_primary` |
 | `IMPORT_STARTED` | `imports` insert | `imports` / import id | `file_name`, `row_count` |
 | `IMPORT_COMPLETED` / `IMPORT_CANCELLED` | `imports` status change | `imports` / import id | `file_name`, `row_count`, `summary` (created, linked, matched, skipped, households, guardians) |
-| `MEMBER_ADDED` | `organization_members` insert | `organization_members` / member id | `user_id`; after: `role_key`, `status` |
-| `ROLE_CHANGED` | `organization_members.role_key` change | `organization_members` / member id | `user_id`; before/after `role_key` |
-| `MEMBER_STATUS_CHANGED` | `organization_members.status` change | `organization_members` / member id | `user_id`; before/after `status` |
+| `MEMBER_ADDED` | `organization_members` insert | `organization_members` / member id | `user_id`, `reason` |
+| `MEMBER_STATUS_CHANGED` | `organization_members.status` change (`set_member_status`) | `organization_members` / member id | before/after `status`, `reason` |
+| `ROLE_GRANTED` / `ROLE_REVOKED` | `organization_member_roles` insert / delete | member id | `role_key`, `granted_by`, `reason` |
+| `ROLE_CHANGED` | legacy (Phase 1, single-role column, now dropped) | — | kept readable for history |
+| `INVITATION_CREATED` / `_RESENT` / `_ACCEPTED` / `_REVOKED` / `_EXPIRED` | `organization_invitations` | invitation id | email, roles, `reason` |
+| `ORGANIZATION_PROTECTED_CHANGED` | protected-field change (`platform_update_organization`) | organization id | changed fields before/after, `reason` (required) |
+| `ORGANIZATION_STATUS_CHANGED` / `CAMPAIGN_STATUS_CHANGED` | `status` column change | organization / campaign id | before/after `status`, `reason` |
 
 These cover every event the Phase 1 brief names: `PLAYER_CREATED`, `PLAYER_UPDATED`, `PLAYER_ARCHIVED`, `PLAYER_IMPORTED`, `PLAYER_TEAM_CHANGED`, `IMPORT_COMPLETED` and `ROLE_CHANGED`.
 
@@ -107,8 +111,8 @@ Both require `audit.read`. Labels come from `lib/audit/describe.ts`.
 | Per-row edits inside an unfinished import (`import_rows`) | Staging data. The import's final outcome is audited, and every record it creates is audited individually. |
 | Reads and exports | The blueprint requires "log export event" (§23). Add an `EXPORT_*` event when exports ship. |
 | Sign-ins and failed sign-ins | Supabase Auth keeps its own auth audit log. Mirroring it into `audit_events` is a later decision. |
-| "Reason" on sensitive actions | The blueprint requires a reason for voids, draw lock/unlock and write-offs. Add a `reason` value (via a transaction-local setting like `raffle_hub.reason`, or an explicit RPC parameter) when those actions exist. |
-| Tamper evidence beyond append-only | A database superuser could disable triggers. The blueprint's `beforeHash/afterHash` (§19) and draw-snapshot hashing (§14) are planned for the ticket and drawing phases, e.g. a hash chain over events plus periodic signed exports. |
+| ~~"Reason" on sensitive actions~~ | **Done in Phase 0** — see §9. |
+| Tamper evidence against a database superuser | Hash chains (§9) make edits *detectable*, but someone with superuser access could rewrite a whole chain consistently. Mitigation (planned before money workflows go live): publish the chain head (`head_hash`) periodically outside the database (signed export, email to directors, or object storage with retention lock). |
 
 ## 8. Extending to money and tickets (later phases)
 
@@ -119,3 +123,40 @@ The same model carries forward:
 - **Exports:** `EXPORT_GENERATED`, with export type and row count.
 
 New tables attach `audit_row_change('<PREFIX>')` or a purpose-built trigger in their migration, and get a pgTAP test proving the event is written.
+
+## 9. Hardening phase: reasons, hash chains, ledgers
+
+### Reasons
+`set_audit_reason(text)` stores a transaction-local setting (`raffle_hub.reason`);
+`audit_context()` copies it into `metadata.reason` of every event written in that
+transaction. Functions that need a reason take it as a parameter and set it in
+the same transaction as the change: `platform_update_organization` (required,
+≥5 chars), `transition_campaign` (required except DRAFT → READY),
+`set_member_roles`, `add_organization_member`, `set_member_status`,
+`revoke_invitation`. The setting can't leak across API requests.
+
+### Tamper-evident hash chains
+`audit_events`, `campaign_events`, `ticket_events` and `money_events` each form a
+SHA-256 chain: `row_hash = sha256(prev_hash || canonical_row_json)` with
+`chain_pos` assigned under an advisory lock (no interleaving between concurrent
+writers). Partitions: per organization for `audit_events`, per campaign for the
+ledgers. Verification:
+
+| Function | Who | Returns |
+|---|---|---|
+| `verify_audit_chain(org)` | `audit.read` | `ok`, `rows_checked`, `first_bad_pos`, `head_hash` |
+| `verify_campaign_ledgers(campaign)` | `campaigns.read` | one row per ledger |
+
+pgTAP proves that an edited row (even by a superuser with triggers disabled) is
+reported at its exact position.
+
+### Append-only ledgers
+| Ledger | Status | Events | Integrity rules |
+|---|---|---|---|
+| `campaign_events` | **live** | `STATUS_CHANGED` (from/to, reason, actor) | written only by `transition_campaign` |
+| `ticket_events` | prepared | `ALLOCATED`, `UNALLOCATED`, `ISSUED`, `VOIDED`, `REISSUED`, `WINNER`, `CLAIMED` | `VOIDED`/`REISSUED` need a reason; `REISSUED` needs `replaces_ticket_id` |
+| `money_events` | prepared | `SALE_COLLECTED`, `TURN_IN`, `ADJUSTMENT`, `REVERSAL`, `WRITE_OFF`, `EXCEPTION_OPENED`/`RESOLVED` | reason required for corrections; `REVERSAL` needs `reverses_event_id`; `WRITE_OFF` needs `approved_by`; cash/check only (CREA) |
+
+All ledgers: no client `INSERT/UPDATE/DELETE` grants, `*_append_only` triggers
+reject updates and deletes, `actor_id` stamped from `auth.uid()`. Corrections are
+new compensating events, never edits.

@@ -76,7 +76,7 @@ export function UploadCard({ orgSlug }: { orgSlug: string }) {
           <Button icon={<Upload className="size-4" />} loading={pending} onClick={() => inputRef.current?.click()}>
             Choose file
           </Button>
-          <a href="/templates/raffle-hub-player-import-template.csv" download className="inline-flex h-9 items-center gap-1.5 rounded-control px-3 text-sm font-medium text-ink-soft hover:bg-surface">
+          <a href="/templates/raffle-hub-player-import-template.csv" download className="inline-flex h-9 pointer-coarse:h-11 items-center gap-1.5 rounded-control px-3 text-sm font-medium text-ink-soft hover:bg-surface">
             <Download aria-hidden className="size-4" /> Download template
           </a>
         </div>

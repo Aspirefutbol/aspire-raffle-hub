@@ -8,6 +8,7 @@ import { Field, Input, Select } from "@/components/ui/form-controls";
 import { Sheet } from "@/components/ui/sheet";
 import { useActionRunner } from "@/lib/hooks/use-action-runner";
 import { createOrganization } from "@/lib/platform/actions";
+import { JURISDICTION_LABELS, JURISDICTION_PROFILES } from "@/lib/platform/constants";
 import { TIMEZONES } from "@/lib/settings/schemas";
 
 const EMPTY = { name: "", slug: "", organization_type: "sports_club", timezone: "America/Chicago", jurisdiction_profile: "", admin_email: "" };
@@ -35,7 +36,7 @@ export function CreateOrganizationButton() {
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
             <Button loading={pending}
-              onClick={() => run(() => createOrganization(form), { onSuccess: (d) => { setOpen(false); router.push(`/o/${d.slug}/dashboard`); }, onError: (fe) => setErrors(fe ?? {}) })}>
+              onClick={() => run(() => createOrganization(form), { onSuccess: () => { setOpen(false); router.refresh(); }, onError: (fe) => setErrors(fe ?? {}) })}>
               Create
             </Button>
           </div>
@@ -69,10 +70,10 @@ export function CreateOrganizationButton() {
           <Field label="Jurisdiction profile" htmlFor="po_jur" hint="Controls which fundraising features campaigns may use.">
             <Select id="po_jur" value={form.jurisdiction_profile} onChange={(e) => setForm({ ...form, jurisdiction_profile: e.target.value })}>
               <option value="">Not set</option>
-              <option value="TEXAS_CREA_OFFLINE_PAYMENT">Texas CREA — offline payment only</option>
+              {JURISDICTION_PROFILES.map((j) => <option key={j} value={j}>{JURISDICTION_LABELS[j]}</option>)}
             </Select>
           </Field>
-          <Field label="First admin (existing account email)" htmlFor="po_admin" error={errors.admin_email}>
+          <Field label="First administrator email" htmlFor="po_admin" error={errors.admin_email} hint="Existing account: added now. New email: receives an invitation.">
             <Input id="po_admin" type="email" value={form.admin_email} onChange={(e) => setForm({ ...form, admin_email: e.target.value })} />
           </Field>
         </div>

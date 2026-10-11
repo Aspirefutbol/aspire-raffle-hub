@@ -218,19 +218,28 @@ erDiagram
 - **`profiles`** — one row per `auth.users` row, created by trigger on signup.
   `last_organization_id` lets the app return users to the org they last used.
 - **`roles`** — catalog. `scope` is `platform` (SUPER_ADMIN) or `organization`.
-- **`permissions`** — catalog of permission keys (`roster.write`, …).
+- **`permissions`** — catalog of permission keys (`roster.write`, …) with a
+  `scope`; a trigger keeps platform permissions off organization roles.
 - **`role_permissions`** — which permissions each organization role grants.
 - **`platform_admins`** — users holding SUPER_ADMIN. Service role only.
-- **`organization_members`** — user ↔ organization with exactly one role. A
-  composite FK to `roles(key, scope)` forbids assigning platform roles here. A
-  trigger prevents removing the last active ORGANIZATION_ADMIN.
+- **`organization_members`** — user ↔ organization membership with `status`
+  (`active`, `suspended`, `removed`).
+- **`organization_member_roles`** — one row per role a member holds (multi-role).
+  Composite FK to `roles(key, scope)` forbids platform roles; `granted_by`/`granted_at`
+  recorded. Deferred triggers keep at least one active ORGANIZATION_ADMIN.
+- **`organization_invitations`** — pending access for an email that has no account
+  yet: normalized email, roles, `status` (`pending`, `accepted`, `revoked`,
+  `expired`), expiry, send count. One pending invitation per org + email.
+  Accepted by `accept_my_invitations()` on sign-in (confirmed, exact email only).
 
 ### Organization
 
 - **`organizations`** — tenant root: display and legal name, URL slug, type
   (sports club, nonprofit, school, ministry, …), timezone, legal/operator
   address and support contact (needed on future tickets, blueprint §2),
-  `jurisdiction_profile`, free-form `settings`, `status`.
+  `jurisdiction_profile`, free-form `settings`, `status`, `platform_config`.
+  Slug, status, jurisdiction profile and platform config are **protected**
+  (platform admins only, via `platform_update_organization`).
 
 ### Master roster
 
@@ -268,16 +277,23 @@ erDiagram
 
 ### Campaign foundation (no UI yet)
 
-- **`campaigns`** — any fundraiser type; status follows the blueprint state
-  machine (`DRAFT → READY → ACTIVE → SALES_CLOSED → DRAW_LOCKED → COMPLETED`,
-  `CANCELLED`).
+- **`campaigns`** — any fundraiser type. Status: `DRAFT → READY → ACTIVE →
+  CLOSED → DRAWN → ARCHIVED` (plus `READY → DRAFT`, `DRAFT → ARCHIVED`), changed
+  only by `transition_campaign`. Ticket price (cents), prefix, goal, family
+  target, default allocation, sales window, draw date, support contact, rules
+  text/version, operator snapshot, and who/when for activation, close, draw,
+  archive. Ticket-critical fields lock at ACTIVE; CLOSED and later are read-only.
+- **`campaign_events`** — append-only, hash-chained lifecycle ledger.
+- **`ticket_events`**, **`money_events`** — append-only, hash-chained ledgers
+  prepared for the ticket and reconciliation phases (see `docs/AUDIT.md` §9).
 - **`campaign_participants`** — players enrolled in a campaign with team and
   household snapshots. This is where sellers, inventory and tickets will attach.
 
 ### Audit
 
 - **`audit_events`** — append-only: actor, action, entity, before/after, changed
-  fields, metadata. Written only by triggers / SECURITY DEFINER functions.
+  fields, metadata (incl. `reason`). Written only by triggers / SECURITY DEFINER
+  functions. Hash-chained per organization (`chain_pos`, `prev_hash`, `row_hash`).
 
 ## Key functions
 
@@ -290,6 +306,13 @@ erDiagram
 | `roster_overview(org)` | invoker | Dashboard + Action Needed |
 | `commit_player_import(import_id)` | invoker, transactional | Executes reviewed import plan |
 | `audit_row_change()` and friends | trigger, SECURITY DEFINER | Writes `audit_events` |
+| `has_platform_permission(key)`, `my_org_roles(org)`, `can_assign_role(org, role)` | SECURITY DEFINER, stable | Platform scope, multi-role, grant rule |
+| `platform_update_organization(org, changes, reason)` | SECURITY DEFINER | Protected fields; platform admins only |
+| `add_organization_member`, `set_member_roles`, `set_member_status`, `revoke_invitation`, `accept_my_invitations` | transactional | Membership changes with reasons |
+| `auth_user_id_by_email(email)` | `service_role` only | Exact, case-insensitive; errors on ambiguity |
+| `transition_campaign(campaign, to, reason)`, `campaign_readiness(campaign)` | SECURITY DEFINER | Lifecycle + ledger |
+| `verify_audit_chain(org)`, `verify_campaign_ledgers(campaign)` | SECURITY DEFINER, stable | Tamper detection |
+| `list_households`, `list_org_members`, `list_possible_duplicates`, `team_player_counts`, `platform_organization_summaries` | stable | SQL-side filtering, counts, pagination |
 
 ## Local development
 

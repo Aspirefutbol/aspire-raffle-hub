@@ -7,26 +7,26 @@ const control =
   "disabled:bg-canvas disabled:text-muted aria-[invalid=true]:border-red-400 aria-[invalid=true]:ring-red-500/20";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
-  return <input className={cn(control, "h-9", className)} {...props} />;
+  return <input className={cn(control, "h-9 pointer-coarse:h-11 pointer-coarse:text-base", className)} {...props} />;
 }
 
 export function Select({ className, children, ...props }: ComponentProps<"select">) {
   return (
-    <select className={cn(control, "h-9 pr-8", className)} {...props}>
+    <select className={cn(control, "h-9 pr-8 pointer-coarse:h-11 pointer-coarse:text-base", className)} {...props}>
       {children}
     </select>
   );
 }
 
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
-  return <textarea className={cn(control, "min-h-20 py-2", className)} {...props} />;
+  return <textarea className={cn(control, "min-h-20 py-2 pointer-coarse:text-base", className)} {...props} />;
 }
 
 export function Checkbox({ className, ...props }: Omit<ComponentProps<"input">, "type">) {
   return (
     <input
       type="checkbox"
-      className={cn("size-4 shrink-0 rounded border-line-strong text-brand-600 accent-brand-600", className)}
+      className={cn("size-4 shrink-0 rounded border-line-strong text-brand-600 accent-brand-600 pointer-coarse:size-6", className)}
       {...props}
     />
   );
