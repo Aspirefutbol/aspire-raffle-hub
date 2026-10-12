@@ -210,7 +210,7 @@ export function MembersPanel({ orgSlug, members, invitations, canManage, assigna
                     )}
                     {(m.roles.includes("PARTICIPANT_FAMILY") || m.familyLinks.length > 0) && (
                       <Button size="sm" variant="ghost" icon={<Home className="size-3.5" />} onClick={() => setScope({ kind: "family", member: m })}>
-                        Family
+                        Family access
                       </Button>
                     )}
                     {!m.isSelf && (

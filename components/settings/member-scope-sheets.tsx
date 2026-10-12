@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2, Search, Unlink } from "lucide-react";
+import { Check, Link2, Search, Unlink } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ui/confirm-button";
@@ -101,22 +101,22 @@ export function MemberFamilySheet({ orgSlug, memberId, memberName, links, onClos
     <Sheet
       open
       onClose={onClose}
-      title={`Family · ${memberName}`}
+      title={`Family access · ${memberName}`}
       description="Link this account to the guardian record it belongs to. The account can then read only that household and its players."
       footer={<div className="flex justify-end"><Button variant="secondary" onClick={onClose}>Done</Button></div>}
     >
-      <div className="space-y-4">
-        <div>
-          <p className="mb-1.5 text-sm font-medium text-ink-soft">Linked guardian records</p>
+      <div className="space-y-8">
+        <section aria-labelledby="family-linked-heading" className="space-y-3">
+          <h3 id="family-linked-heading" className="text-sm font-semibold text-ink">Linked guardian records</h3>
           {links.length === 0 ? (
             <p className="text-sm text-muted">Not linked yet — this account can’t see any family data.</p>
           ) : (
             <ul className="divide-y divide-line rounded-control border border-line">
               {links.map((l) => (
-                <li key={l.linkId} className="flex min-h-11 items-center gap-2 px-3 py-2">
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                    {l.guardianName}
-                    {l.householdName && <span className="text-muted"> · {l.householdName}</span>}
+                <li key={l.linkId} className="flex min-h-11 items-center gap-3 px-3 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block break-words text-sm font-medium text-ink">{l.guardianName}</span>
+                    <span className="mt-0.5 block break-words text-xs text-muted">{l.householdName || "No household"}</span>
                   </span>
                   <ConfirmButton variant="ghost" icon={<Unlink className="size-3.5" />} confirmLabel="Unlink?" disabled={pending}
                     onConfirm={() => run(() => unlinkFamilyGuardian(orgSlug, { link_id: l.linkId, reason }))}>
@@ -126,17 +126,18 @@ export function MemberFamilySheet({ orgSlug, memberId, memberName, links, onClos
               ))}
             </ul>
           )}
-        </div>
-        <Field label="Reason (recorded in the activity log)" htmlFor="family-reason">
-          <Input id="family-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Verified parent at registration" />
-        </Field>
-        <div>
+        </section>
+        <section aria-labelledby="family-search-heading" className="space-y-4 rounded-control border border-line-strong bg-canvas/50 p-4">
+          <div>
+            <h3 id="family-search-heading" className="text-sm font-semibold text-ink">Link another guardian</h3>
+            <p id="family-search-hint" className="mt-1 text-sm text-muted">Search by guardian name or email.</p>
+          </div>
           <div className="relative">
-            <Search aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search guardians by name or email" aria-label="Search guardians" className="pl-8" />
+            <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search guardians..." aria-label="Search guardians" aria-describedby="family-search-hint" className="h-11 border-brand-300 pl-10 text-base" />
           </div>
           {searchable && (
-            <ul className="mt-2 max-h-64 divide-y divide-line overflow-y-auto rounded-control border border-line" aria-busy={searching}>
+            <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-control border border-line bg-surface" aria-label="Guardian search results" aria-busy={searching}>
               {results.length === 0 ? (
                 <li className="px-3 py-3 text-sm text-muted">{searching ? "Searching…" : "No guardians match"}</li>
               ) : (
@@ -146,7 +147,8 @@ export function MemberFamilySheet({ orgSlug, memberId, memberName, links, onClos
                       <span className="block truncate text-sm text-ink">{g.first_name} {g.last_name}</span>
                       <span className="block truncate text-xs text-muted">{[g.households?.name, g.email].filter(Boolean).join(" · ") || "No household"}</span>
                     </span>
-                    <Button size="sm" variant="subtle" icon={<Link2 className="size-3.5" />} disabled={pending || linked.has(g.id)}
+                    <Button size="sm" variant={linked.has(g.id) ? "secondary" : "subtle"} className="shrink-0"
+                      icon={linked.has(g.id) ? <Check aria-hidden className="size-3.5" /> : <Link2 aria-hidden className="size-3.5" />} disabled={pending || linked.has(g.id)}
                       onClick={() => run(() => linkFamilyGuardian(orgSlug, { member_id: memberId, guardian_id: g.id, reason }))}>
                       {linked.has(g.id) ? "Linked" : "Link"}
                     </Button>
@@ -155,7 +157,10 @@ export function MemberFamilySheet({ orgSlug, memberId, memberName, links, onClos
               )}
             </ul>
           )}
-        </div>
+          <Field label="Reason / note" htmlFor="family-reason" hint="Optional. Recorded in the activity log." className="border-t border-line pt-4">
+            <Input id="family-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Verified parent at registration" />
+          </Field>
+        </section>
       </div>
     </Sheet>
   );
