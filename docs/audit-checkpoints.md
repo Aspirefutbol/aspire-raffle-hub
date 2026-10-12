@@ -49,7 +49,7 @@ Each run:
    uploaded as evidence.
 
 Configuration, in the GitHub `staging` environment:
-- variable `STAGING_SUPABASE_URL`;
+- `STAGING_SUPABASE_URL`, as a variable or a secret (environment or repository level);
 - secret `STAGING_SUPABASE_SECRET_KEY` (service-role/secret key; it only lives in GitHub);
 - optional secret `AUDIT_CHECKPOINT_SIGNING_KEY`.
 

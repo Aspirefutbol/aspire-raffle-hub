@@ -25,7 +25,8 @@ jobs:
     environment: staging
     timeout-minutes: 15
     env:
-      SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+      # Accept the URL as either an environment/repository variable or a secret.
+      SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL || secrets.STAGING_SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
       AUDIT_CHECKPOINT_SIGNING_KEY: ${{ secrets.AUDIT_CHECKPOINT_SIGNING_KEY }}
       AUDIT_ENVIRONMENT: staging
@@ -33,8 +34,10 @@ jobs:
     steps:
       - name: Require configuration
         run: |
-          [ -n "$SUPABASE_URL" ] || { echo "::error::Set the staging environment variable STAGING_SUPABASE_URL"; exit 1; }
-          [ -n "$SUPABASE_SECRET_KEY" ] || { echo "::error::Set the staging environment secret STAGING_SUPABASE_SECRET_KEY"; exit 1; }
+          missing=0
+          [ -n "$SUPABASE_URL" ] || { echo "::error::STAGING_SUPABASE_URL is empty. Add it as a variable (or secret) in Settings → Environments → staging, or at repository level."; missing=1; }
+          [ -n "$SUPABASE_SECRET_KEY" ] || { echo "::error::STAGING_SUPABASE_SECRET_KEY is empty. Add it as a secret in Settings → Environments → staging, or at repository level."; missing=1; }
+          exit $missing
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
