@@ -9,3 +9,11 @@
 [build.environment]
   NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
+
+# Public variables are embedded during the Next build. Preview confirmation
+# links must return to the same host that owns the preview session cookie.
+[context.deploy-preview]
+  command = 'test -n "$DEPLOY_PRIME_URL" && NEXT_PUBLIC_SITE_URL="$DEPLOY_PRIME_URL" npm run build'
+
+[context.branch-deploy]
+  command = 'test -n "$DEPLOY_PRIME_URL" && NEXT_PUBLIC_SITE_URL="$DEPLOY_PRIME_URL" npm run build'
