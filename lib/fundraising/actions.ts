@@ -110,7 +110,11 @@ export async function setCampaignTeamGoal(orgSlug: string, input: unknown): Prom
   });
 }
 
-export async function recordCampaignSale(orgSlug: string, input: unknown): Promise<ActionResult<RecordedSale>> {
+// Editing is safe only after a definite transaction rejection. A lost response,
+// receipt parse failure, or post-commit refresh failure must reuse the same key.
+export type SaleActionResult = ActionResult<RecordedSale> & { canEdit?: boolean };
+
+export async function recordCampaignSale(orgSlug: string, input: unknown): Promise<SaleActionResult> {
   return orgAction(orgSlug, "tickets.issue", recordCampaignSaleSchema, input, async (ctx, data) => {
     // Broad roster/campaign read or captain scope never grants broad sale scope.
     // SQL independently checks linked-family scope for this exact participant.
@@ -123,7 +127,10 @@ export async function recordCampaignSale(orgSlug: string, input: unknown): Promi
       p_buyer_email: data.buyer_email ?? undefined, p_buyer_phone: data.buyer_phone ?? undefined,
       p_notes: data.notes ?? undefined, p_sold_at: data.sold_at ?? undefined, p_corrects_sale_id: data.corrects_sale_id ?? undefined,
     });
-    if (error) return fail(describeDbError(error));
+    if (error) {
+      const canEdit = ["23503", "23514", "42501", "P0002", "22023", "22P02", "23502", "40001", "40P01"].includes(error.code);
+      return { ...fail(describeDbError(error)), canEdit };
+    }
     const result = recordedSaleSchema.safeParse(sale);
     if (!result.success) return fail("The sale result could not be confirmed. Retry using the same submission key.");
     refresh(orgSlug);

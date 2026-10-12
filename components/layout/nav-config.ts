@@ -11,7 +11,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Dashboard", href: "/dashboard", icon: "dashboard", permission: "roster.read" },
   {
     label: "People",
     href: "/people",
@@ -23,7 +23,9 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Teams", href: "/teams", icon: "teams", permission: "roster.read" },
-  { label: "Campaigns", href: "/campaigns", icon: "campaigns" },
-  { label: "Reports", href: "/reports", icon: "reports" },
-  { label: "Settings", href: "/settings", icon: "settings" },
+  { label: "Campaigns", href: "/campaigns", icon: "campaigns", permission: "campaigns.read" },
+  { label: "My fundraising", href: "/fundraising", icon: "campaigns", permission: "roster.read_own_family" },
+  { label: "Team fundraising", href: "/team-fundraising", icon: "teams", permission: "roster.read_assigned_teams" },
+  { label: "Reports", href: "/reports", icon: "reports", permission: "roster.read" },
+  { label: "Settings", href: "/settings", icon: "settings", permission: "roster.read" },
 ];

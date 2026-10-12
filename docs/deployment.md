@@ -4,7 +4,7 @@
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `.github/workflows/ci.yml` | every PR, pushes to `main` | lint · typecheck · unit tests · build; then a fresh local Supabase: apply all migrations, **pgTAP** (121 assertions), generated-types drift check, seed, unit tests incl. DB catalog parity, **Playwright e2e** (Phase 0 acceptance + 360px touch targets) |
+| `.github/workflows/ci.yml` | every PR, pushes to `main` | lint · typecheck · unit tests · build; then a fresh local Supabase: apply all migrations, **pgTAP** (471 assertions), generated-types drift check, seed, unit tests incl. DB catalog parity, concurrent raffle transactions, **Playwright e2e** (Phase 0 acceptance, raffle slice, and 360px family/touch targets) |
 | `.github/workflows/audit-checkpoint.yml` | daily 06:17 UTC, manual (from `main`) | verifies every staging audit chain and uploads a checkpoint artifact outside Supabase (`docs/audit-checkpoints.md`) |
 | `.github/workflows/staging.yml` | pushes to `main`, manual | hosted Supabase: `db push` + **pgTAP against the hosted database** (transactional, rolled back); Netlify production deploy of the staging site; smoke tests against the deployed URL |
 
@@ -13,9 +13,22 @@ Locally, the same checks:
 ```bash
 npx supabase start && npx supabase db reset && npx supabase test db
 ./scripts/ci-env.sh && npm run seed:dev
+set -a && . ./.env.local && set +a
 npm run check && npm run build
+npm run test:concurrency
 npm run start &  E2E_BASE_URL=http://localhost:3000 npm run test:e2e
 ```
+
+`test:concurrency` refuses remote databases. It uses separate signed-in user
+sessions and real PostgreSQL lock barriers to verify sale retries, stock
+contention, reversals, and closure, including scoped totals and ledger hashes.
+It leaves isolated local fixture organizations for the next reset and does not
+change the normal seed roster. Run the complete E2E suite after a fresh reset
+and seed; do not skip Mailpit invitation acceptance.
+
+The first raffle slice is a development acceptance gate. Money custody,
+reconciliation, a frozen drawing export, and an operator rehearsal are required
+before the Aspire pilot launches; see [the pilot backlog](./raffle-pilot-backlog.md).
 
 ## Staging setup (one time)
 
