@@ -61,6 +61,7 @@ async function seedOrganization({ org, members, season, teams, households, playe
 
   const { id: orgId } = await must(db.from("organizations").insert(org).select("id").single(), "insert organization");
 
+  const memberIds = {};
   for (const m of members) {
     const userId = await ensureUser(m.email, m.fullName);
     const member = await must(
@@ -72,6 +73,7 @@ async function seedOrganization({ org, members, season, teams, households, playe
       `grant roles to ${m.email}`,
     );
     await must(db.from("profiles").update({ last_organization_id: orgId }).eq("id", userId), "set last org");
+    memberIds[m.email] = member.id;
   }
 
   const { id: seasonId } = await must(
@@ -140,6 +142,22 @@ async function seedOrganization({ org, members, season, teams, households, playe
     }
   }
 
+  // Scoped access: captain → teams, family account → guardian record.
+  for (const m of members) {
+    for (const team of m.teams ?? []) {
+      await must(
+        db.from("team_staff_assignments").insert({ organization_id: orgId, team_id: teamIds[team], member_id: memberIds[m.email] }),
+        `assign ${m.email} to ${team}`,
+      );
+    }
+    if (m.familyGuardian) {
+      await must(
+        db.from("guardian_user_links").insert({ organization_id: orgId, guardian_id: guardianIds[m.familyGuardian], member_id: memberIds[m.email] }),
+        `link ${m.email} to guardian ${m.familyGuardian}`,
+      );
+    }
+  }
+
   console.log(`✓ ${org.name}: ${teams.length} teams, ${households.length} households, ${players.length} players`);
 }
 
@@ -167,7 +185,8 @@ await seedOrganization({
     { email: "admin@aspire.test", fullName: "Alex Admin", roles: ["ORGANIZATION_ADMIN", "DIRECTOR"] },
     { email: "auditor@aspire.test", fullName: "Avery Auditor", roles: ["AUDITOR"] },
     // Multi-role example: a parent who is also a team manager.
-    { email: "coach@aspire.test", fullName: "Casey Coach", roles: ["TEAM_CAPTAIN", "PARTICIPANT_FAMILY"] },
+    // Captain of U13 Boys only; also the parent account for the Smith household (guardian Dana).
+    { email: "coach@aspire.test", fullName: "Casey Coach", roles: ["TEAM_CAPTAIN", "PARTICIPANT_FAMILY"], teams: ["U13 Boys"], familyGuardian: "dana" },
   ],
   season: { name: "2026–27", starts_on: "2026-08-01", ends_on: "2027-07-31" },
   teams: [
@@ -287,6 +306,6 @@ Development accounts (password: ${password})
   ${superAdminEmail.padEnd(28)} SUPER_ADMIN (all organizations)
   ${"admin@aspire.test".padEnd(28)} ORGANIZATION_ADMIN + DIRECTOR — Aspire Sports Group
   ${"auditor@aspire.test".padEnd(28)} AUDITOR (read-only) — Aspire Sports Group
-  ${"coach@aspire.test".padEnd(28)} TEAM_CAPTAIN + PARTICIPANT_FAMILY — Aspire Sports Group
+  ${"coach@aspire.test".padEnd(28)} TEAM_CAPTAIN (U13 Boys) + PARTICIPANT_FAMILY (Smith household) — Aspire Sports Group
   ${"admin@northside.test".padEnd(28)} ORGANIZATION_ADMIN + DIRECTOR — Northside Youth Soccer
 `);

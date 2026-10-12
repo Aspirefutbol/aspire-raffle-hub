@@ -5,7 +5,7 @@ import { type ActionResult, describeDbError, fail, ok, orgAction } from "@/lib/a
 import { ROLE_LABELS } from "@/lib/permissions";
 import { AdminNotConfiguredError } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { addMemberSchema, invitationSchema, memberStatusSchema, setRolesSchema } from "./schemas";
+import { addMemberSchema, invitationSchema, linkGuardianSchema, memberStatusSchema, memberTeamsSchema, setRolesSchema, unlinkGuardianSchema } from "./schemas";
 import { addOrInviteMember, sendInvitationEmail } from "./service";
 
 function refresh(orgSlug: string) {
@@ -102,5 +102,45 @@ export async function revokeInvitation(orgSlug: string, input: unknown): Promise
     if (error) return fail(describeDbError(error));
     refresh(orgSlug);
     return ok(undefined, "Invitation revoked");
+  });
+}
+
+// ── Scope: which teams a Team Manager/Captain reads; which guardian a family account is ──
+
+export async function setMemberTeams(orgSlug: string, input: unknown): Promise<ActionResult<{ count: number }>> {
+  return orgAction(orgSlug, "members.manage", memberTeamsSchema, input, async (_ctx, data) => {
+    const supabase = await createClient();
+    const { data: count, error } = await supabase.rpc("set_team_staff_assignments", {
+      p_member_id: data.member_id,
+      p_team_ids: data.team_ids,
+      p_reason: data.reason ?? undefined,
+    });
+    if (error) return fail(describeDbError(error));
+    refresh(orgSlug);
+    return ok({ count: count ?? 0 }, count ? `Assigned to ${count} team${count === 1 ? "" : "s"}` : "Team assignments removed");
+  });
+}
+
+export async function linkFamilyGuardian(orgSlug: string, input: unknown): Promise<ActionResult> {
+  return orgAction(orgSlug, "members.manage", linkGuardianSchema, input, async (_ctx, data) => {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("link_family_guardian", {
+      p_member_id: data.member_id,
+      p_guardian_id: data.guardian_id,
+      p_reason: data.reason ?? undefined,
+    });
+    if (error) return fail(describeDbError(error));
+    refresh(orgSlug);
+    return ok(undefined, "Family account linked");
+  });
+}
+
+export async function unlinkFamilyGuardian(orgSlug: string, input: unknown): Promise<ActionResult> {
+  return orgAction(orgSlug, "members.manage", unlinkGuardianSchema, input, async (_ctx, data) => {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("unlink_family_guardian", { p_link_id: data.link_id, p_reason: data.reason ?? undefined });
+    if (error) return fail(describeDbError(error));
+    refresh(orgSlug);
+    return ok(undefined, "Family link removed");
   });
 }

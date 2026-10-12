@@ -5,6 +5,7 @@
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `.github/workflows/ci.yml` | every PR, pushes to `main` | lint · typecheck · unit tests · build; then a fresh local Supabase: apply all migrations, **pgTAP** (121 assertions), generated-types drift check, seed, unit tests incl. DB catalog parity, **Playwright e2e** (Phase 0 acceptance + 360px touch targets) |
+| `.github/workflows/audit-checkpoint.yml` | daily 06:17 UTC, manual (from `main`) | verifies every staging audit chain and uploads a checkpoint artifact outside Supabase (`docs/audit-checkpoints.md`) |
 | `.github/workflows/staging.yml` | pushes to `main`, manual | hosted Supabase: `db push` + **pgTAP against the hosted database** (transactional, rolled back); Netlify production deploy of the staging site; smoke tests against the deployed URL |
 
 Locally, the same checks:
@@ -36,9 +37,10 @@ Staging must exist **before** any ticket or money workflow ships.
    - Secrets: `SUPABASE_ACCESS_TOKEN`, `STAGING_PROJECT_REF`, `STAGING_DB_PASSWORD`,
      `STAGING_DB_URL` (session-pooler connection string), `NETLIFY_AUTH_TOKEN`, `NETLIFY_SITE_ID`.
    - Variables: `STAGING_URL`, `STAGING_SUPABASE_URL`, `STAGING_SUPABASE_PUBLISHABLE_KEY`.
+   - Audit checkpoints: secret `STAGING_SUPABASE_SECRET_KEY` (service-role key), optional `AUDIT_CHECKPOINT_SIGNING_KEY`.
    - Add a required reviewer so production-like deploys are approved.
 4. **First platform admin**: invite yourself from the Supabase dashboard, then in the
-   SQL editor: `insert into platform_admins (user_id) select id from auth.users where email = '<you>';`
+   SQL editor using the procedure in `docs/platform-admins.md`.
    Sign in, open **Platform**, create the organization; its first admin is added or invited by email.
 5. Run the **Staging** workflow manually once and check every step is green.
 

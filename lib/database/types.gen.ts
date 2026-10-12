@@ -141,6 +141,37 @@ isOneToOne: false
       referencedColumns: ["id","organization_id"]
     }
                   ]
+                },"guardian_user_links": {
+                  Row: {
+                    "archived_at": string | null,"archived_by": string | null,"created_at": string,"created_by": string | null,"guardian_id": string,"id": string,"member_id": string,"organization_id": string
+                  }
+                  Insert: {
+                    "archived_at"?: string | null,"archived_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"guardian_id": string,"id"?: string,"member_id": string,"organization_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"archived_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"guardian_id"?: string,"id"?: string,"member_id"?: string,"organization_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "guardian_user_links_guardian_id_organization_id_fkey"
+      columns: ["guardian_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "guardians"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "guardian_user_links_member_id_organization_id_fkey"
+      columns: ["member_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "organization_members"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "guardian_user_links_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"guardians": {
                   Row: {
                     "archived_at": string | null,"communication_preferences": NonNullable<Json>,"created_at": string,"created_by": string | null,"email": string | null,"email_normalized": string | null,"first_name": string,"household_id": string | null,"id": string,"is_primary_contact": boolean,"last_name": string,"notes": string | null,"organization_id": string,"phone": string | null,"phone_digits": string | null,"profile_id": string | null,"updated_at": string,"updated_by": string | null
@@ -653,6 +684,37 @@ isOneToOne: false
       referencedColumns: ["id","organization_id"]
     }
                   ]
+                },"team_staff_assignments": {
+                  Row: {
+                    "archived_at": string | null,"archived_by": string | null,"created_at": string,"created_by": string | null,"id": string,"member_id": string,"organization_id": string,"team_id": string
+                  }
+                  Insert: {
+                    "archived_at"?: string | null,"archived_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"member_id": string,"organization_id": string,"team_id": string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"archived_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"member_id"?: string,"organization_id"?: string,"team_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "team_staff_assignments_member_id_organization_id_fkey"
+      columns: ["member_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "organization_members"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "team_staff_assignments_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "team_staff_assignments_team_id_organization_id_fkey"
+      columns: ["team_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "teams"
+      referencedColumns: ["id","organization_id"]
+    }
+                  ]
                 },"teams": {
                   Row: {
                     "age_group": string | null,"archived_at": string | null,"coach_name": string | null,"created_at": string,"created_by": string | null,"gender_division": string | null,"id": string,"name": string,"notes": string | null,"organization_id": string,"season_id": string | null,"status": string,"team_code": string | null,"updated_at": string,"updated_by": string | null
@@ -749,8 +811,19 @@ isOneToOne: false
 "assert_org_permission":
 { Args: { "p_organization_id": string,"p_permission": string }; Returns: undefined
                            },
+"audit_chain_hash_at":
+{ Args: { "p_chain_pos": number,"p_organization_id": string }; Returns: string
+                           },
+"audit_checkpoint_rows":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "first_bad_pos": number,"head_hash": string,"last_chain_pos": number,"ok": boolean,"organization_id": string,"organization_name": string,"organization_slug": string,"rows_checked": number
+            }[]
+                           },
 "audit_context":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"audit_schema_version":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "auth_user_id_by_email":
 { Args: { "p_email": string }; Returns: string
@@ -766,6 +839,15 @@ isOneToOne: false
                            },
 "campaign_transition_allowed":
 { Args: { "p_from": string,"p_to": string }; Returns: boolean
+                           },
+"can_access_household":
+{ Args: { "p_household_id": string }; Returns: boolean
+                           },
+"can_access_player":
+{ Args: { "p_player_id": string }; Returns: boolean
+                           },
+"can_access_team":
+{ Args: { "p_team_id": string }; Returns: boolean
                            },
 "can_assign_role":
 { Args: { "p_organization_id": string,"p_role_key": string }; Returns: boolean
@@ -797,6 +879,9 @@ isOneToOne: false
 "is_platform_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"link_family_guardian":
+{ Args: { "p_guardian_id": string,"p_member_id": string,"p_reason"?: string }; Returns: string
+                           },
 "list_households":
 { Args: { "p_archived"?: boolean,"p_issue"?: string,"p_limit"?: number,"p_offset"?: number,"p_organization_id": string,"p_q"?: string }; Returns: Json
                            },
@@ -806,11 +891,38 @@ isOneToOne: false
 "list_possible_duplicates":
 { Args: { "p_limit"?: number,"p_offset"?: number,"p_organization_id": string }; Returns: Json
                            },
+"my_assigned_team_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"my_family_guardian_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"my_family_household_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"my_family_player_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
 "my_org_permissions":
 { Args: { "p_organization_id": string }; Returns: (string)[]
                            },
 "my_org_roles":
 { Args: { "p_organization_id": string }; Returns: (string)[]
+                           },
+"my_scoped_guardian_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"my_scoped_household_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"my_scoped_player_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"my_scoped_team_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"my_team_player_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
                            },
 "platform_organization_summaries":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -855,6 +967,9 @@ isOneToOne: false
 "set_primary_guardian":
 { Args: { "p_guardian_id": string,"p_organization_id": string,"p_player_id": string }; Returns: undefined
                            },
+"set_team_staff_assignments":
+{ Args: { "p_member_id": string,"p_reason"?: string,"p_team_ids": (string)[] }; Returns: number
+                           },
 "shares_org_with":
 { Args: { "p_user_id": string }; Returns: boolean
                            },
@@ -865,6 +980,9 @@ isOneToOne: false
                            },
 "transition_campaign":
 { Args: { "p_campaign_id": string,"p_reason"?: string,"p_to": string }; Returns: string
+                           },
+"unlink_family_guardian":
+{ Args: { "p_link_id": string,"p_reason"?: string }; Returns: undefined
                            },
 "verify_audit_chain":
 { Args: { "p_organization_id": string }; Returns: {

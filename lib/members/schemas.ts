@@ -19,3 +19,11 @@ export type AddMemberInput = z.input<typeof addMemberSchema>;
 export const setRolesSchema = z.object({ member_id: id, roles: rolesSchema, reason: optionalText(300) });
 export const memberStatusSchema = z.object({ member_id: id, status: z.enum(["active", "suspended"]), reason: optionalText(300) });
 export const invitationSchema = z.object({ invitation_id: id, reason: optionalText(300) });
+
+export const memberTeamsSchema = z.object({
+  member_id: id,
+  team_ids: z.array(id).max(50).transform((ids) => [...new Set(ids)]),
+  reason: optionalText(300),
+});
+export const linkGuardianSchema = z.object({ member_id: id, guardian_id: id, reason: optionalText(300) });
+export const unlinkGuardianSchema = z.object({ link_id: id, reason: optionalText(300) });

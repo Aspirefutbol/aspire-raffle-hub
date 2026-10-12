@@ -7,6 +7,7 @@ import { SearchInput } from "@/components/ui/url-filters";
 import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
 import { listMembers, listPendingInvitations } from "@/lib/members/queries";
 import { canAssignRole, ORGANIZATION_ROLES } from "@/lib/permissions";
+import { listTeamOptions } from "@/lib/roster/queries";
 
 export const metadata: Metadata = { title: "Members" };
 
@@ -20,11 +21,12 @@ export default async function MembersPage({ params, searchParams }: {
   requirePagePermission(ctx, "members.read");
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
-  const [members, invitations] = await Promise.all([
+  const canManage = can(ctx, "members.manage");
+  const [members, invitations, teams] = await Promise.all([
     listMembers(ctx.organization.id, { q: sp.q, page }),
     listPendingInvitations(ctx.organization.id),
+    canManage && can(ctx, "roster.read") ? listTeamOptions(ctx.organization.id) : Promise.resolve([]),
   ]);
-  const canManage = can(ctx, "members.manage");
   const base = `/o/${orgSlug}/settings/members`;
 
   return (
@@ -37,6 +39,7 @@ export default async function MembersPage({ params, searchParams }: {
       <MembersPanel
         orgSlug={orgSlug}
         canManage={canManage}
+        teamOptions={teams.map((t) => ({ value: t.value, label: t.label }))}
         assignableRoles={ORGANIZATION_ROLES.filter((r) => canAssignRole(ctx.permissions, r, ctx.user.isPlatformAdmin))}
         toolbar={<SearchInput placeholder="Search name or email" className="w-full sm:w-72" />}
         members={members.rows.map((m) => ({ ...m, isSelf: m.userId === ctx.user.id }))}

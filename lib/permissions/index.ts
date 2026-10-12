@@ -1,4 +1,4 @@
-// Mirrors the role/permission catalog in supabase/migrations (0100 + 1100).
+// Mirrors the role/permission catalog in supabase/migrations (0100, 1100, 2100).
 // The database is authoritative (RLS + has_org_permission / has_platform_permission);
 // this file lets the server return clear errors and the UI hide what a user can't do.
 // lib/permissions/catalog.test.ts checks it stays consistent.
@@ -9,6 +9,8 @@ export const PERMISSIONS = [
   "members.read",
   "members.manage",
   "roster.read",
+  "roster.read_assigned_teams",
+  "roster.read_own_family",
   "roster.write",
   "roster.import",
   "audit.read",
@@ -59,9 +61,9 @@ export const ROLE_DESCRIPTIONS: Record<OrganizationRole, string> = {
   ORGANIZATION_ADMIN: "Day-to-day operations: roster, members, settings, campaigns, corrections.",
   CAMPAIGN_MANAGER: "Sets up and runs campaigns; reads the roster.",
   FINANCE_ADMIN: "Records turn-ins and reconciles seller funds; exports.",
-  TEAM_CAPTAIN: "Team-level follow-up (team-scoped access arrives with campaigns).",
+  TEAM_CAPTAIN: "Reads only the teams they’re assigned to, those players and their guardians.",
   AUDITOR: "Read-only: roster, members, campaigns, activity log, exports.",
-  PARTICIPANT_FAMILY: "Sells tickets for their player(s) once campaigns launch.",
+  PARTICIPANT_FAMILY: "Reads only their own linked household and player(s); sells tickets once campaigns launch.",
 };
 
 /** Permissions each organization role grants (must match role_permissions). */
@@ -70,12 +72,13 @@ export const ROLE_PERMISSIONS: Record<OrganizationRole, readonly Permission[]> =
   ORGANIZATION_ADMIN: [
     "organization.manage", "members.read", "members.manage", "roster.read", "roster.write", "roster.import", "audit.read",
     "campaigns.read", "campaigns.manage", "tickets.issue", "tickets.void", "reconciliation.manage", "drawing.manage", "exports.run",
+    "roster.read_assigned_teams", "roster.read_own_family",
   ],
   CAMPAIGN_MANAGER: ["roster.read", "members.read", "campaigns.read", "campaigns.manage", "tickets.void", "drawing.manage"],
   FINANCE_ADMIN: ["roster.read", "campaigns.read", "reconciliation.manage", "exports.run"],
-  TEAM_CAPTAIN: [],
+  TEAM_CAPTAIN: ["roster.read_assigned_teams"],
   AUDITOR: ["roster.read", "members.read", "audit.read", "campaigns.read", "exports.run"],
-  PARTICIPANT_FAMILY: ["tickets.issue"],
+  PARTICIPANT_FAMILY: ["tickets.issue", "roster.read_own_family"],
 };
 
 export function isPermission(value: string): value is Permission {

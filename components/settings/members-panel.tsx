@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Mail, Pencil, RotateCcw, Send, ShieldCheck, UserPlus, Users, X } from "lucide-react";
+import { Clock, Home, Mail, Pencil, RotateCcw, Send, ShieldCheck, Shirt, UserPlus, Users, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { formatRelative } from "@/lib/format";
 import { useActionRunner } from "@/lib/hooks/use-action-runner";
 import { addMember, resendInvitation, revokeInvitation, setMemberRoles, setMemberStatus } from "@/lib/members/actions";
 import { ORGANIZATION_ROLES, ROLE_DESCRIPTIONS, ROLE_LABELS, type OrganizationRole } from "@/lib/permissions";
+import { type FamilyLink, MemberFamilySheet, MemberTeamsSheet, type TeamOption } from "./member-scope-sheets";
 
 export interface MemberView {
   memberId: string;
@@ -22,6 +23,8 @@ export interface MemberView {
   status: string;
   roles: OrganizationRole[];
   isSelf: boolean;
+  teams: { id: string; name: string }[];
+  familyLinks: FamilyLink[];
 }
 
 export interface InvitationView {
@@ -78,8 +81,9 @@ function RolePicker({ value, onChange, assignable, idPrefix }: {
   );
 }
 
-export function MembersPanel({ orgSlug, members, invitations, canManage, assignableRoles, toolbar, pagination }: {
+export function MembersPanel({ orgSlug, members, invitations, canManage, assignableRoles, teamOptions, toolbar, pagination }: {
   orgSlug: string;
+  teamOptions: TeamOption[];
   members: MemberView[];
   invitations: InvitationView[];
   canManage: boolean;
@@ -98,6 +102,7 @@ export function MembersPanel({ orgSlug, members, invitations, canManage, assigna
   const [editing, setEditing] = useState<MemberView | null>(null);
   const [editRoles, setEditRoles] = useState<OrganizationRole[]>([]);
   const [reason, setReason] = useState("");
+  const [scope, setScope] = useState<{ kind: "teams" | "family"; member: MemberView } | null>(null);
 
   const openAdd = () => {
     setEmail("");
@@ -178,12 +183,36 @@ export function MembersPanel({ orgSlug, members, invitations, canManage, assigna
                       </Badge>
                     ))}
                   </div>
+                  {(m.roles.includes("TEAM_CAPTAIN") || m.teams.length > 0) && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                      <Shirt aria-hidden className="size-3.5 shrink-0" />
+                      {m.teams.length ? `Teams: ${m.teams.map((t) => t.name).join(", ")}` : "No teams assigned — sees no roster data"}
+                    </p>
+                  )}
+                  {(m.roles.includes("PARTICIPANT_FAMILY") || m.familyLinks.length > 0) && (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                      <Home aria-hidden className="size-3.5 shrink-0" />
+                      {m.familyLinks.length
+                        ? `Family: ${m.familyLinks.map((l) => (l.householdName ? `${l.guardianName} (${l.householdName})` : l.guardianName)).join(", ")}`
+                        : "Not linked to a family — sees no roster data"}
+                    </p>
+                  )}
                 </div>
                 {canManage && (
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     <Button size="sm" variant="ghost" icon={<Pencil className="size-3.5" />} onClick={() => openEdit(m)}>
                       Roles
                     </Button>
+                    {(m.roles.includes("TEAM_CAPTAIN") || m.teams.length > 0) && (
+                      <Button size="sm" variant="ghost" icon={<Shirt className="size-3.5" />} onClick={() => setScope({ kind: "teams", member: m })}>
+                        Teams
+                      </Button>
+                    )}
+                    {(m.roles.includes("PARTICIPANT_FAMILY") || m.familyLinks.length > 0) && (
+                      <Button size="sm" variant="ghost" icon={<Home className="size-3.5" />} onClick={() => setScope({ kind: "family", member: m })}>
+                        Family
+                      </Button>
+                    )}
                     {!m.isSelf && (
                       <ConfirmButton
                         variant="ghost"
@@ -236,6 +265,15 @@ export function MembersPanel({ orgSlug, members, invitations, canManage, assigna
           <RolePicker value={newRoles} onChange={setNewRoles} assignable={assignable} idPrefix="add" />
         </div>
       </Sheet>
+
+      {scope?.kind === "teams" && (
+        <MemberTeamsSheet orgSlug={orgSlug} memberId={scope.member.memberId} memberName={scope.member.name}
+          current={scope.member.teams.map((t) => t.id)} teams={teamOptions} onClose={() => setScope(null)} />
+      )}
+      {scope?.kind === "family" && (
+        <MemberFamilySheet orgSlug={orgSlug} memberId={scope.member.memberId} memberName={scope.member.name}
+          links={members.find((x) => x.memberId === scope.member.memberId)?.familyLinks ?? scope.member.familyLinks} onClose={() => setScope(null)} />
+      )}
 
       {/* Edit roles */}
       <Sheet

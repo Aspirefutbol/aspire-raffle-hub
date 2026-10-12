@@ -13,6 +13,10 @@ const memberRowSchema = z.object({
   full_name: z.string().nullable(),
   email: z.string().nullable(),
   roles: z.array(z.string()),
+  teams: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
+  family_links: z
+    .array(z.object({ link_id: z.string(), guardian_id: z.string(), guardian_name: z.string(), household_name: z.string().nullable() }))
+    .default([]),
 });
 
 export interface MemberRow {
@@ -22,6 +26,8 @@ export interface MemberRow {
   name: string;
   email: string;
   roles: OrganizationRole[];
+  teams: { id: string; name: string }[];
+  familyLinks: { linkId: string; guardianId: string; guardianName: string; householdName: string | null }[];
 }
 
 export async function listMembers(orgId: string, opts: { q?: string; page?: number }) {
@@ -46,6 +52,8 @@ export async function listMembers(orgId: string, opts: { q?: string; page?: numb
       name: r.full_name || r.email || "Unknown user",
       email: r.email ?? "",
       roles: r.roles.filter(isOrganizationRole),
+      teams: r.teams,
+      familyLinks: r.family_links.map((l) => ({ linkId: l.link_id, guardianId: l.guardian_id, guardianName: l.guardian_name, householdName: l.household_name })),
     })),
   };
 }

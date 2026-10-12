@@ -95,3 +95,32 @@ Bugs the new tests caught and that are now fixed:
 | Permissions enforced server-side | **PASS** | e2e: seller/captain API escalation attempts rejected; pgTAP RLS; `orgAction` checks |
 | Hosted Supabase testing passes | **PARTIAL** | Workflow step ready (`supabase test db --db-url`); not run because there are no credentials |
 | Staging deployment operational | **FAIL (blocked)** | Pipeline and config ready; no staging environment exists yet |
+
+---
+
+## Addendum — final Phase 0 items (scoping, platform-admin lockdown, external checkpoints)
+
+Migration `20261013000100_scoped_access.sql`:
+
+- **Team Manager/Captain and Seller/Family scoping**, enforced by RLS:
+  - New permissions `roster.read_assigned_teams` and `roster.read_own_family`.
+  - Scope tables `team_staff_assignments` and `guardian_user_links`. Rows are archived, never deleted, and every change is audited.
+  - Scope helpers `my_scoped_*_ids()` and `can_access_team/player/household()`.
+  - Additional SELECT policies on teams, players, households, guardians, player_guardians, team_memberships and seasons.
+  - Admin UI under Settings → Members: **Teams** and **Family** buttons.
+- **Platform admin lockdown:**
+  - All client grants removed; RLS allows reading your own row only.
+  - A guard trigger refuses any write that carries a user JWT.
+  - Changes are audited in the platform partition.
+  - The procedure is SQL-only: `docs/platform-admins.md`.
+- **External audit checkpoints:**
+  - Service-role-only RPCs `audit_checkpoint_rows`, `audit_chain_hash_at` and `audit_schema_version`.
+  - `npm run audit:checkpoint` (exit codes 0/1/2/3).
+  - The daily GitHub Action uploads a 90-day artifact.
+  - CI runs the script twice to prove continuity.
+  - Details: `docs/audit-checkpoints.md`.
+
+Tests:
+- pgTAP: `scoped_access.test.sql`, 76 assertions.
+- Playwright: API-level scope and the assignment UI.
+- Vitest: 6 tests for the checkpoint core.

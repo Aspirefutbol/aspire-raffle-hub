@@ -2,7 +2,7 @@
   "name": "raffle-hub",
   "version": "0.1.0",
   "private": true,
-  "description": "Raffle Hub — multi-tenant fundraising platform. Phase 1: foundation and master roster.",
+  "description": "Raffle Hub \u2014 multi-tenant fundraising platform. Phase 1: foundation and master roster.",
   "type": "module",
   "engines": {
     "node": ">=20.9"
@@ -20,7 +20,8 @@
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > lib/database/types.gen.ts",
     "seed:dev": "node --env-file=.env.local scripts/seed-dev.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "audit:checkpoint": "node --env-file-if-exists=.env.local scripts/audit-checkpoint.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",

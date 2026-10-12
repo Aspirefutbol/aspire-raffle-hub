@@ -112,7 +112,7 @@ Both require `audit.read`. Labels come from `lib/audit/describe.ts`.
 | Reads and exports | The blueprint requires "log export event" (§23). Add an `EXPORT_*` event when exports ship. |
 | Sign-ins and failed sign-ins | Supabase Auth keeps its own auth audit log. Mirroring it into `audit_events` is a later decision. |
 | ~~"Reason" on sensitive actions~~ | **Done in Phase 0** — see §9. |
-| Tamper evidence against a database superuser | Hash chains (§9) make edits *detectable*, but someone with superuser access could rewrite a whole chain consistently. Mitigation (planned before money workflows go live): publish the chain head (`head_hash`) periodically outside the database (signed export, email to directors, or object storage with retention lock). |
+| Tamper evidence against a database superuser | Hash chains (§9) detect edits. Rewriting a whole chain consistently is detected by comparing it with **external checkpoints** (§10, `docs/audit-checkpoints.md`). Remaining gap: GitHub artifact retention is 90 days, so archive checkpoints for longer-term evidence. |
 
 ## 8. Extending to money and tickets (later phases)
 
@@ -160,3 +160,15 @@ reported at its exact position.
 All ledgers: no client `INSERT/UPDATE/DELETE` grants, `*_append_only` triggers
 reject updates and deletes, `actor_id` stamped from `auth.uid()`. Corrections are
 new compensating events, never edits.
+
+## 10. Scoped access, platform admins, external checkpoints
+
+| Action | Source |
+|---|---|
+| `TEAM_STAFF_CREATED` / `TEAM_STAFF_ARCHIVED` | captain team assignment granted / removed (`set_team_staff_assignments`, reason) |
+| `FAMILY_LINK_CREATED` / `FAMILY_LINK_ARCHIVED` | family account linked to / unlinked from a guardian record (reason) |
+| `PLATFORM_ADMIN_GRANTED` / `PLATFORM_ADMIN_REVOKED` | `platform_admins` insert / delete (SQL only), recorded with `organization_id = NULL`, `db_user`, `db_role`, reason |
+
+The chain head of every partition, including the platform partition, is
+exported outside the database by the audit checkpoint job. See
+`docs/audit-checkpoints.md`.

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { canAssignRole, ORGANIZATION_ROLES, PERMISSIONS, PLATFORM_PERMISSIONS, permissionsForRoles, ROLE_PERMISSIONS } from "./index";
 
-const migrations = ["20261011000100_foundation.sql", "20261012000100_hardening_identity_roles.sql"]
+const migrations = ["20261011000100_foundation.sql", "20261012000100_hardening_identity_roles.sql", "20261013000100_scoped_access.sql"]
   .map((f) => readFileSync(join(__dirname, "../../supabase/migrations", f), "utf8"))
   .join("\n");
 
@@ -21,7 +21,8 @@ describe("permission catalog mirror", () => {
 
   it("multi-role permissions are the union of each role", () => {
     const perms = permissionsForRoles(["TEAM_CAPTAIN", "PARTICIPANT_FAMILY"]);
-    expect([...perms]).toEqual(["tickets.issue"]);
+    expect([...perms].sort()).toEqual(["roster.read_assigned_teams", "roster.read_own_family", "tickets.issue"]);
+    expect(perms.has("roster.read")).toBe(false); // scoped roles never get org-wide roster access
     const dual = permissionsForRoles(["ORGANIZATION_ADMIN", "DIRECTOR"]);
     expect(dual.has("campaigns.activate") && dual.has("roster.write")).toBe(true);
   });

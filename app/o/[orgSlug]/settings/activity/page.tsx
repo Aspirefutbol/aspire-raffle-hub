@@ -53,7 +53,7 @@ export default async function ActivityPage({ params, searchParams }: {
     .order("occurred_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   if (sp.category && sp.category in CATEGORIES) {
-    query = sp.category === "MEMBER" ? query.in("action", ["MEMBER_ADDED", "ROLE_CHANGED", "ROLE_GRANTED", "ROLE_REVOKED", "MEMBER_STATUS_CHANGED"]) : query.like("action", `${sp.category}\\_%`);
+    query = sp.category === "MEMBER" ? query.in("action", ["MEMBER_ADDED", "ROLE_CHANGED", "ROLE_GRANTED", "ROLE_REVOKED", "MEMBER_STATUS_CHANGED", "TEAM_STAFF_CREATED", "TEAM_STAFF_ARCHIVED", "FAMILY_LINK_CREATED", "FAMILY_LINK_ARCHIVED"]) : query.like("action", `${sp.category}\\_%`);
   }
   const { data: events, count, error } = await query;
   if (error) throw new Error(error.message);

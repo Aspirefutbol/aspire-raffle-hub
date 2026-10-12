@@ -146,6 +146,51 @@ test("permissions are enforced server-side for lower roles", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Add member" })).toHaveCount(0);
 });
 
+test("captain and family scope is enforced by the database API", async () => {
+  // coach@aspire.test: captain of U13 Boys, family account for the Smith household.
+  const api = await apiAs("coach@aspire.test");
+  const { data: teams } = await api.from("teams").select("name");
+  expect(teams?.map((t) => t.name)).toEqual(["U13 Boys"]);
+  const { data: players } = await api.from("player_directory").select("first_name, last_name, team_name");
+  expect(players?.length).toBe(3);
+  expect(new Set(players?.map((p) => p.team_name))).toEqual(new Set(["U13 Boys"]));
+  // Diego Garcia plays U16: invisible even though his brother is on U13.
+  const { data: diego } = await api.from("players").select("id").eq("first_name", "Diego");
+  expect(diego).toEqual([]);
+  const { data: org } = await api.from("organizations").select("id").eq("slug", "aspire").single();
+  expect((await api.rpc("roster_overview", { p_organization_id: org!.id })).error?.code).toBe("42501");
+  expect((await api.rpc("set_team_staff_assignments", { p_member_id: "00000000-0000-0000-0000-000000000000", p_team_ids: [] })).error).not.toBeNull();
+  const write = await api.from("players").update({ notes: "x" }).eq("first_name", "Mateo").select("id");
+  expect(write.data ?? []).toEqual([]);
+});
+
+test("admin assigns a captain to a team and links a family account in the UI", async ({ page }) => {
+  await signIn(page, "admin@aspire.test");
+  await page.goto("/o/aspire/settings/members");
+  const row = page.locator("main li").filter({ hasText: "coach@aspire.test" });
+  await expect(row.getByText("Teams: U13 Boys")).toBeVisible();
+
+  await row.getByRole("button", { name: "Teams" }).click();
+  await page.getByLabel("U14 Boys").check();
+  await page.locator("#teams-reason").fill("Helping U14 this season");
+  await page.getByRole("button", { name: "Save teams" }).click();
+  await expect(row.getByText("Teams: U13 Boys, U14 Boys")).toBeVisible();
+
+  await row.getByRole("button", { name: "Family" }).click();
+  await page.getByLabel("Search guardians").fill("Keisha");
+  await page.getByRole("button", { name: "Link", exact: true }).click();
+  await expect(page.getByRole("dialog").getByText("Keisha Williams")).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(row.getByText(/Family: .*Keisha Williams/)).toBeVisible();
+
+  const api = await apiAs("coach@aspire.test");
+  const { data: teams } = await api.from("teams").select("name").order("name");
+  expect(teams?.map((t) => t.name)).toEqual(expect.arrayContaining(["U13 Boys", "U14 Boys"]));
+
+  await page.goto("/o/aspire/settings/activity?category=MEMBER");
+  await expect(page.getByRole("row").filter({ hasText: "Team access granted" }).filter({ hasText: "Helping U14 this season" }).first()).toBeVisible();
+});
+
 test("campaign lifecycle: ticket price locks after activation and every status change is recorded", async () => {
   const api = await apiAs("admin@aspire.test");
   const { data: org } = await api.from("organizations").select("id").eq("slug", "aspire").single();

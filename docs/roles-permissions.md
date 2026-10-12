@@ -51,9 +51,9 @@ changes, reason)`, which accepts only `slug`, `status`, `jurisdiction_profile`,
 | `ORGANIZATION_ADMIN` | Organization Admin | Day-to-day operations: roster, members, settings, campaigns, corrections. |
 | `CAMPAIGN_MANAGER` | Campaign Manager | Sets up and runs campaigns; reads the roster. |
 | `FINANCE_ADMIN` | Finance Admin | Records turn-ins and reconciles seller funds; exports. |
-| `TEAM_CAPTAIN` | Team Manager / Captain | Team-level follow-up (team-scoped grants arrive with campaigns). |
+| `TEAM_CAPTAIN` | Team Manager / Captain | Reads only assigned teams, their current players and those players’ guardians/households. |
 | `AUDITOR` | Auditor (read-only) | Read-only: roster, members, campaigns, activity log, exports. |
-| `PARTICIPANT_FAMILY` | Seller / Family | Sells tickets for their player(s) once campaigns launch. |
+| `PARTICIPANT_FAMILY` | Seller / Family | Reads only their own linked household and player(s); sells tickets once campaigns launch. |
 
 Typical combinations: **Organization Admin + Director** (small clubs), **Director +
 Finance Admin**, **Team Manager + Seller**, **Auditor + Finance Admin**.
@@ -66,6 +66,8 @@ Finance Admin**, **Team Manager + Seller**, **Auditor + Finance Admin**.
 | `members.read` | ✓ | ✓ | ✓ | | | ✓ | |
 | `members.manage` | | ✓ | | | | | |
 | `roster.read` | ✓ | ✓ | ✓ | ✓ | | ✓ | |
+| `roster.read_assigned_teams` (scoped) | | ✓¹ | | | ✓ | | |
+| `roster.read_own_family` (scoped) | | ✓¹ | | | | | ✓ |
 | `roster.write` | | ✓ | | | | | |
 | `roster.import` | | ✓ | | | | | |
 | `audit.read` | ✓ | ✓ | | | | ✓ | |
@@ -79,6 +81,9 @@ Finance Admin**, **Team Manager + Seller**, **Auditor + Finance Admin**.
 | `drawing.manage` *(drawing phase)* | | ✓ | ✓ | | | | |
 | `drawing.certify` *(drawing phase)* | ✓ | | | | | | |
 | `exports.run` | ✓ | ✓ | | ✓ | | ✓ | |
+
+¹ Org Admins already read the whole roster; they hold the scoped permissions so
+the grant rule lets them assign the Captain and Seller/Family roles.
 
 Platform permissions (`platform.organizations`, `platform.admins`) belong only to
 `SUPER_ADMIN`. Separation of duties: activating a campaign, approving adjustments
@@ -118,5 +123,32 @@ migrations (`catalog.test.ts`) and against the live database (`catalog.db.test.t
 3. RLS policies on new tables use `has_org_permission(organization_id, '<key>')`.
 4. `npm test` fails until the TS mirror and the database agree.
 
-Scoped roles (captain → own team, family → own household) will add policies that
-join through `team_memberships` / `guardians.profile_id` without changing this model.
+## Scoped roles (database-enforced)
+
+| | Team Manager / Captain | Seller / Family |
+|---|---|---|
+| Permission | `roster.read_assigned_teams` | `roster.read_own_family` |
+| Scope table | `team_staff_assignments` (member ↔ team) | `guardian_user_links` (member ↔ the guardian record they are) |
+| Teams | assigned teams only | the current team of their own player(s) |
+| Players | players currently on assigned teams | players in their household, or linked to their guardian record |
+| Households | households of those players | their own household |
+| Guardians | guardians linked to those players | their own record + their household’s guardians |
+| Team history | current memberships only | their own players’ history |
+| Writes | none | none |
+
+- Scope only applies while the member is **active**, the organization is
+  **active**, the member holds the scoped permission, and the assignment/link is
+  not archived. Removing any of these removes access immediately.
+- Enforced by additional permissive RLS SELECT policies built on
+  `my_scoped_team_ids()`, `my_scoped_player_ids()`, `my_scoped_household_ids()`,
+  `my_scoped_guardian_ids()` (SECURITY DEFINER, keyed on `auth.uid()`). Boolean
+  helpers: `can_access_team(id)`, `can_access_player(id)`, `can_access_household(id)`.
+- Org-wide RPCs (`roster_overview`, `list_households`, …) still require
+  `roster.read`, so scoped users get `42501` from them.
+- Assignments are changed only through `set_team_staff_assignments`,
+  `link_family_guardian` and `unlink_family_guardian` (`members.manage`, reason
+  recorded, audited as `TEAM_STAFF_*` / `FAMILY_LINK_*`, archived and never deleted).
+- **Admin UI:** Settings → Members. A member with the Captain role shows a
+  **Teams** button; one with the Seller/Family role shows a **Family** button.
+
+Platform Admin creation is SQL-only; see `docs/platform-admins.md`.

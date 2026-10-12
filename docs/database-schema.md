@@ -221,12 +221,17 @@ erDiagram
 - **`permissions`** — catalog of permission keys (`roster.write`, …) with a
   `scope`; a trigger keeps platform permissions off organization roles.
 - **`role_permissions`** — which permissions each organization role grants.
-- **`platform_admins`** — users holding SUPER_ADMIN. Service role only.
+- **`platform_admins`** — users holding SUPER_ADMIN. Changed only with
+  privileged database access (no end-user JWT; guard trigger), audited. See `docs/platform-admins.md`.
 - **`organization_members`** — user ↔ organization membership with `status`
   (`active`, `suspended`, `removed`).
 - **`organization_member_roles`** — one row per role a member holds (multi-role).
   Composite FK to `roles(key, scope)` forbids platform roles; `granted_by`/`granted_at`
   recorded. Deferred triggers keep at least one active ORGANIZATION_ADMIN.
+- **`team_staff_assignments`** — Team Manager/Captain ↔ team (read scope).
+  One active row per member+team; removal archives the row.
+- **`guardian_user_links`** — Seller/Family account ↔ the guardian record it is
+  (read scope: that household and its players). One active account per guardian.
 - **`organization_invitations`** — pending access for an email that has no account
   yet: normalized email, roles, `status` (`pending`, `accepted`, `revoked`,
   `expired`), expiry, send count. One pending invitation per org + email.
@@ -310,6 +315,9 @@ erDiagram
 | `platform_update_organization(org, changes, reason)` | SECURITY DEFINER | Protected fields; platform admins only |
 | `add_organization_member`, `set_member_roles`, `set_member_status`, `revoke_invitation`, `accept_my_invitations` | transactional | Membership changes with reasons |
 | `auth_user_id_by_email(email)` | `service_role` only | Exact, case-insensitive; errors on ambiguity |
+| `my_scoped_*_ids()`, `can_access_team/player/household(id)` | SECURITY DEFINER, stable | Captain/family scope used by RLS |
+| `set_team_staff_assignments`, `link_family_guardian`, `unlink_family_guardian` | SECURITY DEFINER | `members.manage`; scope management |
+| `audit_checkpoint_rows()`, `audit_chain_hash_at(org, pos)`, `audit_schema_version()` | `service_role` only | External audit checkpoints |
 | `transition_campaign(campaign, to, reason)`, `campaign_readiness(campaign)` | SECURITY DEFINER | Lifecycle + ledger |
 | `verify_audit_chain(org)`, `verify_campaign_ledgers(campaign)` | SECURITY DEFINER, stable | Tamper detection |
 | `list_households`, `list_org_members`, `list_possible_duplicates`, `team_player_counts`, `platform_organization_summaries` | stable | SQL-side filtering, counts, pagination |
