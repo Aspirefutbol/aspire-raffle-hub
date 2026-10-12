@@ -11,13 +11,15 @@ export const campaignFieldsSchema = z.object({
   season_id: id.nullish().transform((v) => v ?? null),
   ticket_price_cents: z.number().int().min(1).max(100_000).nullish().transform((v) => v ?? null),
   goal_amount_cents: cents,
+  player_goal_default_cents: cents,
+  team_goal_default_cents: cents,
   family_target_tickets: z.number().int().min(0).max(10_000).nullish().transform((v) => v ?? null),
   default_allocation: z.number().int().min(0).max(10_000).nullish().transform((v) => v ?? null),
   ticket_prefix: z
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z0-9]{1,6}$/, "Use 1–6 letters or digits.")
+    .regex(/^[A-Z0-9]{2,8}$/, "Use 2–8 letters or digits.")
     .nullish()
     .transform((v) => v ?? null),
   starts_at: optionalTimestamp,
