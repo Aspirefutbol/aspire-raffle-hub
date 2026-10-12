@@ -1,0 +1,56 @@
+{
+  "name": "raffle-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Raffle Hub \u2014 multi-tenant fundraising platform. Phase 1: foundation and master roster.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > lib/database/types.gen.ts",
+    "seed:dev": "node --env-file=.env.local scripts/seed-dev.mjs",
+    "test:e2e": "playwright test",
+    "audit:checkpoint": "node --env-file-if-exists=.env.local scripts/audit-checkpoint.mjs"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "5.2.2",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.2",
+    "lucide-react": "1.48.0",
+    "next": "16.3.6",
+    "papaparse": "5.7.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-hook-form": "7.62.0",
+    "server-only": "0.0.1",
+    "sonner": "2.0.7",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.18.6",
+    "@types/papaparse": "5.3.16",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.6",
+    "supabase": "2.118.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "8.3.1",
+    "vitest": "5.0.2",
+    "wait-on": "^8.0.5"
+  }
+}
