@@ -55,6 +55,8 @@ export const recentCampaignSaleSchema = z.object({
   ticket_numbers: z.array(z.string()),
   reversed: z.boolean(),
   can_reverse: z.boolean(),
+  corrects_sale_id: id.nullish().transform((value) => value ?? null),
+  replacement_sale_id: id.nullish().transform((value) => value ?? null),
 });
 export const campaignProgressSchema = fundraisingCampaignSchema.extend({
   participants: z.array(campaignParticipantProgressSchema),

@@ -69,6 +69,23 @@ describe("bounded fundraising projections", () => {
     expect(parsed).not.toHaveProperty("buyer_name");
     expect(parsed).not.toHaveProperty("buyer_email");
     expect(parsed).not.toHaveProperty("notes");
+    expect(parsed.corrects_sale_id).toBeNull();
+    expect(parsed.replacement_sale_id).toBeNull();
+  });
+
+  it("retains authorized correction associations while stripping private buyer data", () => {
+    const original = recentCampaignSaleSchema.parse({ id: PLAYER, participant_id: PLAYER, player_name: "Player A", quantity: 2, amount_cents: 1000,
+      payment_method: "cash", sold_at: "2026-10-12T12:00:00Z", ticket_numbers: ["AB000001", "AB000002"], reversed: true, can_reverse: false,
+      corrects_sale_id: null, replacement_sale_id: CAMPAIGN });
+    expect(original.replacement_sale_id).toBe(CAMPAIGN);
+    const replacement = recentCampaignSaleSchema.parse({ ...original, id: CAMPAIGN, reversed: false,
+      corrects_sale_id: PLAYER, replacement_sale_id: null, buyer_name: "Private Buyer", buyer_phone: "555-555-5555", notes: "Private correction note" });
+    expect(replacement.corrects_sale_id).toBe(PLAYER);
+    expect(replacement.replacement_sale_id).toBeNull();
+    expect(replacement).not.toHaveProperty("buyer_name");
+    expect(replacement).not.toHaveProperty("buyer_phone");
+    expect(replacement).not.toHaveProperty("notes");
+    expect(recentCampaignSaleSchema.safeParse({ ...replacement, corrects_sale_id: "invalid-id" }).success).toBe(false);
   });
 
   it("rejects totals that cannot be represented as exact cents", () => {

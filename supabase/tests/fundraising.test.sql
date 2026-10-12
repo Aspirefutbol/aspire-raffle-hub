@@ -4,7 +4,7 @@
 -- is never relied upon for authorization. All fixture state rolls back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(267);
+select plan(274);
 
 create function pg_temp.id(p_key text) returns uuid language sql immutable as $$
   select md5('raffle-pgtap-fundraising:' || p_key)::uuid;
@@ -714,6 +714,41 @@ select lives_ok($$
     pg_temp.id('org-a'), pg_temp.id('campaign-alt'), pg_temp.participant('alt', 'a1'),
     'alt-sale', 'Buyer second campaign', 1, 500, 'cash'))
 $$, 'same player can independently sell assigned stock in another campaign');
+
+-- Correction identifiers are projected only from the caller's visible sales.
+select pg_temp.as_user('admin');
+select is((select item ->> 'replacement_sale_id' from jsonb_array_elements(
+  public.campaign_progress(pg_temp.id('org-a'), pg_temp.id('campaign-main')) -> 'recent_sales') item
+  where item ->> 'id' = pg_temp.sale('family-first')::text), pg_temp.sale('replacement')::text,
+  'admin original sale projection identifies its committed replacement');
+select is((select item ->> 'corrects_sale_id' from jsonb_array_elements(
+  public.campaign_progress(pg_temp.id('org-a'), pg_temp.id('campaign-main')) -> 'recent_sales') item
+  where item ->> 'id' = pg_temp.sale('replacement')::text), pg_temp.sale('family-first')::text,
+  'admin replacement sale projection identifies its immutable original');
+select pg_temp.as_user('family-a');
+select is((select item ->> 'replacement_sale_id' from jsonb_array_elements(
+  public.campaign_progress(pg_temp.id('org-a'), pg_temp.id('campaign-main'), 'family') -> 'recent_sales') item
+  where item ->> 'id' = pg_temp.sale('family-first')::text), pg_temp.sale('replacement')::text,
+  'family projection retains the association for its own corrected sale');
+select ok(not exists (select 1 from jsonb_array_elements(
+  public.campaign_progress(pg_temp.id('org-a'), pg_temp.id('campaign-main'), 'family') -> 'recent_sales') item
+  where (item ->> 'participant_id')::uuid not in (pg_temp.participant('main', 'a1'), pg_temp.participant('main', 'b2'))),
+  'correction associations do not add unrelated participants to the family sale projection');
+select pg_temp.as_user('captain');
+select is((select item ->> 'replacement_sale_id' from jsonb_array_elements(
+  public.campaign_progress(pg_temp.id('org-a'), pg_temp.id('campaign-main'), 'team') -> 'recent_sales') item
+  where item ->> 'id' = pg_temp.sale('family-first')::text), pg_temp.sale('replacement')::text,
+  'captain projection retains correction association for its assigned team');
+select is(jsonb_array_length(public.campaign_progress(pg_temp.id('org-a'), pg_temp.id('campaign-main'),
+  'team', pg_temp.id('team-b')) -> 'recent_sales'), 0,
+  'correction association cannot make an unrelated team filter visible to the captain');
+select pg_temp.as_user('dual');
+select ok(not exists (select 1 from jsonb_array_elements(
+  public.campaign_progress(pg_temp.id('org-a'), pg_temp.id('campaign-main'), 'family') -> 'recent_sales') item
+  where item ->> 'id' in (pg_temp.sale('family-first')::text, pg_temp.sale('replacement')::text)
+    or item ->> 'corrects_sale_id' = pg_temp.sale('family-first')::text
+    or item ->> 'replacement_sale_id' = pg_temp.sale('replacement')::text),
+  'captain plus family cannot obtain teammate correction identifiers through family projection');
 
 reset role;
 select pg_temp.as_db_admin();
