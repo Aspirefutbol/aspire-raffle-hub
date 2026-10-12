@@ -33,7 +33,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await page.goto("/o/aspire/campaigns");
   await page.getByRole("button", { name: "New campaign", exact: true }).click();
   const draft = page.getByRole("dialog", { name: "New raffle campaign", exact: true });
-  await draft.getByLabel("Campaign name", { exact: true }).fill(campaignName);
+  await draft.getByRole("textbox", { name: "Campaign name", exact: true }).fill(campaignName);
   await draft.getByLabel("Ticket price ($)", { exact: true }).fill("5.00");
   await draft.getByLabel("Campaign goal ($)", { exact: true }).fill("1000.00");
   await draft.getByLabel("Default player goal ($)", { exact: true }).fill("100.00");
@@ -75,7 +75,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await page.getByRole("button", { name: "Mark ready", exact: true }).click();
   await page.getByRole("button", { name: "Activate campaign", exact: true }).click();
   const activation = page.getByRole("dialog", { name: "Activate campaign", exact: true });
-  await activation.getByLabel("Reason", { exact: true }).fill("Board approved the desktop raffle pilot");
+  await activation.getByRole("textbox", { name: "Reason", exact: true }).fill("Board approved the desktop raffle pilot");
   await activation.getByRole("button", { name: "Activate campaign", exact: true }).click();
   await expect(activation).not.toBeVisible();
   await page.getByRole("button", { name: "Prepare inventory", exact: true }).click();
@@ -85,7 +85,10 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await page.getByRole("button", { name: "Edit campaign", exact: true }).click();
   const edit = page.getByRole("dialog", { name: "Edit raffle campaign", exact: true });
   for (const label of ["Campaign name", "Ticket price ($)", "Ticket number prefix", "Sales start", "Drawing date"]) {
-    await expect(edit.getByLabel(label, { exact: true })).toBeDisabled();
+    const field = label === "Campaign name"
+      ? edit.getByRole("textbox", { name: label, exact: true })
+      : edit.getByLabel(label, { exact: true });
+    await expect(field).toBeDisabled();
   }
   await expect(edit.getByLabel("Sales close", { exact: true })).toBeEditable();
   await edit.getByLabel("Description", { exact: true }).fill("Active raffle description updated without changing locked disclosures");
@@ -135,9 +138,9 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
     await playerCard.getByRole("button", { name: "Record sale", exact: true }).click();
     const sale = family.getByRole("dialog", { name: "Record sale", exact: true });
-    await sale.getByLabel("Buyer name", { exact: true }).fill("Desktop cash buyer");
-    await sale.getByLabel("Quantity", { exact: true }).fill("2");
-    await expect(sale.getByLabel("Amount collected ($)", { exact: true })).toHaveValue("10.00");
+    await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Desktop cash buyer");
+    await sale.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("2");
+    await expect(sale.getByRole("textbox", { name: "Amount collected ($)", exact: true })).toHaveValue("10.00");
     await sale.getByLabel("Payment method", { exact: true }).selectOption("cash");
     await sale.getByRole("button", { name: "Record sale", exact: true }).click();
     const receipt = family.getByRole("dialog", { name: "Tickets issued", exact: true });
@@ -175,7 +178,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   const originalRow = page.getByTestId(`campaign-sale-${originalSale.id}`);
   await originalRow.getByRole("button", { name: "Reverse sale", exact: true }).click();
   const reversal = page.getByRole("dialog", { name: "Reverse sale", exact: true });
-  await reversal.getByLabel("Reason for reversal", { exact: true }).fill("Buyer details corrected with director approval");
+  await reversal.getByRole("textbox", { name: "Reason for reversal", exact: true }).fill("Buyer details corrected with director approval");
   await reversal.getByRole("button", { name: "Confirm reversal", exact: true }).click();
   await expect(reversal).not.toBeVisible();
   await expectStat(page, "Total raised", "$0.00");
@@ -185,8 +188,8 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
 
   await originalRow.getByRole("button", { name: "Record correction", exact: true }).click();
   const correction = page.getByRole("dialog", { name: "Record sale", exact: true });
-  await correction.getByLabel("Buyer name", { exact: true }).fill("Corrected desktop cash buyer");
-  await correction.getByLabel("Quantity", { exact: true }).fill("2");
+  await correction.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Corrected desktop cash buyer");
+  await correction.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("2");
   await correction.getByLabel("Payment method", { exact: true }).selectOption("cash");
   await correction.getByRole("button", { name: "Record sale", exact: true }).click();
   const correctionReceipt = page.getByRole("dialog", { name: "Tickets issued", exact: true });

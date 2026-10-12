@@ -12,6 +12,8 @@ async function localTimestamp(page: Page, milliseconds: number) {
 }
 
 async function expectPhoneLayout(page: Page) {
+  expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches && navigator.maxTouchPoints > 0),
+    "Phone input emulation must remain active throughout the workflow").toBe(true);
   const smallControls = await page.evaluate(() => {
     const failures: string[] = [];
     const selector = "main button, main input:not([type=hidden]):not([type=checkbox]):not([type=radio]), main select, header button, nav a, nav button, dialog[open] button, dialog[open] input:not([type=hidden]), dialog[open] select, dialog[open] textarea";
@@ -97,13 +99,15 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expectPhoneLayout(page);
   await card.getByRole("button", { name: "Record sale", exact: true }).click();
   const sale = page.getByRole("dialog", { name: "Record sale", exact: true });
-  await sale.getByLabel("Buyer name", { exact: true }).fill("Phone cash buyer");
-  await sale.getByLabel("Quantity", { exact: true }).fill("2");
-  await expect(sale.getByLabel("Amount collected ($)", { exact: true })).toHaveValue("10.00");
+  await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Phone cash buyer");
+  await sale.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("2");
+  await expect(sale.getByRole("textbox", { name: "Amount collected ($)", exact: true })).toHaveValue("10.00");
   await sale.getByLabel("Payment method", { exact: true }).selectOption("cash");
   await sale.getByLabel("Sale timestamp", { exact: true }).fill(await localTimestamp(page, now - 2 * day));
   await expectPhoneLayout(page);
-  await page.screenshot({ path: testInfo.outputPath("phone-sale-form.png"), fullPage: true });
+  // Full-page capture with a native dialog resets Chromium's mobile input
+  // emulation. Capture the actual phone viewport and retain touch assertions.
+  await page.screenshot({ path: testInfo.outputPath("phone-sale-form.png"), fullPage: false });
   await sale.getByRole("button", { name: "Record sale", exact: true }).click();
   await expect(sale.getByRole("alert")).toContainText("Sale timestamp must fall within the campaign sales window");
   await expect(sale.getByRole("button", { name: "Edit details", exact: true })).toBeVisible();
@@ -119,8 +123,8 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   expect(rejectedMoney.error).toBeNull();
   expect(rejectedMoney.count).toBe(0);
   await sale.getByRole("button", { name: "Edit details", exact: true }).click();
-  await expect(sale.getByLabel("Buyer name", { exact: true })).toBeEditable();
-  await expect(sale.getByLabel("Buyer name", { exact: true })).toHaveValue("Phone cash buyer");
+  await expect(sale.getByRole("textbox", { name: "Buyer name", exact: true })).toBeEditable();
+  await expect(sale.getByRole("textbox", { name: "Buyer name", exact: true })).toHaveValue("Phone cash buyer");
   await expect(sale.getByLabel("Sale timestamp", { exact: true })).toBeEditable();
   await sale.getByLabel("Sale timestamp", { exact: true }).fill(await localTimestamp(page, Date.now()));
   await sale.getByRole("button", { name: "Record sale", exact: true }).click();
@@ -128,13 +132,13 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(receipt.getByRole("listitem")).toHaveText(expectedNumbers);
   await expect(receipt.getByText("2 tickets issued for $10.00. Payment was recorded offline.", { exact: true })).toBeVisible();
   await expectPhoneLayout(page);
-  await page.screenshot({ path: testInfo.outputPath("phone-ticket-receipt.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("phone-ticket-receipt.png"), fullPage: false });
   await receipt.getByRole("button", { name: "Done", exact: true }).click();
   await expect(card.getByText("Amount raised", { exact: true }).locator("..").getByText("$10.00", { exact: true })).toBeVisible();
   await expect(card.getByText("Tickets sold", { exact: true }).locator("..").getByText("2", { exact: true })).toBeVisible();
   await expect(card.getByText("2 tickets available", { exact: true })).toBeVisible();
   await expectPhoneLayout(page);
-  await page.screenshot({ path: testInfo.outputPath("phone-family-progress.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("phone-family-progress.png"), fullPage: false });
   const final = await progress();
   expect(final.totals).toEqual({ raised_cents: 1000, tickets_sold: 2, player_count: 3, team_count: 1 });
   expect(final.recent_sales).toHaveLength(1);
@@ -146,5 +150,5 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(page.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Record sale", exact: true })).toHaveCount(0);
   await expectPhoneLayout(page);
-  await page.screenshot({ path: testInfo.outputPath("phone-team-progress.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("phone-team-progress.png"), fullPage: false });
 });

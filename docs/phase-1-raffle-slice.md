@@ -79,5 +79,37 @@ and the complete operator rehearsal remain required launch work. See
 Shared Campaign Boost Engine. Do not implement other fundraiser types before
 the raffle pilot is operational.
 
-Validation results are recorded after the complete regression run; local
-validation does not establish hosted deployment or production readiness.
+## Verified regression results
+
+Validated against a freshly reset and seeded local Supabase stack on October 12,
+2026. All 15 migrations applied; generated TypeScript types matched exactly.
+
+| Check | Result |
+|---|---|
+| Lint and typecheck | Passed. |
+| Unit tests, including live permission catalog parity | 85 passed across 14 files; original 69 retained. |
+| pgTAP | 471 passed: original 197 plus 274 fundraising assertions. |
+| Concurrent transactions | Four groups passed with real overlapping sessions: same-key issuance, stock contention, reversal, and closure; scoped totals and all ledger/audit chains verified. |
+| Production build | Passed with Next 16.3.8. |
+| Browser acceptance | 21 passed, zero skipped/flaky: original 19 plus desktop raffle and 360px family acceptance. Real Mailpit invitation acceptance ran. |
+| External audit checkpoints | Before/after verification and continuity passed after all browser mutations. |
+
+The desktop test creates the campaign through the UI, enrolls U13 Boys, and
+proves that the combined captain/family account sees only Liam Smith in family
+mode while team mode includes the team roster. It records a $10 cash sale,
+verifies exact issued ticket numbers and all totals, then reverses and replaces
+the sale without altering original money/ticket facts. The phone test also proves
+safe editing after a definite timestamp rejection, zero partial writes, exact
+receipts, preserved touch targets, and no horizontal overflow.
+
+Concurrency fixtures use the seeded accounts in separate organizations. Reset
+and seed again before the full browser suite; otherwise the original tests'
+exact account-scope expectations include those extra fixtures. Phone screenshots
+use viewport capture: Chromium full-page capture can reset touch emulation.
+Every touch/input and overflow assertion remains enabled.
+
+Screenshots are generated under `test-results/` for prepared/admin correction
+history, family progress and ticket receipts, team progress, and the phone sale
+form. Local validation does not establish hosted deployment or production
+readiness. Phase 0 remains green, and the residual `braces@3.0.3` development
+advisory remains accepted/monitored in [dependency security](./dependency-security.md).

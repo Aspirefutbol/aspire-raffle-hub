@@ -14,8 +14,12 @@ Locally, the same checks:
 npx supabase start && npx supabase db reset && npx supabase test db
 ./scripts/ci-env.sh && npm run seed:dev
 set -a && . ./.env.local && set +a
-npm run check && npm run build
+npm run check
 npm run test:concurrency
+npx supabase db reset --local
+./scripts/ci-env.sh && npm run seed:dev
+set -a && . ./.env.local && set +a
+npm run build
 npm run start &  E2E_BASE_URL=http://localhost:3000 npm run test:e2e
 ```
 
@@ -23,8 +27,9 @@ npm run start &  E2E_BASE_URL=http://localhost:3000 npm run test:e2e
 sessions and real PostgreSQL lock barriers to verify sale retries, stock
 contention, reversals, and closure, including scoped totals and ledger hashes.
 It leaves isolated local fixture organizations for the next reset and does not
-change the normal seed roster. Run the complete E2E suite after a fresh reset
-and seed; do not skip Mailpit invitation acceptance.
+change the normal seed roster. These organizations share the seeded users, so
+reset and seed again before E2E to preserve its exact account-scope expectations.
+Do not skip Mailpit invitation acceptance.
 
 The first raffle slice is a development acceptance gate. Money custody,
 reconciliation, a frozen drawing export, and an operator rehearsal are required
