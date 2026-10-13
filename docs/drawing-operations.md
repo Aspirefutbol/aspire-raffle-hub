@@ -81,9 +81,12 @@ Verify a downloaded JSON file with a supported Node version:
 node scripts/verify-drawing-export.mjs /path/to/manifest.json RETAINED_FREEZE_SHA256
 ```
 
-The CSV file checksum and canonical manifest hash are different values. Export
-generation records the actual file checksum and caller; it does not claim the
-recipient opened or received the file. Downloads use the current user's session,
+The CSV file checksum and canonical manifest hash are different values. The
+application computes its generated file checksum; the SQL export event records
+that checksum as an authenticated exporter's assertion. Direct API callers can
+report a checksum, so this event never claims independently verified file
+generation or browser receipt. The frozen manifest itself remains verified
+against its original audit receipt. Downloads use the current user's session,
 complete pagination, private/no-store responses and an explicit POST.
 
 Database verification also checks original trigger-written snapshot/result

@@ -421,7 +421,10 @@ begin
   select * into s from public.drawing_snapshots where id=p_snapshot_id and organization_id=p_organization_id;
   if not found then raise exception 'Drawing snapshot not found.' using errcode='no_data_found'; end if;
   if p_offset is null or p_offset<0 or p_limit is null or p_limit not between 1 and 1000 then raise exception 'Use an offset of zero or more and a page size of 1–1000.' using errcode='check_violation'; end if;
-  if not (public.drawing_integrity(s.id)->>'ok')::boolean then raise exception 'Drawing snapshot verification failed.' using errcode='check_violation'; end if;
+  -- Verify the population once at pagination start. Subsequent immutable pages
+  -- remain scoped/bounded; the application and export receipt verify again at
+  -- completion instead of rehashing all entries and ledgers for every page.
+  if p_offset=0 and not (public.drawing_integrity(s.id)->>'ok')::boolean then raise exception 'Drawing snapshot verification failed.' using errcode='check_violation'; end if;
   select coalesce(jsonb_agg(to_jsonb(e)||jsonb_build_object('entry_payload_canonical',(to_jsonb(e)-'entry_hash')::text) order by e.sequence_number,e.ticket_id),'[]'::jsonb) into entries
     from (select * from public.drawing_snapshot_entries where snapshot_id=s.id order by sequence_number,ticket_id offset p_offset limit p_limit) e;
   return jsonb_build_object('snapshot',to_jsonb(s)||jsonb_build_object('manifest_canonical',s.manifest::text),'entries',entries,'offset',p_offset,'limit',p_limit,'total',s.ticket_count,'has_more',p_offset::bigint+p_limit::bigint<s.ticket_count,
@@ -438,9 +441,9 @@ begin
   if not found then raise exception 'Drawing snapshot not found.' using errcode='no_data_found'; end if;
   c:=public.drawing_lock_campaign(p_organization_id,s.campaign_id,'exports.run');
   if not public.drawing_has_export_authority(p_organization_id) then raise exception 'You do not have permission to export drawing buyers.' using errcode='insufficient_privilege'; end if;
-  perform public.drawing_validate_request(p_idempotency_key,'Drawing export generated');
+  perform public.drawing_validate_request(p_idempotency_key,'Drawing export checksum reported');
   if p_format is null or p_format not in ('csv','json') or p_export_sha256 is null or p_export_sha256 !~ '^[a-f0-9]{64}$' then
-    raise exception 'An approved export format and generated-file SHA-256 are required.' using errcode='check_violation'; end if;
+    raise exception 'An approved export format and reported file SHA-256 are required.' using errcode='check_violation'; end if;
   fingerprint:=encode(extensions.digest(jsonb_build_object('snapshot_id',s.id,'format',p_format,'export_sha256',p_export_sha256)::text,'sha256'),'hex');
   perform pg_advisory_xact_lock(hashtextextended('drawing-export:'||p_organization_id::text||':'||auth.uid()::text||':'||btrim(p_idempotency_key),0));
   select * into e from public.drawing_events where organization_id=p_organization_id and created_by=auth.uid() and event_type='EXPORTED' and idempotency_key=btrim(p_idempotency_key);
@@ -449,10 +452,12 @@ begin
     return jsonb_build_object('event_id',e.id,'snapshot_id',e.snapshot_id,'replayed',true);
   end if;
   if not (public.drawing_integrity(s.id)->>'ok')::boolean then raise exception 'Drawing snapshot verification failed.' using errcode='check_violation'; end if;
-  perform set_config('raffle_hub.drawing_write',c.id::text,true); perform public.set_audit_reason('Drawing export generated');
+  perform set_config('raffle_hub.drawing_write',c.id::text,true); perform public.set_audit_reason('Drawing export checksum reported');
   insert into public.drawing_events(organization_id,campaign_id,snapshot_id,event_type,reason,idempotency_key,request_fingerprint,metadata)
-    values(p_organization_id,c.id,s.id,'EXPORTED','Drawing export generated',btrim(p_idempotency_key),fingerprint,
-      jsonb_build_object('format',p_format,'export_sha256',p_export_sha256,'manifest_hash',s.manifest_hash,'historical',public.drawing_current_snapshot(c.id) is distinct from s.id,'delivery_confirmed',false)) returning * into e;
+    values(p_organization_id,c.id,s.id,'EXPORTED','Drawing export checksum reported',btrim(p_idempotency_key),fingerprint,
+      jsonb_build_object('format',p_format,'export_sha256',p_export_sha256,'manifest_hash',s.manifest_hash,
+        'historical',public.drawing_current_snapshot(c.id) is distinct from s.id,'delivery_confirmed',false,
+        'checksum_source','authenticated_exporter','file_generation_verified',false,'snapshot_verified',true)) returning * into e;
   perform set_config('raffle_hub.drawing_write',prior_write,true); perform public.set_audit_reason(prior_reason);
   return jsonb_build_object('event_id',e.id,'snapshot_id',s.id,'replayed',false);
 end; $$;

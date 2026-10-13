@@ -68,6 +68,7 @@ export async function transitionCampaign(orgSlug: string, input: unknown): Promi
     if (!current || !isCampaignStatus(current.status)) return fail("Campaign not found.");
     if (!canTransition(current.status, to)) return fail(`A campaign can’t move from ${current.status} to ${to}.`);
     if (!can(ctx, transitionPermission(current.status, to))) return fail("You don't have permission to do that.");
+    if (to === "DRAWN" && !can(ctx, "drawing.certify")) return fail("Drawing certification permission is required to mark this campaign drawn.");
     if (transitionNeedsReason(current.status, to) && (!reason || reason.length < 3)) {
       return fail("A reason is required for this change.", { reason: "Give a short reason (recorded in the audit log)." });
     }

@@ -3,7 +3,7 @@
 -- Known fixture IDs never act as authorization. Every fact rolls back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(216);
+select plan(218);
 
 create function pg_temp.id(p_key text) returns uuid language sql immutable as $$
   select md5('raffle-pgtap-drawing:' || p_key)::uuid;
@@ -372,7 +372,13 @@ select throws_ok($$ select public.export_drawing_snapshot(pg_temp.id('org-a'),pg
   '23514', null, 'export receipt requires an exact SHA256 digest');
 select is((select (metadata->>'delivery_confirmed')::boolean from public.drawing_events
   where id=(pg_temp.result('export-receipt')->>'event_id')::uuid), false,
-  'generation receipt does not claim browser delivery or download confirmation');
+  'reported export receipt does not claim browser delivery or download confirmation');
+select is((select metadata->>'checksum_source' from public.drawing_events
+  where id=(pg_temp.result('export-receipt')->>'event_id')::uuid), 'authenticated_exporter',
+  'direct RPC file checksums are attributed to the exporter rather than trusted server generation');
+select is((select (metadata->>'file_generation_verified')::boolean from public.drawing_events
+  where id=(pg_temp.result('export-receipt')->>'event_id')::uuid), false,
+  'an arbitrary caller-reported checksum cannot fabricate verified file-generation evidence');
 select pg_temp.as_user('finance');
 insert into pg_temp.drawing_results values ('finance-export',public.export_drawing_snapshot(
   pg_temp.id('org-a'),pg_temp.snapshot('freeze-one'),'export-key','json',repeat('a',64)));
