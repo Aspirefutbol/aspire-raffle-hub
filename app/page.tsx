@@ -8,7 +8,8 @@ export default async function Home() {
   await acceptPendingInvitations();
   const orgs = await getMyOrganizations();
   const target = orgs.find((o) => o.id === user.lastOrganizationId) ?? orgs[0];
-  if (target) redirect(`/o/${target.slug}/dashboard`);
+  // The organization entry point selects a home using this member's permissions.
+  if (target) redirect(`/o/${target.slug}`);
   if (user.isPlatformAdmin) redirect("/platform");
   redirect("/no-access");
 }
