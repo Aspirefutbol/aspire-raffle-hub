@@ -22,6 +22,7 @@
     "seed:dev": "node --env-file=.env.local scripts/seed-dev.mjs",
     "test:e2e": "playwright test",
     "test:concurrency": "node --env-file=.env.local scripts/test-fundraising-concurrency.mjs",
+    "test:drawing-concurrency": "node --env-file=.env.local scripts/test-drawing-concurrency.mjs",
     "audit:checkpoint": "node --env-file-if-exists=.env.local scripts/audit-checkpoint.mjs"
   },
   "dependencies": {

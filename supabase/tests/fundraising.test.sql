@@ -134,10 +134,14 @@ from unnest(array['family-a', 'shared-family', 'manager-family', 'family-b', 'du
 
 insert into public.campaigns (id, organization_id, name, ticket_price_cents, ticket_prefix,
   starts_at, sales_close_at, draw_at, default_allocation, goal_amount_cents,
-  player_goal_default_cents, team_goal_default_cents)
+  player_goal_default_cents, team_goal_default_cents, rules_text)
 select pg_temp.id('campaign-' || campaign), pg_temp.id('org-a'), 'Fundraising ' || campaign,
-  500, prefix, now() - interval '1 day', now() + interval '10 days', now() + interval '11 days',
-  4, 10000, 2000, 5000
+  -- Short real timeline keeps the original issuance assertions and permits
+  -- actual drawing evidence after the locked scheduled drawing timestamp.
+  500, prefix, now() - interval '1 day',
+  case when campaign = 'main' then now() + interval '30 seconds' else now() + interval '10 days' end,
+  case when campaign = 'main' then now() + interval '31 seconds' else now() + interval '11 days' end,
+  4, 10000, 2000, 5000, 'Fixture rules: physical drawing of valid issued raffle tickets.'
 from (values ('main', 'MAIN'), ('alt', 'ALT'), ('draft', 'DRAFT'), ('future', 'FUTURE')) campaigns(campaign, prefix);
 insert into public.campaigns (id, organization_id, name, ticket_price_cents, ticket_prefix,
   starts_at, sales_close_at, draw_at, default_allocation, goal_amount_cents) values
@@ -972,6 +976,22 @@ select throws_ok($$ select public.enroll_campaign_players(pg_temp.id('org-a'), p
 select throws_ok($$ select public.prepare_campaign_inventory(pg_temp.id('org-a'), pg_temp.id('campaign-main')) $$,
   '23514', null, 'closed campaign denies new default inventory preparation');
 select pg_temp.as_user('admin-director');
+-- Preserve the existing DRAWN/terminal assertions while preparing the newly
+-- required verified snapshot and actual externally recorded drawing evidence.
+insert into pg_temp.test_values values ('drawing-snapshot', public.freeze_drawing(
+  pg_temp.id('org-a'), pg_temp.id('campaign-main'), 'fundraising-drawing-freeze',
+  'Eligible ticket snapshot approved for the fixture drawing', true));
+select pg_sleep(greatest(0, extract(epoch from (
+  (select draw_at from public.campaigns where id=pg_temp.id('campaign-main')) - clock_timestamp()))));
+select public.record_external_drawing_result(pg_temp.id('org-a'),
+  (select (value->>'snapshot_id')::uuid from pg_temp.test_values where label='drawing-snapshot'),
+  'fundraising-external-result', clock_timestamp(), 'Fixture drawing room', 'External fixture operator',
+  '["Fixture witness"]'::jsonb, 'physical',
+  (select ticket_number from public.tickets where campaign_id=pg_temp.id('campaign-main') and status='ISSUED' order by sequence_number limit 1),
+  'Winning ticket physically drawn and recorded for this fixture', null, 'Fixture drawing evidence recorded');
+select public.certify_drawing(pg_temp.id('org-a'),
+  (select (value->>'snapshot_id')::uuid from pg_temp.test_values where label='drawing-snapshot'),
+  'fundraising-drawing-certification', 'Director reviewed the externally recorded fixture drawing');
 select lives_ok($$ select public.transition_campaign(pg_temp.id('campaign-main'), 'DRAWN', 'Drawing certified fixture') $$,
   'director records drawing through existing guarded lifecycle');
 select pg_temp.as_user('corrector');
