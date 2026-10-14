@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TeamCampaignView } from "@/components/fundraising/team-campaign";
+import { ScopedMoney } from "@/components/money/balances";
+import { getCampaignMoney } from "@/lib/money/queries";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterSelect } from "@/components/ui/url-filters";
@@ -22,6 +24,7 @@ export default async function TeamCampaignPage({ params, searchParams }: {
   if (!unfiltered) notFound();
   const progress = team ? await getCampaignProgress(ctx, campaignId, "team", { teamId: team }) : unfiltered;
   if (!progress) notFound();
+  const money = await getCampaignMoney(ctx, campaignId, "team");
   const base = `/o/${orgSlug}/team-fundraising/${campaignId}`;
   return (
     <>
@@ -32,6 +35,7 @@ export default async function TeamCampaignPage({ params, searchParams }: {
         {team && <ButtonLink href={base} variant="ghost">Clear team filter</ButtonLink>}
       </div>
       <TeamCampaignView orgSlug={orgSlug} progress={progress} detail />
+      {money && <ScopedMoney money={money} />}
     </>
   );
 }

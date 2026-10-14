@@ -6,9 +6,10 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { localDockerSocket } from "./lib/local-docker.mjs";
 
 const DB_CONTAINER = "supabase_db_aspire-raffle-hub";
-const DOCKER_SOCKET = "unix:///var/run/docker.sock";
+const DOCKER_SOCKET = localDockerSocket();
 const PRICE_CENTS = 200;
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publicKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

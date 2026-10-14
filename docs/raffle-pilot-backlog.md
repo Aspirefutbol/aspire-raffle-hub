@@ -17,6 +17,8 @@ No other fundraiser type is part of this pilot implementation. Preserve the
 shared organization, roster, authorization, and append-only ledger foundations;
 record future shared capabilities in the backlog without building them now.
 
+The feature branch now also implements [Money Custody & Reconciliation](./money-custody.md) and [guarded drawing operations](./drawing-operations.md). These remain development acceptance slices; operator QA and the complete launch rehearsal are still required. Seller Sharing is not part of the money slice.
+
 ## First-slice acceptance
 
 These are acceptance criteria for the current implementation, **not a complete
@@ -71,14 +73,14 @@ reconciling funds are separate operations.
 | Family access | Intended sellers can sign in and see/sell for the correct family players; invitation/access issues have an operator resolution path. | Existing member/family access plus current scoped sale checks; pilot rehearsal required. |
 | Ticket allocation | Initial stock is assigned, remaining stock is visible, and operators can safely supply additional stock when needed. | Current inventory transactions; confirm the operator workflow is sufficient without a full inventory-management UI. |
 | Sale | A real offline collection can be recorded once and produces the correct issued ticket numbers. | Current manual-sale slice; ticket delivery/receipt expectations still need operator agreement. |
-| Money status | Seller collections, organization receipts, outstanding balances, and check exceptions are distinguishable. | **Required next slice:** collection events alone do not provide these statuses. |
+| Money status | Seller collections, organization receipts, outstanding balances, and check exceptions are distinguishable. | **Development slice implemented:** separate custody balances and check outcomes; operator QA remains. |
 | Totals | Net totals and ticket counts reconcile across organization/team/player scopes without exposing unrelated data. | Current scoped progress slice; later receipt/balance totals must use their own canonical events. |
 | Reversal/Correction | Authorized operators can explain and correct a mistake without deleting history, recycling ticket numbers, or changing drawing eligibility afterward. | Current pre-drawing reversal/correction slice; post-drawing financial-only exceptions require a separate workflow. |
-| Drawing export | Sales are closed and eligible issued tickets can be exported as a reproducible, auditable snapshot, excluding voided tickets. | **Required next slice:** define/export the draw snapshot and agree the operator's drawing/recordkeeping process. |
-| Reconciliation | Turn-ins, partial receipts, checks, deposits/batches, and approved discrepancies have a tested operational path. | **Required next slice:** scope the minimum pilot workflows and implement their append-only money records. |
+| Drawing export | Sales are closed and eligible issued tickets can be exported as a reproducible, auditable snapshot, excluding voided tickets. | **Development slice implemented:** frozen snapshots, verified private exports, and external certification; operator drawing/recordkeeping review remains. |
+| Reconciliation | Turn-ins, partial receipts, checks, deposits/batches, and approved discrepancies have a tested operational path. | **Development slice implemented:** append-only turn-ins, allocations, check outcomes, deposits, refunds, credits, and approvals; operator rehearsal remains. |
 | Audit | Operators can trace a sale, its tickets, collection, correction, drawing snapshot, and reconciliation; verification/export and incident procedures work. | Existing audit/hash foundations plus exports and operating procedures needed for the pilot. |
 
-## Required next slices, in launch priority
+## Pilot acceptance areas, in launch priority
 
 1. **Money status and reconciliation.** Agree the definitions of collected,
    received, outstanding, and deposited money; who may receive/approve it; and

@@ -23,7 +23,8 @@
     "test:e2e": "playwright test",
     "test:concurrency": "node --env-file=.env.local scripts/test-fundraising-concurrency.mjs",
     "test:drawing-concurrency": "node --env-file=.env.local scripts/test-drawing-concurrency.mjs",
-    "audit:checkpoint": "node --env-file-if-exists=.env.local scripts/audit-checkpoint.mjs"
+    "audit:checkpoint": "node --env-file-if-exists=.env.local scripts/audit-checkpoint.mjs",
+    "test:money-concurrency": "node --env-file=.env.local scripts/test-money-concurrency.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",
