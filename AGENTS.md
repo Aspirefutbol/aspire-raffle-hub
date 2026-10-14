@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Raffle Hub — project notes for agents
 
-- Read `docs/architecture.md` first; `docs/Raffle-Hub-Developer-Blueprint.pdf` is the product spec.
+- Read `docs/PROJECT_STATE.md` first for the current branch, verified baseline, next approved action, QA gate, and deferred scope. Then read `docs/architecture.md`; `docs/Raffle-Hub-Developer-Blueprint.pdf` is the product spec.
 - Authorization is enforced in Postgres (RLS + `has_org_permission`) **and** in server actions (`orgAction` in `lib/actions.ts`). Keep both when adding features.
 - Multi-record writes go in Postgres functions (`supabase/migrations/*`), called via `rpc()`; supabase-js has no client transactions.
 - Audit events are written by DB triggers. Don't write `audit_events` from app code.
