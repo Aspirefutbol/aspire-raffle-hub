@@ -1,8 +1,8 @@
 # Raffle Hub Project State
 
-_Last updated: 2026-10-14_
+_Last updated: 2026-10-15_
 
-This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, and `docs/MONEY_HOSTED_QA.md`.
+This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, and `docs/ADMIN_LEARNING_HUB.md`.
 
 ## Source of truth
 
@@ -72,7 +72,7 @@ Reported validation at implementation handoff:
 
 The coding portion of Money Custody & Reconciliation is complete.
 
-**Next approved action:** hosted QA of the Money Custody & Reconciliation slice.
+**Next approved action:** complete the final hands-on UI/operator review for Money Custody & Reconciliation on hosted staging.
 
 Do not start Seller Sharing until money hosted QA is reviewed and accepted.
 
@@ -81,37 +81,53 @@ Do not start Seller Sharing until money hosted QA is reviewed and accepted.
 - Staging Supabase status: healthy.
 - Staging migration `20261016000100_money_custody`: applied.
 - Migration history is aligned with the repository migration version.
+- Netlify hosted QA deployment workflow: passed.
+- Existing staging site refreshed from the current feature branch.
 - GitHub CI on the money implementation passed for both application and database/E2E jobs.
 - Operator checklist: `docs/MONEY_HOSTED_QA.md`.
+- Automated hosted results: `docs/MONEY_HOSTED_QA_RESULTS.md`.
 - Netlify project remains the existing `aspire-raffle-hub-staging`; do not create a replacement site.
+
+### Hosted QA backend/accounting checks already passed
+
+Rollback-only checks against the real hosted staging database verified:
+
+- partial cash receipt updates received/outstanding correctly
+- exact retry creates only one custody event
+- family projection remains linked-player scoped
+- team/captain projection remains assigned-team scoped
+- family/captain private money-event history remains redacted
+- family/captain direct money mutation is denied
+- check clearance updates uncleared/reconciled correctly
+- returned checks reopen obligation/exception without silently voiding tickets
+- deposit evidence is distinct from receipt state
+- reversal-after-receipt preserves the physical receipt and creates overpayment credit
+- linked correction + explicit credit transfer moves held funds without manufacturing a second receipt
+- correction uses a fresh ticket number
+- all automated hosted QA mutations were rolled back and no `hosted-%` custody events persisted
 
 ### Hosted QA target
 - Netlify project: `aspire-raffle-hub-staging`
-- Branch deployment pattern: `feat-phase-1-fundraising-slice--aspire-raffle-hub-staging.netlify.app`
+- Primary staging URL: `https://aspire-raffle-hub-staging.netlify.app`
 - Admin route: `/o/aspire/campaigns`
 - Family route: `/o/aspire/fundraising`
 - Captain route: `/o/aspire/team-fundraising`
 
-The staging database is ready. Netlify's currently published primary deploy is still the older `claude/sharp-ramanujan-r3cjav` deployment, so it must not be used as proof of Money QA readiness. A dedicated feature-branch hosted-QA deployment workflow now exists at `.github/workflows/hosted-qa.yml` and targets the existing staging site directly. Its first run proved the remaining blocker is singular: GitHub Actions does not yet have `NETLIFY_AUTH_TOKEN`. Once that one secret is added, rerun the failed Hosted QA Deploy job, refresh staging from the current feature-branch head, and begin Money QA. Reuse the existing Netlify project; do not create a replacement site.
+## Remaining Money QA acceptance
 
-## Hosted QA acceptance for Money Custody
+Use `docs/MONEY_HOSTED_QA.md` and `docs/MONEY_HOSTED_QA_RESULTS.md`.
 
-Use `docs/MONEY_HOSTED_QA.md` for the operator test sequence.
+Still required before Money QA is accepted:
 
-Verify end to end:
-- Recorded sales remain distinct from money physically received.
-- Cash/check turn-in can cover one or multiple sales.
-- Partial turn-ins allocate deterministically and do not over-allocate.
-- Admin sees expected, received, outstanding, reconciled, and exception balances.
-- Family/captain views remain scoped and redacted.
-- Reversing a sale after receipt does not erase the receipt.
-- Refunds, returned checks, credits, and approved adjustments are explicit immutable events.
-- Returned checks do not silently void raffle tickets.
-- Player/team/campaign balances reconcile correctly.
-- Duplicate/retry turn-ins are idempotent.
-- Audit, ticket integrity, drawing integrity, and tenant isolation remain unchanged.
+- hands-on admin UI walkthrough on hosted staging
+- confirm Money & reconciliation labels and operation choices are understandable
+- visually confirm expected / received / outstanding / reconciled / exceptions
+- verify safe-retry UX in the hosted form
+- verify family/captain rendered views remain redacted
+- verify mobile-width usability
+- operator review of terminology and workflow clarity
 
-Stop after hosted QA and report findings before starting the next slice.
+Stop after this final UI/operator review and record findings before starting the next gated slice.
 
 ## Next slices after money QA
 
