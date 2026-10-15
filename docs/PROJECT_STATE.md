@@ -92,7 +92,7 @@ Do not start Seller Sharing until money hosted QA is reviewed and accepted.
 - Family route: `/o/aspire/fundraising`
 - Captain route: `/o/aspire/team-fundraising`
 
-The staging database is ready. Netlify's currently published primary deploy is still the older `claude/sharp-ramanujan-r3cjav` deployment, so it must not be used as proof of Money QA readiness. The remaining preparation step is refreshing/verifying the existing feature-branch deployment for `feat/phase-1-fundraising-slice` at the current branch head. Reuse the existing Netlify project; do not create a replacement site.
+The staging database is ready. Netlify's currently published primary deploy is still the older `claude/sharp-ramanujan-r3cjav` deployment, so it must not be used as proof of Money QA readiness. A dedicated feature-branch hosted-QA deployment workflow now exists at `.github/workflows/hosted-qa.yml` and targets the existing staging site directly. Its first run proved the remaining blocker is singular: GitHub Actions does not yet have `NETLIFY_AUTH_TOKEN`. Once that one secret is added, rerun the failed Hosted QA Deploy job, refresh staging from the current feature-branch head, and begin Money QA. Reuse the existing Netlify project; do not create a replacement site.
 
 ## Hosted QA acceptance for Money Custody
 
