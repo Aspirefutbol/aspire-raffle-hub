@@ -66,14 +66,57 @@ jobs:
 
       - run: npm ci
 
+      - name: Resolve staging IPv4 session pooler
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$STAGING_PROJECT_REF" = ixhpidqhqzbpfbklofrs
+          status="$(curl -sS -o /tmp/pooler.json -w "%{http_code}" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/config/database/pooler")"
+          if [ "$status" != "200" ]; then
+            echo "::error::Unable to read Supabase pooler configuration (HTTP $status). Ensure SUPABASE_ACCESS_TOKEN can read Database Pooling Config for the staging project."
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/pooler.json', 'utf8'));
+          const rows = Array.isArray(payload) ? payload : [payload];
+          const cfg = rows.find((row) => String(row.pool_mode || '').toLowerCase() === 'session')
+            || rows.find((row) => Number(row.db_port) === 5432)
+            || rows.find((row) => String(row.database_type || '').toUpperCase() === 'PRIMARY')
+            || rows[0];
+          if (!cfg) throw new Error('Supabase returned no pooler configuration.');
+
+          const raw = cfg.connection_string || cfg.connectionString || '';
+          let parsed;
+          if (raw) {
+            try { parsed = new URL(raw.replace('[YOUR-PASSWORD]', 'placeholder')); } catch {}
+          }
+          const host = cfg.db_host || parsed?.hostname;
+          const user = cfg.db_user || (parsed ? decodeURIComponent(parsed.username) : `postgres.${process.env.STAGING_PROJECT_REF}`);
+          const database = cfg.db_name || (parsed ? parsed.pathname.replace(/^\//, '') : '') || 'postgres';
+          if (!host || !user) throw new Error('Supabase pooler response omitted host or user.');
+
+          const url = new URL('postgresql://placeholder/postgres');
+          url.username = user;
+          url.password = process.env.SUPABASE_DB_PASSWORD;
+          url.hostname = host;
+          url.port = '5432';
+          url.pathname = `/${database}`;
+          url.searchParams.set('sslmode', 'require');
+          const value = url.toString();
+          console.log(`::add-mask::${value}`);
+          fs.appendFileSync(process.env.GITHUB_ENV, `STAGING_DB_URL=${value}\n`);
+          NODE
+
       - name: Apply additive migrations to existing staging only
         run: |
-          test "$STAGING_PROJECT_REF" = ixhpidqhqzbpfbklofrs
           npx --yes supabase@2.121.0 --version
-          npx --yes supabase@2.121.0 link --project-ref "$STAGING_PROJECT_REF"
-          npx --yes supabase@2.121.0 db push --linked --include-all --yes
+          npx --yes supabase@2.121.0 db push --db-url "$STAGING_DB_URL" --include-all --yes
       - name: Hosted transactional database security tests
-        run: npx --yes supabase@2.121.0 test db --linked
+        run: npx --yes supabase@2.121.0 test db --db-url "$STAGING_DB_URL"
       - name: Show Netlify CLI version
         run: npx netlify-cli@latest --version
 
