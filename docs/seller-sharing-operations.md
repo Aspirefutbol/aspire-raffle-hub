@@ -116,14 +116,13 @@ before claiming staging is refreshed. Operator/family hands-on acceptance is pen
 
 ## Hosted authentication
 
-The hosted lane pins Supabase CLI 2.121.0, which supports Management API temporary login roles. The
-hosted lane uses only the existing `SUPABASE_ACCESS_TOKEN` and
-`NETLIFY_AUTH_TOKEN` GitHub secrets. The lane first runs
-`supabase link --project-ref ixhpidqhqzbpfbklofrs` to establish the IPv4-compatible
-connection, then runs migrations and pgTAP with `--linked --project-ref` so missing
-or unusable saved pooler metadata can fall back to the Management API. Only local
-project-ref/pooler-url cache files are cleared before linking; metadata presence is
-reported without logging its contents. No stored database password,
-connection-string secret, database-password rotation, or new hosted project is needed.
-The CLI obtains temporary credentials for this existing project through its official
-Management API. Full CI must still pass before any hosted migration or deploy.
+The hosted lane pins Supabase CLI 2.121.0 and uses the documented CI password flow.
+GitHub secrets required are `SUPABASE_ACCESS_TOKEN`, `NETLIFY_AUTH_TOKEN`, and
+`STAGING_DB_PASSWORD` (bound to the CLI's `SUPABASE_DB_PASSWORD` environment variable).
+The lane links the existing project with
+`supabase link --project-ref ixhpidqhqzbpfbklofrs`, then runs migrations and pgTAP
+with `--linked`. Passwordless linking and explicit project-ref fallback failed to
+provide usable IPv4 pooler metadata on the hosted runner; do not rely on that path.
+No database URL secret is required. Never log credentials or connection strings.
+Full CI must still pass before any hosted migration or deploy. Staging is never
+reset or seeded by this workflow.
