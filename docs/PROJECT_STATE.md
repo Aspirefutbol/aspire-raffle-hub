@@ -92,7 +92,7 @@ Do not start Seller Sharing until money hosted QA is reviewed and accepted.
 - Family route: `/o/aspire/fundraising`
 - Captain route: `/o/aspire/team-fundraising`
 
-The only remaining preparation step before hands-on money QA is confirming that the existing Netlify branch deployment is serving the current feature-branch code after the money implementation and project-state commits.
+The staging database is ready. Netlify's currently published primary deploy is still the older `claude/sharp-ramanujan-r3cjav` deployment, so it must not be used as proof of Money QA readiness. The remaining preparation step is refreshing/verifying the existing feature-branch deployment for `feat/phase-1-fundraising-slice` at the current branch head. Reuse the existing Netlify project; do not create a replacement site.
 
 ## Hosted QA acceptance for Money Custody
 
