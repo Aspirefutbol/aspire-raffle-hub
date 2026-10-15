@@ -55,7 +55,7 @@ test("money custody: partial receipts, uncertain retry, returned checks and corr
   });
   await form.getByLabel("Seller / family account", { exact: true }).selectOption(sellerId);
   await form.getByLabel("Amount ($)", { exact: true }).fill("15.00");
-  await form.getByLabel("Reason / variance notes").fill("Synthetic partial cash turn-in, five dollars still held");
+  await form.getByLabel("Reason / notes").fill("Synthetic partial cash turn-in, five dollars still held");
   await form.getByRole("button", { name: "Record turn-in", exact: true }).click();
   await expect.poll(async () => (await money()).totals.received_cents).toBe(1500);
   await expect(form.getByRole("button", { name: "Retry preserved submission", exact: true })).toBeEnabled();
@@ -71,7 +71,7 @@ test("money custody: partial receipts, uncertain retry, returned checks and corr
       if (await input.evaluate((el) => el.tagName === "SELECT")) await input.selectOption(value);
       else await input.fill(value);
     }
-    await form.getByLabel("Reason / variance notes").fill(`Synthetic ${kind} evidence`);
+    await form.getByLabel("Reason / notes").fill(`Synthetic ${kind} evidence`);
     const before = (await money()).events.length;
     await form.getByRole("button").click();
     await expect.poll(async () => (await money()).events.length).toBe(before + 1);
