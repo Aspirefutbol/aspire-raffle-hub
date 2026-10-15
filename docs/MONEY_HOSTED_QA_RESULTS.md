@@ -227,6 +227,10 @@ The hosted Team fundraising view for the combined family/captain QA account show
 
 This matches the verified team projection and confirms rendered captain scope remains restricted.
 
+### Mobile captain/team view — PASSED
+
+Safari Responsive Design Mode at approximately 393 × 852 shows the Team fundraising view without visible horizontal overflow. The mobile header collapses to a hamburger menu, summary cards remain readable, team progress fits within the viewport, and the assigned-team data remains usable at phone width.
+
 ## Remaining hosted QA
 
 Still required before Money QA acceptance:
