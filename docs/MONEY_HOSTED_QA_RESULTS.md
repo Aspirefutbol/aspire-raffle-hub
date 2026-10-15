@@ -248,11 +248,16 @@ The live mobile values matched the persisted QA state:
 - approved liability relief: $0.00
 - recorded deposits: $0.00
 
+### Mobile admin money form — PASSED
+
+Safari Responsive Design Mode at approximately 393 × 852 shows the **Record money movement** form without visible horizontal overflow. The operation selector, seller selector, payment method, amount field, reference field, reason textarea, explanatory note, and submit button all fit within the phone viewport and remain usable.
+
+The form is functionally mobile-ready. One UX improvement remains desirable before production: simplify a few accounting-heavy labels and shorten the explanatory paragraph so operators can scan the page faster.
+
 ## Remaining hosted QA
 
 Still required before Money QA acceptance:
 
-- operator review of money operation labels/options
 - safe-retry wording review if that state naturally appears
 - final terminology/clarity approval
 
