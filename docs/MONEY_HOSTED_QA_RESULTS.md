@@ -210,11 +210,27 @@ The hosted family view for the combined family/captain QA account shows:
 
 This matches the verified family projection and confirms rendered family scope remains restricted.
 
+### Captain/team rendered UI — PASSED
+
+The hosted Team fundraising view for the combined family/captain QA account shows:
+
+- only the assigned team: **U13 Boys**
+- assigned-team raised total
+- team ticket count
+- participating-player count
+- team goal progress
+- low/zero-progress follow-up summary
+- no admin Money & reconciliation controls
+- no private receipt history
+- no raw receipt identifiers
+- no unrelated-team data
+
+This matches the verified team projection and confirms rendered captain scope remains restricted.
+
 ## Remaining hosted QA
 
 Still required before Money QA acceptance:
 
-- hands-on captain/team rendered-scope review
 - mobile-width usability check
 - operator review of money operation labels/options
 - safe-retry wording review if that state naturally appears
