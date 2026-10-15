@@ -2,7 +2,7 @@
 
 _Last updated: 2026-10-14_
 
-This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, and `docs/drawing-operations.md`.
+This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, and `docs/MONEY_HOSTED_QA.md`.
 
 ## Source of truth
 
@@ -76,6 +76,15 @@ The coding portion of Money Custody & Reconciliation is complete.
 
 Do not start Seller Sharing until money hosted QA is reviewed and accepted.
 
+### Hosted QA preparation status
+- Staging Supabase project: `Aspire Raffle Hub Staging` (`ixhpidqhqzbpfbklofrs`).
+- Staging Supabase status: healthy.
+- Staging migration `20261016000100_money_custody`: applied.
+- Migration history is aligned with the repository migration version.
+- GitHub CI on the money implementation passed for both application and database/E2E jobs.
+- Operator checklist: `docs/MONEY_HOSTED_QA.md`.
+- Netlify project remains the existing `aspire-raffle-hub-staging`; do not create a replacement site.
+
 ### Hosted QA target
 - Netlify project: `aspire-raffle-hub-staging`
 - Branch deployment pattern: `feat-phase-1-fundraising-slice--aspire-raffle-hub-staging.netlify.app`
@@ -83,11 +92,11 @@ Do not start Seller Sharing until money hosted QA is reviewed and accepted.
 - Family route: `/o/aspire/fundraising`
 - Captain route: `/o/aspire/team-fundraising`
 
-The replacement Codex v2 environment was validated locally, but hosted QA refresh requires credentials/bindings that may not yet be present in that environment.
-
-Do not create a new Netlify site. Reuse the existing staging project.
+The only remaining preparation step before hands-on money QA is confirming that the existing Netlify branch deployment is serving the current feature-branch code after the money implementation and project-state commits.
 
 ## Hosted QA acceptance for Money Custody
+
+Use `docs/MONEY_HOSTED_QA.md` for the operator test sequence.
 
 Verify end to end:
 - Recorded sales remain distinct from money physically received.
