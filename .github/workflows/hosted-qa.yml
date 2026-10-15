@@ -37,6 +37,14 @@ jobs:
             exit 1
           fi
 
+      - name: Require staging database bindings
+        run: |
+          missing=""
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="$missing SUPABASE_ACCESS_TOKEN"
+          [ -n "$SUPABASE_DB_PASSWORD" ] || missing="$missing STAGING_DB_PASSWORD"
+          [ -n "$STAGING_DB_URL" ] || missing="$missing STAGING_DB_URL"
+          if [ -n "$missing" ]; then echo "::error::Missing staging bindings:$missing"; exit 1; fi
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -59,11 +67,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Require staging database bindings
-        run: |
-          for key in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD STAGING_DB_URL; do
-            if [ -z "${!key}" ]; then echo "::error::Missing $key staging binding"; exit 1; fi
-          done
       - name: Verify database test URL belongs to this staging project
         run: |
           node --input-type=module <<'JS'

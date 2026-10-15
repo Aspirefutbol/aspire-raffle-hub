@@ -71,6 +71,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await page.goto(`/o/aspire/fundraising/${id}/requests`);
   const request=page.getByTestId("interest-request");
   await expect(request).toContainText("sharing-supporter@example.test");
+  await expect(request.getByRole("link",{name:"sharing-supporter@example.test"})).toHaveAttribute("href","mailto:sharing-supporter%40example.test");
   await page.setViewportSize({width:360,height:780});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await expect(request).toBeVisible();

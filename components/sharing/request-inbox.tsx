@@ -25,7 +25,7 @@ function RequestCard({ request: r, orgSlug, campaignId, progress }: { request: I
   return <article className="space-y-3 rounded-card border border-line bg-surface p-4" data-testid="interest-request">
     <h2 className="break-words text-lg font-semibold">{r.supporter_name}</h2><p>{participant?.player_name} · {r.requested_quantity} requested · <strong>{r.status}</strong></p>
     <p className="text-xs">{new Date(r.created_at).toLocaleString()} · Prefers {r.preferred_contact}</p>
-    <div className="flex flex-wrap gap-4 break-all text-sm underline">{r.supporter_email && <a href={`mailto:${r.supporter_email}`}>{r.supporter_email}</a>}{r.supporter_phone && <a href={`tel:${r.supporter_phone}`}>{r.supporter_phone}</a>}</div>
+    <div className="flex flex-wrap gap-4 break-all text-sm underline">{r.supporter_email && <a href={`mailto:${encodeURIComponent(r.supporter_email)}`}>{r.supporter_email}</a>}{r.supporter_phone && <a href={`tel:${r.supporter_phone}`}>{r.supporter_phone}</a>}</div>
     <p className="whitespace-pre-wrap break-words">{r.note}</p>
     {r.sale_id && <p className="break-all text-xs">Recorded sale reference: {r.sale_id}. Any later reversal/correction remains in sale history; this request does not change it.</p>}
     {!closed && <><div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={pending} onClick={() => update("contacted")}>Mark contacted</Button><Button variant="ghost" disabled={pending} onClick={() => update("declined")}>Decline</Button><Button variant="ghost" disabled={pending} onClick={() => update("expired")}>Expire</Button></div>

@@ -3,7 +3,8 @@
 This feature creates nonbinding requests only. It never takes payment, holds tickets,
 issues entries, or writes sales/custody/drawing facts. The existing authenticated sale
 RPC remains the only handoff. Status completion separately references an authorized,
-non-reversed sale for the same tenant, campaign and participant. Terminal statuses
+non-reversed sale for the same tenant, campaign and participant. A table-level
+completion constraint and association trigger independently enforce that scope. Terminal statuses
 cannot be rewritten; original request bodies and status events are immutable.
 
 ## Seller operation
@@ -76,7 +77,7 @@ claim that this hands-on QA slice is ready for real supporter data.
 
 Keep PR #2 draft/unmerged. Existing site: aspire-raffle-hub-staging. Existing staging
 Supabase only: ixhpidqhqzbpfbklofrs. Never reset or seed hosted data. The hosted lane
-must apply migration `20261017000100_seller_sharing` before deploying the new UI.
+must apply migration `20261017000100_seller_sharing` and `20261017000200_seller_request_association_guard` before deploying the new UI.
 The feature branch workflow uses existing staging GitHub secrets for Supabase and
 Netlify; no new project or paid capability. The push/dispatch lane waits for the complete CI run on the exact
 feature commit before applying migrations or deploying. It refuses other branches.
@@ -101,7 +102,7 @@ Mailpit invitation/auth and audit continuity. Hands-on hosted approval remains r
 ## Local validation, 2026-10-15
 
 - Clean local migration/reset and seed completed; generated types match the running schema.
-- All 873 pgTAP assertions pass, including 64 sharing assertions.
+- All 875 pgTAP assertions pass, including 66 sharing assertions.
 - All 161 unit tests, lint, typecheck and production build pass.
 - All 18 real concurrency groups pass: 4 sale, 4 drawing, 5 custody, 5 sharing.
 - Full seeded browser regression: 28 passed, including auth/Mailpit invitations,

@@ -242,6 +242,9 @@ select ok(public.public_seller_page(pg_temp.token()) is not null,'restored curre
 select throws_ok($$select public.update_seller_request_status(pg_temp.id('org-b'),pg_temp.request_id(),'contacted')$$,'42501',null,'request organization enforced');
 select throws_ok($$select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),null)$$,'23514',null,'null revoke flag denied');
 select throws_ok($$insert into public.seller_interest_requests(organization_id,campaign_id,participant_id,seller_link_id,submission_key,request_fingerprint,supporter_name,preferred_contact,requested_quantity) values(pg_temp.id('org-a'),pg_temp.id('campaign-main'),pg_temp.participant('main','a1'),pg_temp.id('fake'),pg_temp.id('fake'),'fake','Bypass','email',1)$$,'42501',null,'authenticated direct writes denied');
+reset role;
+select throws_ok($$insert into public.seller_request_events(organization_id,request_id,status,sale_id) values(pg_temp.id('org-a'),pg_temp.request_id(),'completed',pg_temp.sale('different-player'))$$,'23503',null,'table boundary rejects cross-participant sale association even for a privileged writer');
+select throws_ok($$insert into public.seller_request_events(organization_id,request_id,status) values(pg_temp.id('org-a'),pg_temp.request_id(),'completed')$$,'23514',null,'table boundary requires a sale for completed status');
 -- Limits are durable and atomic even if the caller changes idempotency keys.
 reset role;
 select set_config('request.headers','{"x-forwarded-for":"192.0.2.1"}',true);
