@@ -2,7 +2,7 @@
 
 _Date: 2026-10-15_
 
-These checks were run against the existing Aspire Raffle Hub staging Supabase project and current hosted feature-branch deployment. Database mutation scenarios were wrapped in explicit transactions and rolled back. Follow-up queries confirmed no hosted QA custody events persisted.
+These checks were run against the existing Aspire Raffle Hub staging Supabase project and current hosted feature-branch deployment. Database mutation scenarios were wrapped in explicit transactions and rolled back unless explicitly noted as a hands-on operator UI test. Follow-up queries confirmed rollback QA custody events did not persist.
 
 ## Hosted deployment
 
@@ -19,8 +19,6 @@ Campaign used for QA:
 - `QA ONLY — Aspire PR #2`
 - status: ACTIVE
 - ticket price: $5.00
-
-Pre-existing campaign data remained intact after rollback checks.
 
 ## Passed hosted backend checks
 
@@ -127,26 +125,62 @@ Result:
 - received balance remained $5.00
 - source and replacement money obligations netted correctly
 
+## Hands-on operator UI validation
+
+### Partial cash turn-in — PASSED
+
+On the hosted Netlify staging UI, the admin reviewer recorded a real QA $2.50 cash turn-in.
+
+Before:
+
+- recorded sales: $20.00
+- expected: $10.00
+- organization receipts: $0.00
+- outstanding: $10.00
+- reconciled: $0.00
+
+After submission:
+
+- recorded sales remained $20.00
+- expected remained $10.00
+- organization receipts became $2.50
+- outstanding became $7.50
+- reconciled became $2.50
+- uncleared checks remained $0.00
+- exceptions remained $0.00
+- credits, adjustments, and deposits remained $0.00
+
+This matches the verified hosted accounting model and confirms the primary admin turn-in path works end to end through the rendered UI.
+
+### UX observations
+
+The money dashboard is structurally clear and the balances are readable. Some labels remain accounting-heavy for general operators:
+
+- `Organization receipts (net)`
+- `Approved liability relief`
+- `Unallocated credits`
+
+These should be supported by contextual help / Learning Hub definitions and may warrant simpler display labels before production.
+
 ## Rollback verification
 
 Follow-up hosted queries confirmed:
 
-- zero `hosted-%` QA custody events persisted
+- zero automated `hosted-%` QA custody events persisted
 - rollback-only correction ticket inventory did not remain in hosted staging
-- live campaign money balances were unchanged by these automated checks
+- live campaign balances were unaffected by automated rollback checks
+
+The hands-on $2.50 operator UI receipt is intentionally persisted as QA evidence.
 
 ## Remaining hosted QA
 
-The backend/accounting logic is now strongly validated on the real hosted staging database.
-
 Still required before Money QA acceptance:
 
-- hands-on admin UI walkthrough on Netlify staging
-- confirm form labels and operation choices are understandable
-- confirm expected/received/outstanding/reconciled values visually match backend behavior
-- confirm family/captain UI remains redacted in the rendered app
+- inspect immutable money history for the persisted $2.50 receipt
+- hands-on family/captain rendered-scope review
 - mobile-width usability check
-- verify safe retry UX in the hosted UI
-- operator review of terminology and workflow clarity
+- operator review of money operation labels/options
+- safe-retry wording review if that state naturally appears
+- final terminology/clarity approval
 
 Do not start Seller Sharing until this final UI/operator review is accepted.
