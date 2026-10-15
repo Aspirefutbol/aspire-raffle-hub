@@ -64,10 +64,18 @@ jobs:
       - name: Apply additive migrations to existing staging only
         run: |
           test "$STAGING_PROJECT_REF" = ixhpidqhqzbpfbklofrs
-          npx supabase link --project-ref "$STAGING_PROJECT_REF"
-          npx supabase db push --linked --include-all --yes
+          npx --yes supabase@2.121.0 --version
+          # Only disposable local link metadata; never touch hosted data.
+          rm -f supabase/.temp/project-ref supabase/.temp/pooler-url
+          npx --yes supabase@2.121.0 link --project-ref "$STAGING_PROJECT_REF"
+          if [ -s supabase/.temp/pooler-url ]; then
+            echo "Linked pooler metadata is present (contents redacted)."
+          else
+            echo "::warning::Link did not save pooler metadata; explicit project-ref enables Management API fallback."
+          fi
+          npx --yes supabase@2.121.0 db push --linked --project-ref "$STAGING_PROJECT_REF" --include-all --yes
       - name: Hosted transactional database security tests
-        run: npx supabase test db --linked
+        run: npx --yes supabase@2.121.0 test db --linked --project-ref "$STAGING_PROJECT_REF"
       - name: Show Netlify CLI version
         run: npx netlify-cli@latest --version
 

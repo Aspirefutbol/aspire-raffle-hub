@@ -116,11 +116,14 @@ before claiming staging is refreshed. Operator/family hands-on acceptance is pen
 
 ## Hosted authentication
 
-The pinned Supabase CLI 2.118 supports Management API temporary login roles. The
+The hosted lane pins Supabase CLI 2.121.0, which supports Management API temporary login roles. The
 hosted lane uses only the existing `SUPABASE_ACCESS_TOKEN` and
 `NETLIFY_AUTH_TOKEN` GitHub secrets. The lane first runs
 `supabase link --project-ref ixhpidqhqzbpfbklofrs` to establish the IPv4-compatible
-connection, then runs migrations and pgTAP with `--linked`; no stored database password,
+connection, then runs migrations and pgTAP with `--linked --project-ref` so missing
+or unusable saved pooler metadata can fall back to the Management API. Only local
+project-ref/pooler-url cache files are cleared before linking; metadata presence is
+reported without logging its contents. No stored database password,
 connection-string secret, database-password rotation, or new hosted project is needed.
 The CLI obtains temporary credentials for this existing project through its official
 Management API. Full CI must still pass before any hosted migration or deploy.
