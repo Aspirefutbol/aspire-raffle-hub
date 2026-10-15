@@ -193,11 +193,28 @@ Follow-up hosted queries confirmed:
 
 The hands-on $2.50 operator UI receipt is intentionally persisted as QA evidence.
 
+### Family scope rendered UI — PASSED
+
+The hosted family view for the combined family/captain QA account shows:
+
+- exactly one participating linked player: **Liam Smith**
+- family fundraiser card for Liam only
+- campaign status / ticket price / sales close date
+- amount raised and tickets sold
+- personal fundraising goal
+- available ticket count / assigned ticket span
+- no admin Money & reconciliation controls
+- no private receipt history
+- no raw receipt identifiers
+- no private money notes
+
+This matches the verified family projection and confirms rendered family scope remains restricted.
+
 ## Remaining hosted QA
 
 Still required before Money QA acceptance:
 
-- hands-on family/captain rendered-scope review
+- hands-on captain/team rendered-scope review
 - mobile-width usability check
 - operator review of money operation labels/options
 - safe-retry wording review if that state naturally appears
