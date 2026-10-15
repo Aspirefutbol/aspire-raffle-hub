@@ -1,0 +1,57 @@
+name: Hosted QA Deploy
+
+# Temporary feature-branch deployment lane for PR #2.
+# The staging Supabase schema is already current and the feature branch is CI-green,
+# so this workflow only refreshes the existing Netlify staging site and performs
+# seed-free HTTP smoke checks. It intentionally does not merge or touch main.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/phase-1-fundraising-slice
+
+concurrency:
+  group: hosted-qa-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 6da8219b-6bb1-4029-bd4a-a71e7d6eb4c1
+      STAGING_URL: https://aspire-raffle-hub-staging.netlify.app
+    steps:
+      - name: Require Netlify credential
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "::error::Missing NETLIFY_AUTH_TOKEN. Add it as a GitHub Actions secret (prefer the staging environment/repository secret) and rerun."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Deploy current feature branch to existing staging site
+        run: npx netlify-cli@17 deploy --build --prod --site "$NETLIFY_SITE_ID" --message "hosted-qa ${GITHUB_SHA::7}"
+
+      - name: Smoke-check hosted staging
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code="$(curl -sS -o /tmp/login.html -w "%{http_code}" "$STAGING_URL/login" || true)"
+            if [ "$code" = "200" ] && grep -qi "sign in" /tmp/login.html; then
+              echo "Hosted login smoke check passed."
+              exit 0
+            fi
+            echo "Attempt $attempt: staging not ready yet (HTTP $code)."
+            sleep 10
+          done
+          echo "::error::Hosted staging smoke check did not pass."
+          exit 1
