@@ -2,22 +2,24 @@
 
 _Last updated: 2026-10-15_
 
-This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, `docs/MONEY_OPERATOR_UI_REVIEW.md`, and `docs/ADMIN_LEARNING_HUB.md`.
+This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, `docs/MONEY_OPERATOR_UI_REVIEW.md`, `docs/SELLER_SHARING.md`, and `docs/ADMIN_LEARNING_HUB.md`.
 
 ## Source of truth
 
 - Repository: `Aspirefutbol/aspire-raffle-hub`
 - Active implementation branch: `feat/phase-1-fundraising-slice`
-- Draft PR: #2 — keep DRAFT and UNMERGED until hosted QA and operator rehearsal are complete.
+- Current branch head: `c947f7d1bdaa96a801ee981af552ae5aacbe7f81`
+- Draft PR: #2 — keep DRAFT and UNMERGED until the remaining implementation slices and full Aspire operator rehearsal are complete.
 - Default branch: `main`
-- Latest verified implementation baseline: `cddd4f36c57cc5ba6ddf0ad7a0fa1930ed2ec737`
-- Baseline commit message: `feat: add append-only money custody and reconciliation`
+- Hosted QA site: `https://aspire-raffle-hub-staging.netlify.app`
+- Staging Supabase project: `Aspire Raffle Hub Staging` (`ixhpidqhqzbpfbklofrs`)
 
 Do not rely on unpushed state from older Codex environments. Verify remote HEAD before implementation.
 
 ## Completed and verified slices
 
 ### Phase 0 foundation
+
 - Multi-tenant organizations.
 - Members/roles and scoped permissions.
 - Teams, players, households, guardians.
@@ -25,8 +27,9 @@ Do not rely on unpushed state from older Codex environments. Verify remote HEAD 
 - Audit hash chains and external checkpoint continuity.
 - Admin/family/captain scoped access.
 
-### Phase 1 core raffle transaction slice
-- Campaign setup/readiness.
+### Core raffle transactions
+
+- Campaign setup/readiness and lifecycle.
 - Participant enrollment.
 - Ticket generation and allocation.
 - Offline cash/check sale recording.
@@ -36,132 +39,116 @@ Do not rely on unpushed state from older Codex environments. Verify remote HEAD 
 - Sale reversal without deleting history.
 - Linked correction sale using fresh ticket numbers.
 - Voided ticket numbers are never reused.
-- Hosted QA manually verified admin sale, family scoping, multi-ticket sale, safe retry, captain roll-up, reversal, and correction history.
+- Hosted QA verified admin sale, family scope, captain scope, multi-ticket sale, retry, reversal, and correction history.
 
-### Drawing integrity slice
-- Immutable drawing snapshots and snapshot entries.
+### Drawing integrity
+
+- Immutable drawing snapshots and entries.
 - Freeze/reopen workflow.
 - Verified private drawing export.
 - External/physical drawing model for the Aspire pilot.
 - Result/certification structure.
-- Concurrency protections for freeze/reversal/reopen/result/certification.
+- Concurrency protections for freeze, reversal, reopening, result, and certification.
 - No in-platform random winner generator for the pilot.
 
-### Money Custody & Reconciliation slice
-Implementation is pushed and CI-green at the verified baseline above.
+### Money Custody & Reconciliation — ACCEPTED
 
-Includes:
-- Immutable physical receipts and receipt-to-sale FIFO allocations.
-- Separation of recorded sale from organization receipt.
+Implementation and hosted QA are complete.
+
+Verified capabilities:
+
+- Recorded sales remain separate from money received by the organization.
+- Immutable physical receipts and deterministic receipt-to-sale allocations.
 - Partial and multi-sale turn-ins.
-- Check lifecycle/outcomes and returned-check exceptions.
-- Refunds, credits, approved adjustments, and deposits as explicit events.
-- Reversal-after-receipt behavior without erasing physical receipt facts.
-- Correction credit-transfer behavior.
-- Scoped balance UI for admin/family/team contexts.
+- Explicit check pending/cleared/returned outcomes.
+- Returned-check exceptions do not silently void raffle tickets.
+- Refunds, credits, approved balance adjustments, and deposits are explicit events.
+- Reversal after receipt preserves physical receipt facts and creates credit/overpayment where appropriate.
+- Linked correction + credit transfer moves existing held funds without manufacturing another receipt.
+- Admin, family, and captain projections remain scoped and redacted.
+- Desktop and mobile money workflows are usable without horizontal overflow.
+- Money terminology was simplified after operator review.
 
-Reported validation at implementation handoff:
-- 809 database assertions.
-- 157 unit tests.
-- 13 concurrency groups.
-- 27 browser tests.
-- Lint, typecheck, production build, generated-type comparison, and audit continuity passed.
-- GitHub CI passed for both application and database/E2E jobs.
+Hosted/operator QA completed:
 
-## Current QA gate
+- real $2.50 partial cash turn-in through the hosted UI
+- expected / received / money-still-due / reconciled balances updated correctly
+- immutable money history displayed the receipt, actor, reason, timestamp, and event ID
+- player/team/campaign roll-ups reconciled
+- family view showed only the linked player and no private money details
+- captain view showed only the assigned team and no admin reconciliation controls
+- mobile admin dashboard and money form passed phone-width review
+- hosted rollback checks passed for idempotency, check clearance, returned checks, deposits, reversal after receipt, and correction credit transfer
+- automated hosted QA mutations were rolled back; only the intentional $2.50 operator receipt remains as QA evidence
 
-The coding portion of Money Custody & Reconciliation is complete.
+Validation at acceptance:
 
-**Next approved action:** complete the final hands-on UI/operator review for Money Custody & Reconciliation on hosted staging.
+- 809 pgTAP assertions
+- 157 unit tests
+- 13 real concurrency groups
+- 27 browser tests
+- lint, typecheck, generated-types parity, production build, audit continuity, database/E2E CI, and hosted deploy all green
 
-Do not start Seller Sharing until money hosted QA is reviewed and accepted.
+## Current approved action
 
-### Hosted QA preparation status
-- Staging Supabase project: `Aspire Raffle Hub Staging` (`ixhpidqhqzbpfbklofrs`).
-- Staging Supabase status: healthy.
-- Staging migration `20261016000100_money_custody`: applied.
-- Migration history is aligned with the repository migration version.
-- Netlify hosted QA deployment workflow: passed.
-- Existing staging site refreshed from the current feature branch.
-- GitHub CI on the money implementation passed for both application and database/E2E jobs.
-- Operator checklist: `docs/MONEY_HOSTED_QA.md`.
-- Automated hosted results: `docs/MONEY_HOSTED_QA_RESULTS.md`.
-- Netlify project remains the existing `aspire-raffle-hub-staging`; do not create a replacement site.
+**Implement Seller Sharing + Parent/Player Seller Toolkit.**
 
-### Hosted QA backend/accounting checks already passed
+Approved blueprint: `docs/SELLER_SHARING.md`.
 
-Rollback-only checks against the real hosted staging database verified:
+### Required behavior
 
-- partial cash receipt updates received/outstanding correctly
-- exact retry creates only one custody event
-- family projection remains linked-player scoped
-- team/captain projection remains assigned-team scoped
-- family/captain private money-event history remains redacted
-- family/captain direct money mutation is denied
-- check clearance updates uncleared/reconciled correctly
-- returned checks reopen obligation/exception without silently voiding tickets
-- deposit evidence is distinct from receipt state
-- reversal-after-receipt preserves the physical receipt and creates overpayment credit
-- linked correction + explicit credit transfer moves held funds without manufacturing a second receipt
-- correction uses a fresh ticket number
-- all automated hosted QA mutations were rolled back and no `hosted-%` custody events persisted
-
-### Hosted QA target
-- Netlify project: `aspire-raffle-hub-staging`
-- Primary staging URL: `https://aspire-raffle-hub-staging.netlify.app`
-- Admin route: `/o/aspire/campaigns`
-- Family route: `/o/aspire/fundraising`
-- Captain route: `/o/aspire/team-fundraising`
-
-## Remaining Money QA acceptance
-
-Use `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, and `docs/MONEY_OPERATOR_UI_REVIEW.md`.
-
-Still required before Money QA is accepted:
-
-- hands-on admin UI walkthrough on hosted staging
-- confirm Money & reconciliation labels and operation choices are understandable
-- visually confirm expected / received / outstanding / reconciled / exceptions
-- verify safe-retry UX in the hosted form
-- verify family/captain rendered views remain redacted
-- verify mobile-width usability
-- operator review of terminology and workflow clarity
-
-Stop after this final UI/operator review and record findings before starting the next gated slice.
-
-## Next slices after money QA
-
-### 1. Seller Sharing / Delivery
-Not started.
-
-Approved direction:
-- Replace seller-link placeholder with opaque seller links.
+- Opaque, non-sequential seller links.
 - Copy link, SMS/text, email, WhatsApp, and QR sharing.
-- Public page is request/interest only for the Aspire pilot.
+- Public supporter page is request/interest only.
 - No online raffle payment.
-- No ticket reservation or issuance from the public page.
-- Authorized seller completes the sale after approved offline payment.
-- Minimum public participant information; default to campaign identity unless consent allows participant alias/name.
-- Add lightweight parent/player “How to Sell” guidance and Seller Toolkit foundation.
+- No public ticket reservation.
+- No public ticket issuance.
+- No automatic sale creation.
+- Authorized seller follows up, receives approved offline payment, and records the sale through the authenticated seller workflow.
+- Private request inbox scoped to the authorized linked family/seller.
+- Request states such as new, contacted, completed, declined, and expired.
+- Minimum public identity by default; do not expose private roster, household, buyer, money, ticket, or audit data.
+- Abuse controls, request validation, rate limiting, and safe token rotation/revocation.
+- Parent/player Seller Toolkit with selling steps, scripts, integrity reminders, and offline-payment guidance.
 
-### 2. Admin Learning Hub
-Approved direction captured in `docs/ADMIN_LEARNING_HUB.md`.
+### Implementation sequence
 
-The first Learning Hub slice should provide:
-- Admin-only in-app Learning Hub navigation.
-- Searchable operating guides and FAQ.
-- Launch-critical guides for campaign setup, roster/inventory, sales, reversals/corrections, money/reconciliation, checks/exceptions, deposits/refunds/adjustments, drawing freeze/export/result/certification, roles/scopes, and troubleshooting.
-- Contextual help links from important operating screens.
-- Version-controlled content grounded in actual product terminology and pilot rules.
-- No mutation capability from help content.
+1. Schema/RPC/RLS and abuse-control tests.
+2. Opaque seller-link lifecycle and scoped request inbox.
+3. Public request-only page.
+4. Family copy/SMS/email/WhatsApp/QR controls.
+5. Request-to-record-sale handoff guidance.
+6. Parent/player Seller Toolkit.
+7. Desktop, 360px mobile, privacy, tenant-isolation, retry, and regression tests.
+8. Commit/push, hosted QA deploy, and stop for operator review.
 
-Do not let Learning Hub work delay the current Money hosted QA gate. Build the shell/content after Money QA, then include it in the Aspire operator rehearsal. Keep this separate from the Parent/Player Seller Toolkit.
+Preserve all existing authorization, tenant isolation, immutable ledgers, ticket inventory, drawing integrity, money custody, idempotency, and audit behavior.
 
-### 3. Aspire Operator Rehearsal
-Run the complete hosted staging rehearsal:
-campaign setup → roster/enrollment → ticket allocation → family selling → captain monitoring → cash/check recording → turn-in/reconciliation → reversals/corrections → close sales → freeze/export drawing population → external/physical draw → result/certification → final reconciliation → audit verification.
+## Following approved slices
+
+### Admin Learning Hub
+
+Blueprint: `docs/ADMIN_LEARNING_HUB.md`.
+
+First slice should include:
+
+- admin-only Learning Hub navigation
+- searchable operating guides and FAQ
+- launch-critical guides for campaign setup, inventory, sales, reversals/corrections, money/reconciliation, checks/exceptions, deposits/refunds/adjustments, drawing, roles/scopes, and troubleshooting
+- contextual help links from important operating screens
+- version-controlled, product-grounded content
+- no mutation capability from help content
+
+Keep this separate from the Parent/Player Seller Toolkit.
+
+### Aspire operator rehearsal
+
+Run the complete hosted staging path:
+
+campaign setup → enrollment → ticket allocation → family sharing/selling → captain monitoring → sale → money turn-in/reconciliation → reversal/correction → close sales → freeze/export drawing population → external/physical draw → result/certification → final reconciliation → audit verification.
 
 Produce a go-live blocker list categorized as:
+
 - Product
 - Operations
 - Compliance/legal
@@ -170,46 +157,47 @@ Produce a go-live blocker list categorized as:
 
 ## Production gate
 
-The 4–5 week Aspire raffle target is a planning target, not a production-readiness claim.
+The Aspire raffle target is a planning target, not a production-readiness claim.
 
 Before live operation, confirm:
-- The legal entity operating the raffle is eligible under the applicable Texas raffle rules.
-- Raffle rules/prizes/disclosures are approved.
-- Ticket pricing/numbering and permitted payment/delivery methods are approved.
-- Sales dates/cutoff and drawing procedure are approved.
-- Required recordkeeping and operator responsibilities are confirmed.
+
+- legal entity eligibility under applicable Texas raffle rules
+- approved rules, prizes, and disclosures
+- approved ticket pricing/numbering and payment/delivery methods
+- approved sales dates, cutoff, and drawing procedure
+- required recordkeeping and operator responsibilities
 
 Texas pilot mode remains offline cash/check; no online raffle-ticket checkout.
 
 ## Deferred — do not implement yet
 
-- Shared Campaign Boost Engine.
-- Marketplace / Experience Marketplace.
-- Sponsor-a-Day migration.
-- Puzzle.
-- Fill the Field.
-- 100 Board.
-- Journey / Build It.
-- Sponsorship CRM.
-- Other fundraiser experiences.
-- In-platform random winner generator.
+- Shared Campaign Boost Engine
+- Marketplace / Experience Marketplace
+- Sponsor-a-Day migration
+- Puzzle
+- Fill the Field
+- 100 Board
+- Journey / Build It
+- Sponsorship CRM
+- Other fundraiser experiences
+- In-platform random winner generator
 
-The Boost Engine remains a future shared capability for premium units, contribution multipliers, sponsor matches, promotional windows, and milestone unlocks. For raffles it must not alter odds, ticket quantities, price, or eligibility without separate approved jurisdiction/compliance work.
+The future Boost Engine must not alter raffle odds, ticket quantities, ticket price, or eligibility without separate approved jurisdiction/compliance work.
 
 ## Project isolation
 
 This repository is Raffle Hub only.
 
-Do not implement Aspire One or Aspire Coaching Studio work here.
-Do not copy instructions from those projects unless the user explicitly approves a cross-project change.
+Do not implement Aspire One or Aspire Coaching Studio work here. Do not copy instructions from those projects unless the user explicitly approves a cross-project change.
 
 ## Agent operating rule
 
 For future implementation tasks:
+
 1. Read `AGENTS.md`.
 2. Read this file.
 3. Verify remote HEAD and PR state.
-4. Execute **only** the “Next approved action” above.
-5. Preserve all authorization, RLS, immutable ledger, idempotency, ticket, drawing, and audit guarantees.
+4. Execute only the Current approved action above.
+5. Preserve all authorization, RLS, immutable ledger, idempotency, ticket, drawing, money, and audit guarantees.
 6. Keep PR #2 draft/unmerged unless the user explicitly approves a merge.
 7. Stop at the next QA/approval gate and report the exact commit SHA, tests, hosted state, and known gaps.
