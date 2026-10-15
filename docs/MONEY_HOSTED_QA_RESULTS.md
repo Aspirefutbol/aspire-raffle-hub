@@ -152,6 +152,27 @@ After submission:
 
 This matches the verified hosted accounting model and confirms the primary admin turn-in path works end to end through the rendered UI.
 
+### Immutable history — PASSED
+
+The hosted UI shows the persisted $2.50 cash turn-in in **Immutable money history** with:
+
+- event type: receipt
+- amount: $2.50
+- payment method: cash
+- operator attribution
+- operator reason: `Operator UI review — partial cash turn-in`
+- timestamp
+- immutable event identifier
+- actor identifier
+
+The same page also shows the team and player roll-ups reconciling correctly:
+
+- U13 Boys: $10.00 expected · $2.50 received · $7.50 outstanding · $2.50 reconciled
+- Liam Smith carries the $10.00 expected / $2.50 received obligation
+- Isaac Martinez and Mateo Garcia remain at $0.00
+
+This confirms the persisted UI receipt is visible for audit and the player/team balance projections reconcile with campaign totals.
+
 ### UX observations
 
 The money dashboard is structurally clear and the balances are readable. Some labels remain accounting-heavy for general operators:
@@ -176,7 +197,6 @@ The hands-on $2.50 operator UI receipt is intentionally persisted as QA evidence
 
 Still required before Money QA acceptance:
 
-- inspect immutable money history for the persisted $2.50 receipt
 - hands-on family/captain rendered-scope review
 - mobile-width usability check
 - operator review of money operation labels/options
