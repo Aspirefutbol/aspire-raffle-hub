@@ -8,8 +8,8 @@ import { MONEY_KINDS, type MoneyKind, type MoneyProjection } from "@/lib/money/s
 
 const moneyLabels: Record<MoneyKind, string> = {
   receipt: "Record turn-in", check_cleared: "Mark check cleared", check_returned: "Record returned check",
-  exception_opened: "Open other financial exception", exception_resolved: "Resolve financial exception", refund: "Record refund", credit: "Transfer correction credit",
-  adjustment: "Approve liability adjustment", deposit: "Record deposit",
+  exception_opened: "Flag financial issue", exception_resolved: "Resolve financial issue", refund: "Record refund", credit: "Move available credit",
+  adjustment: "Approve balance adjustment", deposit: "Record deposit",
 };
 const control = "min-h-11 w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-sm";
 
@@ -74,9 +74,9 @@ export function MoneyOperationForm({ orgSlug, campaignId, money, canReceive, can
       {kind === "credit" && <label className="text-sm">Replacement / destination sale<select name="target_sale_id" aria-label="Replacement / destination sale" required className={control} defaultValue=""><option value="" disabled>Select destination</option>{sales.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>}
       {needsAmount && <label className="text-sm">Amount ($)<input name="amount" aria-label="Amount ($)" inputMode="decimal" required className={control} placeholder={kind === "adjustment" ? "Positive relief; negative to undo" : "0.00"} /></label>}
       <label className="text-sm">Check / batch reference<input name="reference" aria-label="Check / batch reference" maxLength={200} className={control} /></label>
-      <label className="text-sm md:col-span-2">Reason / variance notes<textarea name="reason" aria-label="Reason / variance notes" minLength={3} maxLength={500} required className={control} /></label>
+      <label className="text-sm md:col-span-2">Reason / notes<textarea name="reason" aria-label="Reason / notes" minLength={3} maxLength={500} required className={control} /></label>
     </fieldset>
-    <p className="text-xs text-muted">Turn-ins allocate oldest obligations first and may be partial. Corrections require an explicit credit transfer, refund, or approved adjustment; they never create another receipt. Refunds reduce held funds, not sale obligations. Check outcomes and deposits require separate evidence.</p>
+    <p className="text-xs text-muted">Turn-ins apply to the oldest unpaid sales first and can be partial. Corrections move existing money with a credit transfer, refund, or approved balance adjustment—they never create a second receipt. Check outcomes and deposits are recorded separately.</p>
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     {message && <p role="status" className="break-words text-sm text-emerald-700">{message}</p>}
     <Button type="submit" loading={pending}>{submission ? "Retry preserved submission" : moneyLabels[kind]}</Button>
