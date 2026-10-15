@@ -64,9 +64,10 @@ jobs:
       - name: Apply additive migrations to existing staging only
         run: |
           test "$STAGING_PROJECT_REF" = ixhpidqhqzbpfbklofrs
-          npx supabase db push --linked --project-ref "$STAGING_PROJECT_REF" --include-all --yes
+          npx supabase link --project-ref "$STAGING_PROJECT_REF"
+          npx supabase db push --linked --include-all --yes
       - name: Hosted transactional database security tests
-        run: npx supabase test db --linked --project-ref "$STAGING_PROJECT_REF"
+        run: npx supabase test db --linked
       - name: Show Netlify CLI version
         run: npx netlify-cli@latest --version
 

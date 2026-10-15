@@ -118,8 +118,9 @@ before claiming staging is refreshed. Operator/family hands-on acceptance is pen
 
 The pinned Supabase CLI 2.118 supports Management API temporary login roles. The
 hosted lane uses only the existing `SUPABASE_ACCESS_TOKEN` and
-`NETLIFY_AUTH_TOKEN` GitHub secrets. Both migration and pgTAP commands pass
-`--linked --project-ref ixhpidqhqzbpfbklofrs` explicitly; no stored database password,
+`NETLIFY_AUTH_TOKEN` GitHub secrets. The lane first runs
+`supabase link --project-ref ixhpidqhqzbpfbklofrs` to establish the IPv4-compatible
+connection, then runs migrations and pgTAP with `--linked`; no stored database password,
 connection-string secret, database-password rotation, or new hosted project is needed.
 The CLI obtains temporary credentials for this existing project through its official
 Management API. Full CI must still pass before any hosted migration or deploy.
