@@ -1,14 +1,12 @@
 name: Hosted QA Deploy
 
 # Temporary feature-branch deployment lane for PR #2.
-# The staging Supabase schema is already current and the feature branch is CI-green,
-# so this workflow only refreshes the existing Netlify staging site and performs
-# seed-free HTTP smoke checks. It intentionally does not merge or touch main.
+# Apply additive migrations to the existing staging database before refreshing
+# the existing site. No seed, reset, merge, or production database operation.
 on:
   workflow_dispatch:
   push:
-    branches:
-      - feat/phase-1-fundraising-slice
+    branches: [feat/phase-1-fundraising-slice]
 
 concurrency:
   group: hosted-qa-deploy
@@ -16,9 +14,18 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/feat/phase-1-fundraising-slice'
+    environment: staging
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
     env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+      STAGING_PROJECT_REF: ixhpidqhqzbpfbklofrs
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: 6da8219b-6bb1-4029-bd4a-a71e7d6eb4c1
       STAGING_URL: https://aspire-raffle-hub-staging.netlify.app
@@ -31,7 +38,20 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
+      - name: Wait for full CI on this feature commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ -n "$result" ] && [ "$result" != null ]; then echo "::error::CI did not pass: $result"; exit 1; fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for feature CI"; exit 1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -39,11 +59,34 @@ jobs:
 
       - run: npm ci
 
+      - name: Require staging database bindings
+        run: |
+          for key in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD STAGING_DB_URL; do
+            if [ -z "${!key}" ]; then echo "::error::Missing $key staging binding"; exit 1; fi
+          done
+      - name: Verify database test URL belongs to this staging project
+        run: |
+          node --input-type=module <<'JS'
+          let url;
+          try { url = new URL(process.env.STAGING_DB_URL); } catch { throw new Error('Invalid staging database URL binding'); }
+          const ref = process.env.STAGING_PROJECT_REF;
+          if (!['postgres:', 'postgresql:'].includes(url.protocol) ||
+              !(url.hostname === `db.${ref}.supabase.co` ||
+                (url.hostname.endsWith('.pooler.supabase.com') && decodeURIComponent(url.username) === `postgres.${ref}`))) {
+            throw new Error('STAGING_DB_URL must target the existing Raffle Hub staging project');
+          }
+          JS
+      - name: Apply additive migrations to existing staging only
+        run: |
+          npx supabase link --project-ref "$STAGING_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          npx supabase db push --include-all
+      - name: Hosted transactional database security tests
+        run: npx supabase test db --db-url "$STAGING_DB_URL"
       - name: Show Netlify CLI version
         run: npx netlify-cli@latest --version
 
       - name: Deploy current feature branch to existing staging site
-        run: npx netlify-cli@latest deploy --build --prod --site "$NETLIFY_SITE_ID" --message "hosted-qa ${GITHUB_SHA::7}"
+        run: npx netlify-cli@latest deploy --build --prod --site "$NETLIFY_SITE_ID" --message "hosted-qa $(git rev-parse --short HEAD)"
 
       - name: Smoke-check hosted staging
         run: |
@@ -51,6 +94,11 @@ jobs:
             code="$(curl -sS -o /tmp/login.html -w "%{http_code}" "$STAGING_URL/login" || true)"
             if [ "$code" = "200" ] && grep -qi "sign in" /tmp/login.html; then
               echo "Hosted login smoke check passed."
+              public_code=$(curl -sS -D /tmp/public-headers -o /tmp/public.html -w "%{http_code}" "$STAGING_URL/s/0000000000000000000000000000000000000000000000000000000000000000")
+              if [ "$public_code" != 404 ] && [ "$public_code" != 200 ]; then echo "::error::Public link route unexpectedly redirects/fails ($public_code)"; exit 1; fi
+              if ! grep -qi 'x-robots-tag:.*noindex' /tmp/public-headers; then echo "::error::Missing public noindex header"; exit 1; fi
+              if grep -qi 'Send nonbinding request' /tmp/public.html; then echo "::error::Invalid public link exposed a request form"; exit 1; fi
+              echo "Hosted public route privacy smoke check passed."
               exit 0
             fi
             echo "Attempt $attempt: staging not ready yet (HTTP $code)."

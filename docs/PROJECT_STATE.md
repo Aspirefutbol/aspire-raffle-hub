@@ -8,7 +8,8 @@ This file is the changing execution state for the Aspire Raffle Hub pilot. Read 
 
 - Repository: `Aspirefutbol/aspire-raffle-hub`
 - Active implementation branch: `feat/phase-1-fundraising-slice`
-- Current branch head: `c947f7d1bdaa96a801ee981af552ae5aacbe7f81`
+- Verified implementation baseline: `bfb681f73bd5cf6b270bbbb69accda0a0e7bdb78`
+- Seller Sharing implementation commit: see feature branch history and task delivery report; never infer hosted state from local files.
 - Draft PR: #2 — keep DRAFT and UNMERGED until the remaining implementation slices and full Aspire operator rehearsal are complete.
 - Default branch: `main`
 - Hosted QA site: `https://aspire-raffle-hub-staging.netlify.app`
@@ -91,7 +92,14 @@ Validation at acceptance:
 
 ## Current approved action
 
-**Implement Seller Sharing + Parent/Player Seller Toolkit.**
+**Seller Sharing + Parent/Player Seller Toolkit: implementation and QA gate.**
+
+Implementation is in this branch. See `docs/seller-sharing-operations.md` for behavior,
+privacy/abuse limits, retention/support launch gates, and the hands-on checklist.
+Complete full local regression, push only this feature branch, and refresh the existing
+hosted QA stack through the CI-gated lane. Stop for hands-on review. Do not begin the
+Admin Learning Hub or operator rehearsal as part of this task. Hosted migration/deploy
+status must be verified from the actual workflow; this document does not certify it.
 
 Approved blueprint: `docs/SELLER_SHARING.md`.
 

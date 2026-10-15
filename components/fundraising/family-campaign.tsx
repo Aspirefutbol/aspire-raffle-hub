@@ -1,8 +1,9 @@
-import { Link2, Ticket } from "lucide-react";
+import { SellerTools } from "@/components/sharing/seller-tools";
+import { Ticket } from "lucide-react";
 import { CampaignStatusBadge, GoalProgress } from "@/components/campaigns/progress";
 import { RecordSaleButton } from "@/components/campaigns/sale-sheets";
 import { Badge } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { formatMoney } from "@/lib/fundraising/money";
@@ -80,9 +81,8 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                     <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents}
                       participant={participant} className="w-full" />
                     {unavailable ? <p className="text-xs text-muted">{unavailable}</p> : <p className="text-xs text-muted">Record a sale after you receive cash or a check.</p>}
-                    <Button variant="secondary" size="lg" className="w-full" disabled icon={<Link2 aria-hidden className="size-4" />}>
-                      Seller link coming soon
-                    </Button>
+                    {detail && participant.status === "active" && <SellerTools orgSlug={orgSlug} participantId={participant.id} price={campaign.ticket_price_cents}/>}
+                    {detail && <ButtonLink variant="secondary" href={`/o/${orgSlug}/fundraising/${campaign.id}/requests`}>View private requests</ButtonLink>}
                   </div>
                 </article>
               );

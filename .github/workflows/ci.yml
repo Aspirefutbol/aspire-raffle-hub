@@ -68,6 +68,8 @@ jobs:
         run: |
           set -a && . ./.env.local && set +a
           npm run test:money-concurrency
+      - name: Concurrent seller links, public retries, and revocation
+        run: npm run test:sharing-concurrency
       - name: Restore fresh E2E fixtures after concurrency organizations
         run: |
           npx supabase db reset --local

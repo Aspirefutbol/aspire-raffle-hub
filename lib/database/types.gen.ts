@@ -153,6 +153,25 @@ isOneToOne: false
       referencedColumns: ["id","organization_id","campaign_id"]
     }
                   ]
+                },"campaign_seller_links": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"expires_at": string,"id": string,"opaque_token_hash": string,"organization_id": string,"participant_id": string,"revoked_at": string | null,"seller_user_id": string
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"expires_at": string,"id"?: string,"opaque_token_hash": string,"organization_id": string,"participant_id": string,"revoked_at"?: string | null,"seller_user_id": string
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"expires_at"?: string,"id"?: string,"opaque_token_hash"?: string,"organization_id"?: string,"participant_id"?: string,"revoked_at"?: string | null,"seller_user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_seller_links_participant_id_organization_id_campa_fkey"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
                 },"campaign_team_goals": {
                   Row: {
                     "campaign_id": string,"goal_amount_cents": number | null,"id": string,"organization_id": string,"team_id": string,"updated_at": string,"updated_by": string | null
@@ -999,6 +1018,69 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"seller_interest_requests": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"id": string,"note": string,"organization_id": string,"participant_id": string,"preferred_contact": string,"request_fingerprint": string,"requested_quantity": number,"seller_link_id": string,"submission_key": string,"supporter_email": string | null,"supporter_name": string,"supporter_phone": string | null
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"id"?: string,"note"?: string,"organization_id": string,"participant_id": string,"preferred_contact": string,"request_fingerprint": string,"requested_quantity": number,"seller_link_id": string,"submission_key": string,"supporter_email"?: string | null,"supporter_name": string,"supporter_phone"?: string | null
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"id"?: string,"note"?: string,"organization_id"?: string,"participant_id"?: string,"preferred_contact"?: string,"request_fingerprint"?: string,"requested_quantity"?: number,"seller_link_id"?: string,"submission_key"?: string,"supporter_email"?: string | null,"supporter_name"?: string,"supporter_phone"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "seller_interest_requests_seller_link_id_organization_id_ca_fkey"
+      columns: ["seller_link_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "campaign_seller_links"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    }
+                  ]
+                },"seller_request_events": {
+                  Row: {
+                    "actor_id": string | null,"created_at": string,"id": string,"organization_id": string,"request_id": string,"sale_id": string | null,"status": string
+                  }
+                  Insert: {
+                    "actor_id"?: string | null,"created_at"?: string,"id"?: string,"organization_id": string,"request_id": string,"sale_id"?: string | null,"status": string
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"created_at"?: string,"id"?: string,"organization_id"?: string,"request_id"?: string,"sale_id"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "seller_request_events_request_id_organization_id_fkey"
+      columns: ["request_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "seller_interest_requests"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "seller_request_events_sale_id_fkey"
+      columns: ["sale_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "seller_request_events_sale_id_fkey"
+      columns: ["sale_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"seller_request_limits": {
+                  Row: {
+                    "attempts": number,"bucket": string,"window_at": string
+                  }
+                  Insert: {
+                    "attempts": number,"bucket": string,"window_at": string
+                  }
+                  Update: {
+                    "attempts"?: number,"bucket"?: string,"window_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"team_memberships": {
                   Row: {
                     "created_at": string,"created_by": string | null,"end_reason": string | null,"ended_at": string | null,"id": string,"organization_id": string,"player_id": string,"started_at": string,"team_id": string
@@ -1291,6 +1373,9 @@ isOneToOne: false
 "can_issue_campaign_participant":
 { Args: { "p_organization_id": string,"p_participant_id": string }; Returns: boolean
                            },
+"can_manage_seller_participant":
+{ Args: { "p_org": string,"p_participant": string }; Returns: boolean
+                           },
 "can_read_fundraising_participant":
 { Args: { "p_participant_id": string,"p_view"?: string }; Returns: boolean
                            },
@@ -1459,6 +1544,9 @@ isOneToOne: false
 "lock_fundraising_membership":
 { Args: { "p_organization_id": string }; Returns: string
                            },
+"manage_seller_link":
+{ Args: { "p_organization_id": string,"p_participant_id": string,"p_revoke"?: boolean }; Returns: Json
+                           },
 "my_assigned_team_ids":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
@@ -1508,6 +1596,9 @@ isOneToOne: false
 "prepare_campaign_inventory":
 { Args: { "p_campaign_id": string,"p_organization_id": string }; Returns: number
                            },
+"public_seller_page":
+{ Args: { "p_token": string }; Returns: Json
+                           },
 "record_campaign_sale":
 { Args: { "p_amount_cents": number,"p_buyer_email"?: string,"p_buyer_name": string,"p_buyer_phone"?: string,"p_campaign_id": string,"p_corrects_sale_id"?: string,"p_idempotency_key": string,"p_notes"?: string,"p_organization_id": string,"p_participant_id": string,"p_payment_method": string,"p_quantity": number,"p_sold_at"?: string }; Returns: Json
                            },
@@ -1531,6 +1622,9 @@ isOneToOne: false
                            },
 "save_import_validation":
 { Args: { "p_column_mapping"?: Json,"p_import_id": string,"p_mapping_id"?: string,"p_rows": Json,"p_summary": Json }; Returns: undefined
+                           },
+"seller_request_inbox":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_view"?: string }; Returns: Json
                            },
 "set_audit_reason":
 { Args: { "p_reason": string }; Returns: undefined
@@ -1565,6 +1659,9 @@ isOneToOne: false
 "shares_org_with":
 { Args: { "p_user_id": string }; Returns: boolean
                            },
+"submit_seller_interest_request":
+{ Args: { "p_request": Json,"p_submission_key": string,"p_token": string }; Returns: Json
+                           },
 "team_player_counts":
 { Args: { "p_organization_id": string }; Returns: {
               "player_count": number,"team_id": string
@@ -1575,6 +1672,9 @@ isOneToOne: false
                            },
 "unlink_family_guardian":
 { Args: { "p_link_id": string,"p_reason"?: string }; Returns: undefined
+                           },
+"update_seller_request_status":
+{ Args: { "p_organization_id": string,"p_request_id": string,"p_sale_id"?: string,"p_status": string }; Returns: undefined
                            },
 "verify_audit_chain":
 { Args: { "p_organization_id": string }; Returns: {

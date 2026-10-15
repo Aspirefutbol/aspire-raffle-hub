@@ -2,6 +2,11 @@
 
 _Last updated: 2026-10-15_
 
+Implementation/QA runbook: `docs/seller-sharing-operations.md`. The implementation
+uses derived active/expired state, one-time token display, immutable request bodies,
+append-only statuses and explicit family/admin inbox projections. Retention/privacy
+support approval and staging gateway rate-limit verification remain launch gates.
+
 ## Purpose
 
 Give an authorized family/seller a safe, easy way to share their raffle campaign with friends and relatives while preserving the Aspire pilot rules:

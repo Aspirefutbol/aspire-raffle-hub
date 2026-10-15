@@ -21,7 +21,7 @@ function localSaleTimestamp(value: unknown): string {
 }
 
 /** Keeps an uncertain submission intact across retries and closing the sheet. */
-export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, participant, label = "Record sale", className, correctsSaleId, alreadyCorrected = false }: {
+export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, participant, label = "Record sale", className, correctsSaleId, alreadyCorrected = false, prefill, onRecorded }: {
   orgSlug: string;
   campaignId: string;
   ticketPriceCents: number | null;
@@ -30,9 +30,11 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
   className?: string;
   correctsSaleId?: string;
   alreadyCorrected?: boolean;
+  prefill?: { buyer_name: string; buyer_email: string; buyer_phone: string; quantity: number; notes: string };
+  onRecorded?: (saleId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [quantity, setQuantity] = useState("1");
+  const [quantity, setQuantity] = useState(String(prefill?.quantity ?? 1));
   const [payload, setPayload] = useState<SalePayload | null>(null);
   const [receipt, setReceipt] = useState<RecordedSale | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
         const result = await recordCampaignSale(orgSlug, parsed.data);
         if (!result.ok) { setError(result.error); setCanEdit(result.canEdit === true || Boolean(result.fieldErrors)); return; }
         setReceipt(result.data);
+        onRecorded?.(result.data.sale_id);
         toast.success(result.message ?? "Sale recorded and tickets issued");
       } catch {
         setError("The response could not be confirmed. Retry this same submission to check whether the sale was recorded.");
@@ -100,13 +103,13 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
             {correctsSaleId && <p className="text-sm text-ink-soft">This replacement is linked to the reversed sale. It issues new ticket numbers and preserves the original history.</p>}
             {error && <p role="alert" className="rounded-control border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
             <fieldset disabled={pending || payload !== null} className="space-y-4">
-              <Field label="Buyer name" htmlFor={`buyer-name-${participant.id}`} required><Input id={`buyer-name-${participant.id}`} name="buyer_name" required maxLength={200} autoFocus defaultValue={payload ? String(payload.buyer_name) : ""} /></Field>
-              <div className="grid gap-3 sm:grid-cols-2"><Field label="Buyer email" htmlFor={`buyer-email-${participant.id}`} hint="Optional"><Input id={`buyer-email-${participant.id}`} name="buyer_email" type="email" maxLength={254} defaultValue={payload ? String(payload.buyer_email ?? "") : ""} /></Field><Field label="Buyer phone" htmlFor={`buyer-phone-${participant.id}`} hint="Optional"><Input id={`buyer-phone-${participant.id}`} name="buyer_phone" type="tel" maxLength={50} defaultValue={payload ? String(payload.buyer_phone ?? "") : ""} /></Field></div>
+              <Field label="Buyer name" htmlFor={`buyer-name-${participant.id}`} required><Input id={`buyer-name-${participant.id}`} name="buyer_name" required maxLength={200} autoFocus defaultValue={payload ? String(payload.buyer_name) : prefill?.buyer_name ?? ""} /></Field>
+              <div className="grid gap-3 sm:grid-cols-2"><Field label="Buyer email" htmlFor={`buyer-email-${participant.id}`} hint="Optional"><Input id={`buyer-email-${participant.id}`} name="buyer_email" type="email" maxLength={254} defaultValue={payload ? String(payload.buyer_email ?? "") : prefill?.buyer_email ?? ""} /></Field><Field label="Buyer phone" htmlFor={`buyer-phone-${participant.id}`} hint="Optional"><Input id={`buyer-phone-${participant.id}`} name="buyer_phone" type="tel" maxLength={50} defaultValue={payload ? String(payload.buyer_phone ?? "") : prefill?.buyer_phone ?? ""} /></Field></div>
               <Field label="Quantity" htmlFor={`quantity-${participant.id}`} hint={`${participant.available_tickets} assigned tickets available`} required><Input id={`quantity-${participant.id}`} name="quantity" type="number" min={1} max={Math.min(500, participant.available_tickets)} value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></Field>
               <Field label="Amount collected ($)" htmlFor={`amount-${participant.id}`} hint="Must match the ticket face value. No online payment is taken." required><Input key={quantity} id={`amount-${participant.id}`} name="amount" inputMode="decimal" required defaultValue={payload ? String(Number(payload.amount_cents) / 100) : amount === null ? "" : (amount / 100).toFixed(2)} /></Field>
               <Field label="Payment method" htmlFor={`payment-${participant.id}`}><Select id={`payment-${participant.id}`} name="payment_method" defaultValue={payload ? String(payload.payment_method) : "cash"}><option value="cash">Cash</option><option value="check">Check</option></Select></Field>
               <Field label="Sale timestamp" htmlFor={`sold-at-${participant.id}`} hint="Optional. Leave blank to use the time this sale is recorded. Dates use your device’s time zone."><Input id={`sold-at-${participant.id}`} name="sold_at" type="datetime-local" defaultValue={localSaleTimestamp(payload?.sold_at)} /></Field>
-              <Field label="Notes" htmlFor={`notes-${participant.id}`} hint="Optional"><Textarea id={`notes-${participant.id}`} name="notes" maxLength={2000} defaultValue={payload ? String(payload.notes ?? "") : ""} /></Field>
+              <Field label="Notes" htmlFor={`notes-${participant.id}`} hint="Optional"><Textarea id={`notes-${participant.id}`} name="notes" maxLength={2000} defaultValue={payload ? String(payload.notes ?? "") : prefill?.notes ?? ""} /></Field>
             </fieldset>
             <p className="text-xs text-muted">Ticket numbers are assigned automatically from this player’s inventory when the sale is recorded.</p>
           </form>

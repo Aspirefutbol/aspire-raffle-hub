@@ -1,3 +1,5 @@
+import { SellerToolkit } from "@/components/sharing/toolkit";
+import { formatDate } from "@/lib/format";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,6 +25,7 @@ export default async function FamilyCampaignPage({ params }: { params: Promise<{
         breadcrumb={<Link href={`/o/${orgSlug}/fundraising`} className="hover:text-ink">All family raffles</Link>} />
       <FamilyCampaignView orgSlug={orgSlug} progress={progress} detail timeZone={ctx.organization.timezone} />
       {money && <ScopedMoney money={money} />}
+      <SellerToolkit price={progress.campaign.ticket_price_cents} closeDate={formatDate(progress.campaign.sales_close_at,ctx.organization.timezone)}/>
     </>
   );
 }
