@@ -128,7 +128,20 @@ Approved direction:
 - Minimum public participant information; default to campaign identity unless consent allows participant alias/name.
 - Add lightweight parent/player “How to Sell” guidance and Seller Toolkit foundation.
 
-### 2. Aspire Operator Rehearsal
+### 2. Admin Learning Hub
+Approved direction captured in `docs/ADMIN_LEARNING_HUB.md`.
+
+The first Learning Hub slice should provide:
+- Admin-only in-app Learning Hub navigation.
+- Searchable operating guides and FAQ.
+- Launch-critical guides for campaign setup, roster/inventory, sales, reversals/corrections, money/reconciliation, checks/exceptions, deposits/refunds/adjustments, drawing freeze/export/result/certification, roles/scopes, and troubleshooting.
+- Contextual help links from important operating screens.
+- Version-controlled content grounded in actual product terminology and pilot rules.
+- No mutation capability from help content.
+
+Do not let Learning Hub work delay the current Money hosted QA gate. Build the shell/content after Money QA, then include it in the Aspire operator rehearsal. Keep this separate from the Parent/Player Seller Toolkit.
+
+### 3. Aspire Operator Rehearsal
 Run the complete hosted staging rehearsal:
 campaign setup → roster/enrollment → ticket allocation → family selling → captain monitoring → cash/check recording → turn-in/reconciliation → reversals/corrections → close sales → freeze/export drawing population → external/physical draw → result/certification → final reconciliation → audit verification.
 
