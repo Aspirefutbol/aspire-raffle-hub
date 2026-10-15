@@ -231,11 +231,27 @@ This matches the verified team projection and confirms rendered captain scope re
 
 Safari Responsive Design Mode at approximately 393 × 852 shows the Team fundraising view without visible horizontal overflow. The mobile header collapses to a hamburger menu, summary cards remain readable, team progress fits within the viewport, and the assigned-team data remains usable at phone width.
 
+### Mobile admin Money view — PASSED
+
+Safari Responsive Design Mode at approximately 393 × 852 shows the Money & reconciliation dashboard without visible horizontal overflow. The balance cards render in a readable two-column mobile grid, values remain legible, the explanatory note wraps correctly, and the page header/navigation remain usable at phone width.
+
+The live mobile values matched the persisted QA state:
+
+- recorded sales: $20.00
+- expected: $10.00
+- organization receipts: $2.50
+- outstanding: $7.50
+- reconciled: $2.50
+- uncleared checks: $0.00
+- open check exceptions: $0.00
+- unallocated credits: $0.00
+- approved liability relief: $0.00
+- recorded deposits: $0.00
+
 ## Remaining hosted QA
 
 Still required before Money QA acceptance:
 
-- mobile-width usability check
 - operator review of money operation labels/options
 - safe-retry wording review if that state naturally appears
 - final terminology/clarity approval
