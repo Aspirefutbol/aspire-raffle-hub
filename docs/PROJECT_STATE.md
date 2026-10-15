@@ -2,7 +2,7 @@
 
 _Last updated: 2026-10-15_
 
-This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, and `docs/ADMIN_LEARNING_HUB.md`.
+This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, `docs/MONEY_OPERATOR_UI_REVIEW.md`, and `docs/ADMIN_LEARNING_HUB.md`.
 
 ## Source of truth
 
@@ -115,7 +115,7 @@ Rollback-only checks against the real hosted staging database verified:
 
 ## Remaining Money QA acceptance
 
-Use `docs/MONEY_HOSTED_QA.md` and `docs/MONEY_HOSTED_QA_RESULTS.md`.
+Use `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, and `docs/MONEY_OPERATOR_UI_REVIEW.md`.
 
 Still required before Money QA is accepted:
 
