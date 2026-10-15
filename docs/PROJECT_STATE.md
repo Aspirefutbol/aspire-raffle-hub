@@ -96,10 +96,11 @@ Validation at acceptance:
 
 Implementation is in this branch. See `docs/seller-sharing-operations.md` for behavior,
 privacy/abuse limits, retention/support launch gates, and the hands-on checklist.
-Complete full local regression, push only this feature branch, and refresh the existing
-hosted QA stack through the CI-gated lane. Stop for hands-on review. Do not begin the
-Admin Learning Hub or operator rehearsal as part of this task. Hosted migration/deploy
-status must be verified from the actual workflow; this document does not certify it.
+Full CI is green on commit `e89b4154035b87270c094f97e7813ca2e9666a9a` and the hosted QA deploy completed successfully.
+The two Seller Sharing staging migrations are present as `20261017000100_seller_sharing` and
+`20261017000200_seller_request_association_guard`, and the current Netlify staging deploy is ready.
+Current gate: complete the hands-on hosted family/supporter/operator review with synthetic data only.
+Do not begin the Admin Learning Hub or full operator rehearsal until Seller Sharing hands-on acceptance.
 
 Approved blueprint: `docs/SELLER_SHARING.md`.
 
