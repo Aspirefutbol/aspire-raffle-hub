@@ -30,7 +30,7 @@ Recommended fixture:
 - Small allocation: 3–5 tickets per player
 - Synthetic buyer/supporter names only
 - Cash plus one check scenario
-- Short staged sales/drawing dates appropriate for the rehearsal
+- Short staged sales/drawing dates appropriate for the rehearsal. If the entire rehearsal must finish in one session, use a compressed valid window: sales close shortly after setup and disclosed draw shortly after close. Never bypass the locked draw time later.
 
 Do not reuse the prior QA campaign as the primary rehearsal campaign; a fresh campaign is required to prove setup and lifecycle behavior.
 
