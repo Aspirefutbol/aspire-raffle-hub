@@ -49,7 +49,7 @@ export function Sheet({ open, onClose, title, description, children, footer, wid
             <button
               type="button"
               onClick={onClose}
-              className="rounded-control p-1.5 pointer-coarse:p-3 text-muted hover:bg-canvas hover:text-ink"
+              className="rounded-control p-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:p-3 text-muted hover:bg-canvas hover:text-ink"
               aria-label="Close"
             >
               <X className="size-4" />

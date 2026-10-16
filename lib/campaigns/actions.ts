@@ -7,11 +7,14 @@ import { createClient } from "@/lib/supabase/server";
 import { canTransition, editableFieldsFilter, isCampaignStatus, transitionNeedsReason, transitionPermission } from "./lifecycle";
 import { createCampaignSchema, transitionCampaignSchema, updateCampaignSchema } from "./schemas";
 
-// Campaign setup actions (Phase 0 hardening). There is deliberately no campaign UI,
-// ticket issuance or money handling yet; these exist so the lifecycle and its
-// locks are exercised end-to-end through the same server/RLS path the UI will use.
+// Campaign setup keeps the existing lifecycle and readiness checks. Fundraising
+// inventory and sale mutations use separate transactional database functions.
 
-const refresh = (orgSlug: string) => revalidatePath(`/o/${orgSlug}/campaigns`, "layout");
+function refresh(orgSlug: string) {
+  revalidatePath(`/o/${orgSlug}/campaigns`, "layout");
+  revalidatePath(`/o/${orgSlug}/fundraising`, "layout");
+  revalidatePath(`/o/${orgSlug}/team-fundraising`, "layout");
+}
 
 export async function createCampaignDraft(orgSlug: string, input: unknown): Promise<ActionResult<{ id: string }>> {
   return orgAction(orgSlug, "campaigns.manage", createCampaignSchema, input, async (ctx, data) => {
@@ -65,6 +68,7 @@ export async function transitionCampaign(orgSlug: string, input: unknown): Promi
     if (!current || !isCampaignStatus(current.status)) return fail("Campaign not found.");
     if (!canTransition(current.status, to)) return fail(`A campaign can’t move from ${current.status} to ${to}.`);
     if (!can(ctx, transitionPermission(current.status, to))) return fail("You don't have permission to do that.");
+    if (to === "DRAWN" && !can(ctx, "drawing.certify")) return fail("Drawing certification permission is required to mark this campaign drawn.");
     if (transitionNeedsReason(current.status, to) && (!reason || reason.length < 3)) {
       return fail("A reason is required for this change.", { reason: "Give a short reason (recorded in the audit log)." });
     }

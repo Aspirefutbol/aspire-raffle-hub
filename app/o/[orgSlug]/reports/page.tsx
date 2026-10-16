@@ -4,13 +4,14 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { can, requireOrgContext } from "@/lib/auth/org-context";
+import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
 
 export const metadata: Metadata = { title: "Reports" };
 
 export default async function ReportsPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
   const ctx = await requireOrgContext(orgSlug);
+  requirePagePermission(ctx, "roster.read");
   return (
     <>
       <PageHeader title="Reports" description="Exports and campaign reporting." />

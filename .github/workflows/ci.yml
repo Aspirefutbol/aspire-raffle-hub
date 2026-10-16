@@ -56,6 +56,25 @@ jobs:
           npm run seed:dev
       - name: Unit tests incl. DB catalog parity
         run: npm test
+      - name: Concurrent raffle sales, stock, reversals, and closure
+        run: |
+          set -a && . ./.env.local && set +a
+          npm run test:concurrency
+      - name: Concurrent drawing freeze, reversal, reopening, and certification
+        run: |
+          set -a && . ./.env.local && set +a
+          npm run test:drawing-concurrency
+      - name: Concurrent money receipts, reversals, checks, refunds, and credits
+        run: |
+          set -a && . ./.env.local && set +a
+          npm run test:money-concurrency
+      - name: Concurrent seller links, public retries, and revocation
+        run: npm run test:sharing-concurrency
+      - name: Restore fresh E2E fixtures after concurrency organizations
+        run: |
+          npx supabase db reset --local
+          ./scripts/ci-env.sh
+          npm run seed:dev
       - name: Audit checkpoint (verify chains, export, then prove continuity)
         run: |
           AUDIT_ENVIRONMENT=ci npm run audit:checkpoint
@@ -64,7 +83,7 @@ jobs:
         run: set -a && . ./.env.local && set +a && npm run build
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-      - name: E2E (Phase 0 acceptance + 360px touch targets)
+      - name: E2E (Phase 0, raffle slice, and 360px family/touch targets)
         run: |
           set -a && . ./.env.local && set +a
           npm run start > next.log 2>&1 &
