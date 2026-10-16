@@ -73,7 +73,7 @@ export default async function LearningHubPage({
             <Card>
               <CardBody className="py-8 text-center">
                 <p className="font-medium text-ink">No approved guide matched that search.</p>
-                <p className="mt-1 text-sm text-muted">Try fewer words or browse the categories below.</p>
+                <p className="mt-1 text-sm text-muted">Try fewer words or clear the search to browse all categories.</p>
               </CardBody>
             </Card>
           )}
