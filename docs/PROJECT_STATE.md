@@ -150,24 +150,39 @@ Passed so far:
 - partial $2.50 cash turn-in
 - $5 check turn-in
 - returned-check handling without automatic ticket invalidation
+- replacement cash + exception resolution
+- full $10 expected / $10 received reconciliation with $0 outstanding
+- sale reversal + linked correction with fresh ticket number
+- two explicit $2.50 credit transfers of already-held funds; no duplicate receipt
+- original ticket `OR1-000010` voided and replacement `OR1-000011` issued
+- audit, campaign, ticket, and money hash chains verified clean
 - operator UX fixes for money-action discoverability
 - highlighted Action center treatment for Money, Campaign readiness, and Drawing
 
 Current database state before continuing:
 
 - campaign lifecycle: ACTIVE
-- tickets: 10 ALLOCATED / 2 ISSUED
+- locked sales close: 2026-10-17 11:24 AM America/Chicago
+- locked draw time: 2026-10-18 11:24 AM America/Chicago
+- tickets: 9 ALLOCATED / 2 ISSUED / 1 VOIDED
 - active recorded sales: 2 / $10 total
 - completed supporter request linked to sale `82bacaf2-df17-4cd5-a0f0-01a5d8bf5e9a`
-- money history includes $2.50 cash turn-in, $5 check turn-in, and returned-check exception
+- original reversed sale: `2f65268d-9fdf-4349-bdf0-d18bd8cba424`
+- linked correction sale: `ef5ad4c8-ce5b-4f0b-a4e4-c6f0c02c5701`
+- money expected: $10.00
+- money received: $10.00
+- outstanding / uncleared / exception balances: $0.00
+- all four relevant hash chains verify with no bad position
 
 Current next step after latest validation/deploy:
 
-1. visually confirm the highlighted Money action center
-2. record replacement cash for the returned check
-3. resolve the check issue
-4. run sale reversal + linked correction with fresh ticket number(s)
-5. continue through close, drawing, certification, final reconciliation, and audit verification
+1. wait for the locked sales-close gate on 2026-10-17 at 11:24 AM America/Chicago
+2. close sales through the hosted operator UI
+3. verify a post-close sale is blocked
+4. freeze and export the drawing population
+5. at or after the locked draw time on 2026-10-18 at 11:24 AM America/Chicago, record the synthetic external result
+6. certify the drawing and move the campaign to DRAWN
+7. complete final reconciliation and audit verification
 
 Detailed live findings: `docs/OPERATOR_REHEARSAL_FINDINGS.md`.
 
