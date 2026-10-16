@@ -90,52 +90,29 @@ Validation at acceptance:
 - 27 browser tests
 - lint, typecheck, generated-types parity, production build, audit continuity, database/E2E CI, and hosted deploy all green
 
+## Completed and verified slices
+
+### Seller Sharing + Parent/Player Seller Toolkit — ACCEPTED
+
+Hosted/operator QA is complete for the Aspire staging fixture.
+
+Verified capabilities:
+
+- Family can create an opaque one-time seller link and share by copy, SMS, email, WhatsApp, and QR.
+- Public supporter page exposes campaign information only; no player, team, household, ticket-number, balance, buyer, money, or audit data was observed.
+- Public interest request remained nonbinding and created no sale or money-custody event.
+- Family private inbox showed the synthetic supporter request and allowed status progression to contacted.
+- One synthetic offline $5 cash sale issued ticket `QA2-000013` and the sale reference linked back to the request, which then reached completed status.
+- Replacing the seller link revoked the prior active link while preserving request history; staging showed one active and one revoked link after rotation.
+- QR generation rendered successfully and encoded the new replacement seller URL.
+- Hosted mobile review at 393×852 showed a usable responsive supporter page with no horizontal overflow or private player/team information visible.
+- Full CI and Hosted QA Deploy are green on commit `0c30a9c17f45e89755b449f9a39c529ca3fbc932`.
+
+Known follow-up UX refinement: after a browser reload, the seller control returns to `Share fundraiser` because tokens are intentionally shown once and not persisted. Consider clearer copy such as `Create / replace seller link` in a later polish pass so families understand that generating a new link revokes the prior one.
+
 ## Current approved action
 
-**Seller Sharing + Parent/Player Seller Toolkit: implementation and QA gate.**
-
-Implementation is in this branch. See `docs/seller-sharing-operations.md` for behavior,
-privacy/abuse limits, retention/support launch gates, and the hands-on checklist.
-Full CI is green on commit `e89b4154035b87270c094f97e7813ca2e9666a9a` and the hosted QA deploy completed successfully.
-The two Seller Sharing staging migrations are present as `20261017000100_seller_sharing` and
-`20261017000200_seller_request_association_guard`, and the current Netlify staging deploy is ready.
-Current gate: complete the hands-on hosted family/supporter/operator review with synthetic data only.
-Do not begin the Admin Learning Hub or full operator rehearsal until Seller Sharing hands-on acceptance.
-
-Approved blueprint: `docs/SELLER_SHARING.md`.
-
-### Required behavior
-
-- Opaque, non-sequential seller links.
-- Copy link, SMS/text, email, WhatsApp, and QR sharing.
-- Public supporter page is request/interest only.
-- No online raffle payment.
-- No public ticket reservation.
-- No public ticket issuance.
-- No automatic sale creation.
-- Authorized seller follows up, receives approved offline payment, and records the sale through the authenticated seller workflow.
-- Private request inbox scoped to the authorized linked family/seller.
-- Request states such as new, contacted, completed, declined, and expired.
-- Minimum public identity by default; do not expose private roster, household, buyer, money, ticket, or audit data.
-- Abuse controls, request validation, rate limiting, and safe token rotation/revocation.
-- Parent/player Seller Toolkit with selling steps, scripts, integrity reminders, and offline-payment guidance.
-
-### Implementation sequence
-
-1. Schema/RPC/RLS and abuse-control tests.
-2. Opaque seller-link lifecycle and scoped request inbox.
-3. Public request-only page.
-4. Family copy/SMS/email/WhatsApp/QR controls.
-5. Request-to-record-sale handoff guidance.
-6. Parent/player Seller Toolkit.
-7. Desktop, 360px mobile, privacy, tenant-isolation, retry, and regression tests.
-8. Commit/push, hosted QA deploy, and stop for operator review.
-
-Preserve all existing authorization, tenant isolation, immutable ledgers, ticket inventory, drawing integrity, money custody, idempotency, and audit behavior.
-
-## Following approved slices
-
-### Admin Learning Hub
+**Admin Learning Hub: implementation and QA gate.**
 
 Blueprint: `docs/ADMIN_LEARNING_HUB.md`.
 
@@ -149,6 +126,10 @@ First slice should include:
 - no mutation capability from help content
 
 Keep this separate from the Parent/Player Seller Toolkit.
+
+Preserve all existing authorization, tenant isolation, immutable ledgers, ticket inventory, drawing integrity, money custody, idempotency, Seller Sharing privacy, and audit behavior.
+
+## Following approved slice
 
 ### Aspire operator rehearsal
 
