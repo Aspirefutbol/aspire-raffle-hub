@@ -73,6 +73,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   expect(enrolled.teams[0]?.goal_amount_cents).toBe(50_000);
 
   await page.getByRole("button", { name: "Mark ready", exact: true }).click();
+  await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 10_000 });
   await page.getByRole("button", { name: "Activate campaign", exact: true }).click();
   const activation = page.getByRole("dialog", { name: "Activate campaign", exact: true });
   await activation.getByRole("textbox", { name: "Reason", exact: true }).fill("Board approved the desktop raffle pilot");
