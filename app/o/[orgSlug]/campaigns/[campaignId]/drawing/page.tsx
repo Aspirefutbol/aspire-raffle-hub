@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CampaignStatusBadge } from "@/components/campaigns/progress";
 import { SnapshotIntegrity } from "@/components/drawing/integrity";
+import { HelpLink } from "@/components/learning/help-link";
 import { DrawingOperationButton, ExternalResultButton } from "@/components/drawing/operation-sheets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ orgSlu
 
   return <>
     <PageHeader title="Drawing" breadcrumb={<Link href={campaignRoute} className="hover:text-ink">{campaign.name}</Link>} description="Freeze eligible entries, retain private exports, and record the approved physical or external drawing." actions={<>
+      {can(ctx, "organization.manage") && <HelpLink orgSlug={orgSlug} article="freeze-drawing" label="Drawing guide" />}
       <CampaignStatusBadge status={status} />
       {canManage && !current && <DrawingOperationButton orgSlug={orgSlug} campaignId={campaignId} operation="freeze" disabled={!readiness.ready} />}
       {status === "CLOSED" && certification && current && canCertify && can(ctx, "campaigns.activate") && <DrawingOperationButton orgSlug={orgSlug} campaignId={campaignId} operation="drawn" disabled={!verificationById.get(current.id)?.ok} />}
