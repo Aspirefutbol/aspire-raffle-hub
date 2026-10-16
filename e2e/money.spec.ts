@@ -78,7 +78,10 @@ test("money custody: partial receipts, uncertain retry, returned checks and corr
     await expect(form.getByRole("status")).toContainText("Money event recorded");
   }
   await submit("receipt", { "Seller / family account": sellerId, "Received as": "check", "Amount ($)": "5.00", "Check / batch reference": "Synthetic check 42" });
-  const check = (await money()).events.find((e) => e.kind === "receipt" && e.payment_method === "check")!.id;
+  const checkEvent = (await money()).events.find((e) => e.kind === "receipt" && e.payment_method === "check")!;
+  const check = checkEvent.id;
+  await form.getByLabel("Choose action", { exact: true }).selectOption("check_returned");
+  await expect(form.getByLabel("Original receipt", { exact: true }).locator(`option[value="${check}"]`)).toContainText("receipt total $5.00");
   await expect(page.getByTestId("money-uncleared_cents")).toHaveText("$5.00");
   await submit("check_returned", { "Original receipt": check });
   await expect(page.getByTestId("money-exception_cents")).toHaveText("$5.00");
