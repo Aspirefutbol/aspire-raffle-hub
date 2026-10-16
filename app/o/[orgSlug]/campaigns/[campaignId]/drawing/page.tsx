@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,6 +10,7 @@ import { DrawingOperationButton, ExternalResultButton } from "@/components/drawi
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { WorkflowPanel } from "@/components/ui/workflow-panel";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
@@ -51,14 +53,14 @@ export default async function DrawingPage({ params }: { params: Promise<{ orgSlu
       {status === "CLOSED" && certification && current && canCertify && can(ctx, "campaigns.activate") && <DrawingOperationButton orgSlug={orgSlug} campaignId={campaignId} operation="drawn" disabled={!verificationById.get(current.id)?.ok} />}
     </>} />
 
-    <Card className="mb-5"><CardHeader title={current ? "Frozen population" : "Drawing readiness"} description="The application does not generate a random winner. Use the current frozen population for the operator's approved drawing." /><CardBody className="space-y-4">
+    <WorkflowPanel className="mb-5" icon={<ShieldCheck aria-hidden className="size-4" />} title={current ? "Frozen population" : "Drawing readiness"} description="Action center · The application does not generate a random winner. Use the current frozen population for the operator's approved drawing." bodyClassName="space-y-4">
       <div className="grid grid-cols-2 gap-3"><StatCard label={current ? "Frozen eligible tickets" : "Eligible issued tickets"} value={current?.ticket_count ?? readiness.eligible_ticket_count} /><StatCard label="Total face value" value={formatMoney(current?.total_face_value_cents ?? readiness.total_face_value_cents)} /></div>
       <p className="text-sm text-ink-soft">Disclosed drawing: {formatDateTime(campaign.draw_at, timezone)} · {timezone}</p>
       {!current && (readiness.blocking.length ? <div><Badge tone="warning">Complete before freeze</Badge><ul className="mt-2 space-y-1 text-sm text-ink-soft">{readiness.blocking.map((blocker) => <li key={blocker}>• {blocker}</li>)}</ul></div> : <Badge tone="success">Ready for operator review and freeze</Badge>)}
       <ul className="space-y-1 text-xs text-muted" aria-label="Drawing warnings">{readiness.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul>
       {!current && !canManage && <p className="text-sm text-ink-soft">An authorized drawing manager can freeze the entries after readiness review.</p>}
       {campaign.rules_text && <details className="rounded-control border border-line p-3"><summary className="cursor-pointer text-sm font-medium text-ink-soft">Review locked raffle rules and prizes</summary><p className="mt-3 whitespace-pre-wrap break-words text-sm text-ink-soft">{campaign.rules_text}</p></details>}
-    </CardBody></Card>
+    </WorkflowPanel>
 
     {overview.snapshots.length === 0 && <Card className="mb-5"><CardHeader title="No frozen snapshot yet" /><CardBody><p className="text-sm text-ink-soft">Close sales, complete the readiness review, and freeze the eligible entries before conducting the physical or external drawing.</p></CardBody></Card>}
     <div className="space-y-5">{overview.snapshots.map((snapshot) => {
