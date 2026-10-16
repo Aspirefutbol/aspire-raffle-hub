@@ -41,8 +41,8 @@ export default async function LearningArticlePage({
               ))}
               {section.steps && (
                 <ol className="space-y-2 pl-5 text-sm leading-6 text-ink-soft">
-                  {section.steps.map((step, index) => (
-                    <li key={step} className="list-decimal pl-1"><span className="font-medium text-ink">{index + 1}.</span> {step}</li>
+                  {section.steps.map((step) => (
+                    <li key={step} className="list-decimal pl-1">{step}</li>
                   ))}
                 </ol>
               )}
