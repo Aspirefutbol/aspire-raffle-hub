@@ -12,7 +12,7 @@ Primary synthetic campaign:
 - Ticket price: **$5.00**
 - Ticket prefix: **OR1**
 - Participants: **3 active**
-- Inventory current state: **10 ALLOCATED / 2 ISSUED**
+- Inventory current state: **9 ALLOCATED / 2 ISSUED / 1 VOIDED**
 - Active recorded sales: **2 / $10.00 total**
 
 ## Passed rehearsal steps
@@ -73,7 +73,7 @@ Verified:
 
 ### Money custody and reconciliation
 
-Partially complete and passing so far.
+Complete for the rehearsal reconciliation path and passing.
 
 Verified through hosted UI and ledger:
 
@@ -101,6 +101,37 @@ Observed balances after returned-check scenario:
 - Uncleared checks: $0.00
 - Check issues: $5.00
 - Reconciled money: $2.50
+
+Then completed through hosted operator actions and verified in the ledger:
+
+4. Replacement cash for the returned check:
+   - $5.00 cash receipt
+   - reason: `Operator rehearsal replacement cash for returned check`
+
+5. Final cash settlement:
+   - $2.50 cash receipt
+   - reason: `Operator rehearsal final cash settlement`
+
+6. Returned-check exception resolved:
+   - reason: `Operator rehearsal returned check resolved after replacement cash`
+
+7. Sale reversal + linked correction:
+   - original sale: `2f65268d-9fdf-4349-bdf0-d18bd8cba424`
+   - original ticket: `OR1-000010` → VOIDED
+   - correction sale: `ef5ad4c8-ce5b-4f0b-a4e4-c6f0c02c5701`
+   - fresh replacement ticket: `OR1-000011` → ISSUED
+   - already-held money transferred by two explicit $2.50 credits; no second receipt created
+
+Final verified reconciliation after the correction:
+
+- Active recorded sales: $10.00 / 2 sales
+- Money expected: $10.00
+- Money received: $10.00
+- Money still due: $0.00
+- Uncleared checks: $0.00
+- Check issues: $0.00
+- Ticket inventory: 9 ALLOCATED / 2 ISSUED / 1 VOIDED
+- Audit, campaign, ticket, and money hash chains all verify with no bad position
 
 ## UX findings and fixes made during rehearsal
 
@@ -191,23 +222,23 @@ Until Oct. 18, this rehearsal can still complete money resolution, reversal/corr
 
 ## Current next rehearsal steps
 
-Resume after the latest Learning Hub wording update is green/deployed.
+The rehearsal is now complete through reversal/correction and clean money reconciliation.
 
-1. Refresh Money & reconciliation and visually confirm the highlighted action center.
-2. Record replacement cash for the returned check.
-3. Resolve the check issue.
-4. Complete any remaining outstanding seller balance needed for clean reconciliation.
-5. Reverse one sale.
-6. Record a linked correction using fresh ticket number(s).
-7. Handle already-held money through credit/refund/adjustment rather than a second receipt.
-8. Close sales.
-9. Verify post-close sale is blocked.
-10. Freeze drawing population.
-11. Export frozen population.
-12. Record synthetic external/physical result.
-13. Certify drawing.
-14. Move campaign to DRAWN.
-15. Final money/ticket reconciliation and audit verification.
+Timing gates for the locked rehearsal disclosures:
+
+- Sales close: **2026-10-17 11:24 AM America/Chicago**
+- Disclosed drawing time: **2026-10-18 11:24 AM America/Chicago**
+
+Do not alter these locked timestamps just to advance the rehearsal.
+
+1. At or after the disclosed sales-close time, close sales through the hosted operator UI.
+2. Verify a post-close sale is blocked.
+3. Freeze drawing population.
+4. Export frozen population.
+5. At or after the disclosed drawing time, record the synthetic external/physical result.
+6. Certify drawing.
+7. Move campaign to DRAWN.
+8. Complete final money/ticket reconciliation and audit verification.
 
 ## Current go-live blocker log
 
@@ -268,4 +299,4 @@ Final production review must still confirm production secrets, backups/monitorin
 
 The rehearsal is **not yet accepted**.
 
-The system has successfully passed the path through returned-check handling. Remaining acceptance work is reversal/correction, close sales, drawing lifecycle, final reconciliation, and audit verification.
+The system has successfully passed returned-check handling, full money resolution, sale reversal, linked correction, fresh-ticket issuance, credit transfer, and hash-chain verification. The remaining acceptance work is time-gated: close sales and post-close blocking after Oct. 17 at 11:24 AM CDT, then drawing freeze/export and the external result/certification flow at or after Oct. 18 at 11:24 AM CDT.
