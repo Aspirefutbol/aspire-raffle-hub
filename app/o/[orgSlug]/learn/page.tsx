@@ -17,7 +17,7 @@ export default async function LearningHubPage({
 }) {
   const { orgSlug } = await params;
   const raw = (await searchParams).q;
-  const query = (Array.isArray(raw) ? raw[0] : raw ?? "").trim();
+  const query = (Array.isArray(raw) ? raw[0] ?? "" : raw ?? "").trim();
   const ctx = await requireOrgContext(orgSlug);
   requirePagePermission(ctx, "organization.manage");
 
