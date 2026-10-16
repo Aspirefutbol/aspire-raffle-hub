@@ -7,7 +7,7 @@ test("Learning Hub is admin-only, searchable, and linked from operational screen
   await signIn(page, "admin@aspire.test");
   await page.goto("/o/aspire/learn");
   await expect(page.getByRole("heading", { name: "Learning Hub", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Create and prepare a raffle campaign", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link").filter({ hasText: "Create and prepare a raffle campaign" }).first()).toBeVisible();
 
   const search = page.getByRole("search");
   await search.getByPlaceholder("What do you need help with?").fill("check bounced");
