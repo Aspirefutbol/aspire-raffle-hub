@@ -7,7 +7,7 @@ import { recordMoneyCustody } from "@/lib/money/actions";
 import { MONEY_KINDS, type MoneyKind, type MoneyProjection } from "@/lib/money/schemas";
 
 const moneyLabels: Record<MoneyKind, string> = {
-  receipt: "Record turn-in", check_cleared: "Mark check cleared", check_returned: "Record returned check",
+  receipt: "Record turn-in (full or partial)", check_cleared: "Mark check cleared", check_returned: "Record returned check",
   exception_opened: "Flag financial issue", exception_resolved: "Resolve financial issue", refund: "Record refund", credit: "Move available credit",
   adjustment: "Approve balance adjustment", deposit: "Record deposit",
 };
@@ -31,6 +31,17 @@ export function MoneyOperationForm({ orgSlug, campaignId, money, canReceive, can
   const participants = new Map(money.participants.map((p) => [p.id, p.player_name]));
   const sales = money.sales.map((s) => ({ id: s.id, label: `${participants.get(s.participant_id) ?? "Player"} · ${formatMoney(s.recorded_cents)} · ${s.id.slice(0, 8)}${s.expected_cents === 0 ? " (reversed)" : ""}` }));
   const receipts = money.events.filter((e) => e.kind === "receipt");
+  const actionHelp: Record<MoneyKind, string> = {
+    receipt: "Record money actually handed to the organization. Enter the full amount or any partial amount still due.",
+    check_cleared: "Use when a previously received check clears. This increases reconciled money.",
+    check_returned: "Use when a previously received check is returned or bounces. This does not automatically void raffle tickets.",
+    exception_opened: "Flag a financial issue that needs follow-up without deleting or rewriting history.",
+    exception_resolved: "Close a previously recorded financial issue after the approved resolution is complete.",
+    refund: "Record money physically returned. Ticket validity is handled separately.",
+    credit: "Move already-held money to another same-seller outstanding sale; this does not create a new receipt.",
+    adjustment: "Record approved balance relief or correction. This is not physical money received.",
+    deposit: "Record deposit evidence for money already received; this is not a bank-balance tracker.",
+  };
   function submit(request: Record<string, unknown>) {
     preserved.current = request;
     setSubmission(request); setError(""); setMessage("");
@@ -65,7 +76,7 @@ export function MoneyOperationForm({ orgSlug, campaignId, money, canReceive, can
   }
   return <form ref={form} onSubmit={onSubmit} className="space-y-4" data-testid="money-operation-form">
     <fieldset disabled={pending || submission !== null} className="grid gap-4 md:grid-cols-2">
-      <label className="text-sm">Money operation<select aria-label="Money operation" value={kind} onChange={(e) => { setKind(e.target.value as MoneyKind); setError(""); }} className={control}>{allowed.map((k) => <option key={k} value={k}>{moneyLabels[k]}</option>)}</select></label>
+      <label className="text-sm">Choose action<select aria-label="Choose action" value={kind} onChange={(e) => { setKind(e.target.value as MoneyKind); setError(""); }} className={control}>{allowed.map((k) => <option key={k} value={k}>{moneyLabels[k]}</option>)}</select><span className="mt-1 block text-xs text-muted">{actionHelp[kind]}</span></label>
       {kind === "receipt" && <><label className="text-sm">Seller / family account<select name="seller_id" aria-label="Seller / family account" required className={control} defaultValue=""><option value="" disabled>Select seller</option>{money.sellers.map((s) => <option key={s.id} value={s.id}>{s.name} · {formatMoney(s.outstanding_cents)} outstanding · {s.id.slice(0, 8)}</option>)}</select></label>
         <label className="text-sm">Received as<select aria-label="Received as" name="payment_method" className={control}><option value="cash">Cash</option><option value="check">Check (uncleared)</option></select></label></>}
       {needsReceipt && <label className="text-sm">Original receipt<select name="receipt_id" aria-label="Original receipt" required={kind !== "exception_resolved"} className={control} defaultValue=""><option value="" disabled={kind !== "exception_resolved"}>{kind === "exception_resolved" ? "No check receipt / use other exception" : "Select receipt"}</option>{receipts.map((r) => <option key={r.id} value={r.id}>{r.payment_method} · {formatMoney(r.amount_cents)} · {r.id.slice(0, 8)}{r.reference ? ` · ${r.reference}` : ""}</option>)}</select></label>}
