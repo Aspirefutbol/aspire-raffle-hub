@@ -90,7 +90,7 @@ export const LEARNING_ARTICLES: LearningArticle[] = [
     updatedAt: commonUpdatedAt,
     sections: [
       { title: "When to use it", paragraphs: ["Use a reversal when the original sale must no longer count as a valid raffle sale."] },
-      { title: "How to do it", steps: ["Find the sale in the campaign history.", "Choose Reverse sale.", "Enter the reason.", "Confirm the reversal.", "If the buyer still needs valid tickets, record a linked correction using fresh ticket numbers."] },
+      { title: "How to do it", steps: ["Open the campaign and use Sales & corrections to jump to the highlighted action center.", "Find the original sale.", "Choose Reverse sale.", "Enter the reason and confirm the reversal.", "If the buyer still needs valid tickets, use Record correction on that reversed sale so the replacement stays linked and receives fresh ticket numbers."] },
       { title: "What this does not change", bullets: ["The original sale is not deleted.", "Original ticket numbers are not reused.", "Previously recorded physical money custody is not silently erased; handle refunds, credits, or adjustments separately when needed."] },
     ],
   },
@@ -105,7 +105,7 @@ export const LEARNING_ARTICLES: LearningArticle[] = [
     related: ["reverse-sale", "ticket-status-and-number-reuse", "transfer-credit"],
     updatedAt: commonUpdatedAt,
     sections: [
-      { title: "How to do it", steps: ["Reverse the incorrect original sale first.", "Use the correction/replacement action for the reversed sale.", "Enter the corrected buyer, quantity, and payment facts.", "Submit the replacement.", "Verify the replacement uses new ticket numbers and remains linked to the original history."] },
+      { title: "How to do it", steps: ["Reverse the incorrect original sale first.", "In the campaign’s Sales & corrections action center, use Record correction on the reversed sale.", "Enter the corrected buyer, quantity, and payment facts.", "Submit the replacement.", "Verify the replacement uses new ticket numbers and remains linked to the original history."] },
       { title: "Important rules", bullets: ["A correction is not an edit to the old row.", "Voided ticket numbers stay voided forever.", "If the organization already holds money for the original sale, use the approved credit-transfer workflow rather than recording another physical receipt."] },
     ],
   },
