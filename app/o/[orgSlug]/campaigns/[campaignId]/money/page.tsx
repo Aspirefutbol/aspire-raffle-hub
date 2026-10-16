@@ -4,6 +4,7 @@ import { MoneyTotals } from "@/components/money/balances";
 import { MoneyOperationForm } from "@/components/money/operation-form";
 import { HelpLink } from "@/components/learning/help-link";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { can, requireOrgContext } from "@/lib/auth/org-context";
 import { formatMoney } from "@/lib/fundraising/money";
@@ -21,10 +22,10 @@ export default async function MoneyPage({ params }: { params: Promise<{ orgSlug:
   const sellers = new Map(money.sellers.map((s) => [s.id, s.name]));
   return <>
     <PageHeader title="Money & reconciliation" description="Track sales, money turned in, checks, deposits, and corrections without erasing history."
-      breadcrumb={<Link href={`/o/${orgSlug}/campaigns/${campaignId}`}>Campaign</Link>} actions={can(ctx, "organization.manage") && <HelpLink orgSlug={orgSlug} article="understand-money-balances" label="Money guide" />} />
+      breadcrumb={<Link href={`/o/${orgSlug}/campaigns/${campaignId}`}>Campaign</Link>} actions={<>{(canReceive || canAdjust) && <ButtonLink href="#record-money">Record money</ButtonLink>}{can(ctx, "organization.manage") && <HelpLink orgSlug={orgSlug} article="understand-money-balances" label="Money guide" />}</>} />
     <MoneyTotals balances={money.totals} />
     <p className="my-4 text-sm text-muted">Money received is cash or checks turned in, minus refunds and returned checks. Reconciled money excludes uncleared checks. Deposits are historical records, not a bank balance. Money actions do not change ticket validity or the drawing.</p>
-    {(canReceive || canAdjust) && <Card className="mb-5"><CardHeader title="Record money movement" description="Every entry stays in the audit history. Add a reason and use a correcting entry instead of deleting or rewriting past activity." /><CardBody><MoneyOperationForm orgSlug={orgSlug} campaignId={campaignId} money={money} canReceive={canReceive} canAdjust={canAdjust} /></CardBody></Card>}
+    {(canReceive || canAdjust) && <div id="record-money" className="scroll-mt-4"><Card className="mb-5"><CardHeader title="Record money received / adjustments" description="Record cash or checks turned in, check outcomes, refunds, credits, adjustments, and deposits. Every entry stays in audit history." /><CardBody><MoneyOperationForm orgSlug={orgSlug} campaignId={campaignId} money={money} canReceive={canReceive} canAdjust={canAdjust} /></CardBody></Card></div>}
     {[{ title: "Seller balances", entries: money.sellers }, { title: "Team balances", entries: money.teams }].map(({ title, entries }) => <Card className="mb-5" key={title}><CardHeader title={title} /><CardBody><ul className="divide-y divide-line">{entries.map((s) => <li key={s.id ?? "unassigned"} className="py-3 text-sm"><strong>{s.name ?? "No team"}</strong><p>{formatMoney(s.expected_cents)} expected · {formatMoney(s.received_cents)} received · {formatMoney(s.outstanding_cents)} outstanding · {formatMoney(s.reconciled_cents)} reconciled · {formatMoney(s.exception_cents)} exceptions</p></li>)}</ul></CardBody></Card>)}
     <Card className="mb-5"><CardHeader title="Player balances" /><CardBody><ul className="divide-y divide-line">{money.participants.map((p) => <li key={p.id} className="py-3 text-sm"><strong>{p.player_name}</strong> · {p.team_name ?? "No team"}<p>{formatMoney(p.expected_cents)} expected · {formatMoney(p.received_cents)} received · {formatMoney(p.outstanding_cents)} outstanding · {formatMoney(p.reconciled_cents)} reconciled · {formatMoney(p.exception_cents)} exceptions</p></li>)}</ul></CardBody></Card>
     <Card><CardHeader title="Money history" description="Turn-ins, check outcomes, refunds, credits, adjustments, and deposits stay available for audit." /><CardBody>
