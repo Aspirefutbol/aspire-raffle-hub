@@ -22,8 +22,8 @@ export function SellerTools({ orgSlug, participantId, price }: { orgSlug: string
     });
   }
   return <div className="space-y-3 rounded-control border border-line p-3" data-testid="seller-tools">
-    <Button variant="secondary" className="w-full" disabled={pending} onClick={() => manage(false)}>{url ? "Replace seller link" : "Share fundraiser"}</Button>
-    {!url && <p className="text-xs text-muted">Creates a private sharing token without publishing your player’s name. A saved link can be used until sales close or you revoke/replace it. Tokens are shown once; generate a replacement if you lose yours.</p>}
+    <Button variant="secondary" className="w-full" disabled={pending} onClick={() => manage(false)}>{url ? "Replace seller link" : "Create / replace seller link"}</Button>
+    {!url && <p className="text-xs text-muted">Creates a new private sharing token without publishing your player’s name. If a saved link already exists, creating a new one replaces it and the old link stops working. Tokens are shown once; generate a replacement if you lose yours.</p>}
     {url && <>
       <p className="break-all text-xs" data-testid="seller-url">{url}</p>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm underline [&>*]:inline-flex [&>*]:min-h-11 [&>*]:items-center">
