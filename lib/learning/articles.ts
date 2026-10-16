@@ -136,7 +136,7 @@ export const LEARNING_ARTICLES: LearningArticle[] = [
     updatedAt: commonUpdatedAt,
     sections: [
       { title: "What this is", paragraphs: ["Recorded sales show what sellers collected from buyers. A money turn-in records what the organization physically received from a seller."] },
-      { title: "How to do it", steps: ["Open Money & reconciliation for the campaign.", "Choose the seller and receipt action.", "Enter the cash/check amount, reason, and optional reference.", "Save the entry.", "Verify Money received, Money still due, and Reconciled money update as expected."] },
+      { title: "How to do it", steps: ["Open Money & reconciliation for the campaign.", "Use the Record money button to jump to the highlighted action center.", "Under Choose action, select Record turn-in (full or partial).", "Choose the seller/family account and whether the organization received cash or an uncleared check.", "Enter the amount actually handed to the organization, plus the reason and optional reference.", "Save the entry and verify Money received, Money still due, and Reconciled money update as expected."] },
       { title: "Important rules", bullets: ["Do not manufacture a second receipt for money already held.", "Money actions do not change ticket validity or drawing eligibility.", "Every entry remains in history; correct mistakes with explicit follow-up entries."] },
     ],
   },
@@ -152,7 +152,7 @@ export const LEARNING_ARTICLES: LearningArticle[] = [
     updatedAt: commonUpdatedAt,
     sections: [
       { title: "How it works", paragraphs: ["A receipt can cover less than the seller’s net outstanding amount. The system allocates the received amount deterministically and keeps the remainder outstanding."] },
-      { title: "How to do it", steps: ["Open Money & reconciliation.", "Record only the amount physically turned in.", "Confirm Money received increases by that amount.", "Confirm Money still due decreases but remains above zero until fully settled."] },
+      { title: "How to do it", steps: ["Open Money & reconciliation and use Record money to jump to the action center.", "Under Choose action, select Record turn-in (full or partial).", "Record only the amount physically turned in; you do not need a separate partial-payment mode.", "Confirm Money received increases by that amount.", "Confirm Money still due decreases but remains above zero until fully settled."] },
     ],
   },
   {
@@ -167,7 +167,8 @@ export const LEARNING_ARTICLES: LearningArticle[] = [
     updatedAt: commonUpdatedAt,
     sections: [
       { title: "How it works", paragraphs: ["A check receipt can remain uncleared until its outcome is known. If it returns, the money is removed from received/reconciled balances and a check exception is tracked."] },
-      { title: "Important rules", bullets: ["A returned check does not automatically void the raffle ticket.", "Record replacement money separately when received.", "Resolve the exception only after the outstanding amount is settled or an authorized adjustment has been approved."] },
+      { title: "How to record a returned check", steps: ["Open Money & reconciliation and use Record money to jump to the action center.", "Under Choose action, select Record returned check.", "Select the original check receipt, add the reason, and submit.", "Record replacement money separately when it is actually received.", "Resolve the financial issue only after the outstanding amount is settled or an authorized adjustment has been approved."] },
+      { title: "Important rules", bullets: ["A returned check does not automatically void the raffle ticket.", "Returned-check handling is a money-custody workflow, not a ticket reversal.", "The original receipt and returned-check event remain in immutable history."] },
     ],
   },
   {
@@ -182,6 +183,7 @@ export const LEARNING_ARTICLES: LearningArticle[] = [
     updatedAt: commonUpdatedAt,
     sections: [
       { title: "Key terms", bullets: ["Recorded sales (total): gross recorded seller sales.", "Money expected: net amount the seller is accountable to turn in after reversals/approved relief.", "Money received: cash/check receipts held by the organization, net of refunds/returned checks.", "Money still due: expected money not yet covered by receipts or approved adjustments.", "Reconciled money: received money excluding uncleared checks.", "Deposits recorded: historical deposit evidence, not a bank-account balance."] },
+      { title: "Where to take action", paragraphs: ["Use the Record money button at the top of the Money & reconciliation page to jump to the highlighted Record money received / adjustments action center. Choose the specific action there instead of editing history directly."] },
     ],
   },
   {
