@@ -56,7 +56,7 @@ test("money custody: partial receipts, uncertain retry, returned checks and corr
   await form.getByLabel("Seller / family account", { exact: true }).selectOption(sellerId);
   await form.getByLabel("Amount ($)", { exact: true }).fill("15.00");
   await form.getByLabel("Reason / notes").fill("Synthetic partial cash turn-in, five dollars still held");
-  await form.getByRole("button", { name: "Record turn-in", exact: true }).click();
+  await form.getByRole("button", { name: "Record turn-in (full or partial)", exact: true }).click();
   await expect.poll(async () => (await money()).totals.received_cents).toBe(1500);
   await expect(form.getByRole("button", { name: "Retry preserved submission", exact: true })).toBeEnabled();
   await form.getByRole("button", { name: "Retry preserved submission", exact: true }).click();
@@ -65,7 +65,7 @@ test("money custody: partial receipts, uncertain retry, returned checks and corr
   expect((await money()).events.filter((e) => e.kind === "receipt")).toHaveLength(1);
   const cash = (await money()).events.find((e) => e.kind === "receipt")!.id;
   async function submit(kind: string, values: Record<string, string>) {
-    await form.getByLabel("Money operation", { exact: true }).selectOption(kind);
+    await form.getByLabel("Choose action", { exact: true }).selectOption(kind);
     for (const [label, value] of Object.entries(values)) {
       const input = form.getByLabel(label, { exact: true });
       if (await input.evaluate((el) => el.tagName === "SELECT")) await input.selectOption(value);
