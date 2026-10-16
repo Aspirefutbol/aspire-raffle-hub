@@ -1,6 +1,6 @@
 # Raffle Hub Project State
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-16_
 
 This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, `docs/MONEY_OPERATOR_UI_REVIEW.md`, `docs/SELLER_SHARING.md`, and `docs/ADMIN_LEARNING_HUB.md`.
 
@@ -132,38 +132,58 @@ campaign setup → enrollment → ticket allocation → family sharing/selling �
 
 Use synthetic data only. Preserve the current accepted Money Custody, Seller Sharing, Learning Hub, authorization, tenant isolation, immutable ledger, ticket inventory, drawing integrity, idempotency, and audit behavior.
 
-Produce a go-live blocker list categorized as Product, Operations, Compliance/legal, Training, and Infrastructure. Keep PR #2 draft/unmerged until explicit approval.
+### Rehearsal progress
 
-Blueprint: `docs/ADMIN_LEARNING_HUB.md`.
+Primary campaign: `OPERATOR REHEARSAL — Aspire Pilot`  
+Campaign ID: `5a892877-1b83-4a3b-94d3-7a6e3aa2fb12`
 
-First slice should include:
+Passed so far:
 
-- admin-only Learning Hub navigation
-- searchable operating guides and FAQ
-- launch-critical guides for campaign setup, inventory, sales, reversals/corrections, money/reconciliation, checks/exceptions, deposits/refunds/adjustments, drawing, roles/scopes, and troubleshooting
-- contextual help links from important operating screens
-- version-controlled, product-grounded content
-- no mutation capability from help content
+- fresh campaign setup/readiness
+- U13 Boys enrollment: 3 players
+- ACTIVE lifecycle
+- 12-ticket inventory preparation
+- Seller Sharing public privacy and request-only behavior
+- supporter request → contacted → offline sale → completed request
+- family cash sale and normal check sale
+- captain/team monitoring and privacy
+- partial $2.50 cash turn-in
+- $5 check turn-in
+- returned-check handling without automatic ticket invalidation
+- operator UX fixes for money-action discoverability
+- highlighted Action center treatment for Money, Campaign readiness, and Drawing
 
-Keep this separate from the Parent/Player Seller Toolkit.
+Current database state before continuing:
 
-Preserve all existing authorization, tenant isolation, immutable ledgers, ticket inventory, drawing integrity, money custody, idempotency, Seller Sharing privacy, and audit behavior.
+- campaign lifecycle: ACTIVE
+- tickets: 10 ALLOCATED / 2 ISSUED
+- active recorded sales: 2 / $10 total
+- completed supporter request linked to sale `82bacaf2-df17-4cd5-a0f0-01a5d8bf5e9a`
+- money history includes $2.50 cash turn-in, $5 check turn-in, and returned-check exception
 
-## Following approved slice
+Current next step after latest validation/deploy:
 
-### Aspire operator rehearsal
+1. visually confirm the highlighted Money action center
+2. record replacement cash for the returned check
+3. resolve the check issue
+4. run sale reversal + linked correction with fresh ticket number(s)
+5. continue through close, drawing, certification, final reconciliation, and audit verification
 
-Run the complete hosted staging path:
+Detailed live findings: `docs/OPERATOR_REHEARSAL_FINDINGS.md`.
 
-campaign setup → enrollment → ticket allocation → family sharing/selling → captain monitoring → sale → money turn-in/reconciliation → reversal/correction → close sales → freeze/export drawing population → external/physical draw → result/certification → final reconciliation → audit verification.
+### Rehearsal UX changes already made
 
-Produce a go-live blocker list categorized as:
+- top-level **Record money** shortcut
+- **Record money received / adjustments** action-center heading
+- **Choose action** selector
+- **Record turn-in (full or partial)** wording
+- contextual action help
+- reusable highlighted workflow panel for Money, Campaign readiness, and Drawing
+- Learning Hub money articles aligned with the updated terminology
 
-- Product
-- Operations
-- Compliance/legal
-- Training
-- Infrastructure
+Produce a final go-live blocker list categorized as Product, Operations, Compliance/legal, Training, and Infrastructure.
+
+Keep PR #2 draft/unmerged until explicit approval.
 
 ## Production gate
 
