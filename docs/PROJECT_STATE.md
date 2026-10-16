@@ -110,7 +110,22 @@ Known follow-up UX refinement: after a browser reload, the seller control return
 
 ## Current approved action
 
-**Admin Learning Hub: implementation and QA gate.**
+**Admin Learning Hub: hosted hands-on acceptance review.**
+
+Implementation and automated validation are complete on commit `ba3e971efb513717734eaaa3cf6c7038ebe758dc`.
+
+Validation status:
+
+- lint, typecheck, unit tests, and production build: green
+- fresh migration application and pgTAP: green
+- generated database types: green
+- fundraising, drawing, money, and Seller Sharing concurrency suites: green
+- audit continuity checkpoint: green
+- Playwright browser suite: 29 / 29 passed
+- Hosted QA Deploy: green
+- Netlify staging deploy: ready
+
+Current gate: perform a short admin/operator hands-on review of the Learning Hub in hosted staging. Verify admin navigation, search, one launch-critical article, contextual help links, mobile usability, and that family/seller users cannot access the admin Learning Hub. Do not mark this slice accepted or begin the full Aspire operator rehearsal until this hands-on review passes.
 
 Blueprint: `docs/ADMIN_LEARNING_HUB.md`.
 
