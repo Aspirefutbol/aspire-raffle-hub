@@ -90,8 +90,6 @@ Validation at acceptance:
 - 27 browser tests
 - lint, typecheck, generated-types parity, production build, audit continuity, database/E2E CI, and hosted deploy all green
 
-## Completed and verified slices
-
 ### Seller Sharing + Parent/Player Seller Toolkit — ACCEPTED
 
 Hosted/operator QA is complete for the Aspire staging fixture.
