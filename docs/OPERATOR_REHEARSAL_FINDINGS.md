@@ -172,6 +172,23 @@ During the rehearsal, money workflow guidance was updated again so the articles 
 
 This is the desired operating pattern: rehearsal questions should feed directly back into the in-product guide content.
 
+## Rehearsal fixture timing note
+
+The current rehearsal campaign has a disclosed drawing time of **2026-10-18 11:24 AM America/Chicago**.
+
+The drawing transaction correctly enforces that an external/physical result:
+
+- uses the current frozen snapshot
+- occurs after the snapshot freeze
+- occurs at or after the campaign’s disclosed drawing time
+- cannot be recorded with a future timestamp
+
+Therefore the current campaign cannot complete the hands-on external result/certification step before the disclosed Oct. 18 drawing time. This is **expected integrity behavior, not a product defect**.
+
+For future same-session operator rehearsals, use a compressed but valid synthetic schedule (for example, a sales close shortly after setup and a disclosed draw shortly after close) so the operator can exercise close → freeze → export → external result → certification without bypassing locked disclosures.
+
+Until Oct. 18, this rehearsal can still complete money resolution, reversal/correction, sales close when appropriate, drawing-readiness review, freeze, and export. Do not alter the locked draw date directly in the database merely to make the rehearsal finish early.
+
 ## Current next rehearsal steps
 
 Resume after the latest Learning Hub wording update is green/deployed.
