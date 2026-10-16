@@ -24,7 +24,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await page.goto(`/o/aspire/fundraising/${id}`);
   await expect(page.getByRole("heading",{name:"Parent/Player Seller Toolkit"})).toBeVisible();
   const tools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
-  await tools.getByRole("button",{name:"Share fundraiser",exact:true}).click();
+  await tools.getByRole("button",{name:"Create / replace seller link",exact:true}).click();
   const url=await tools.getByTestId("seller-url").innerText();
   expect(new URL(url).pathname).toMatch(/^\/s\/[a-f0-9]{64}$/);
   for(const name of ["Text / SMS","Email","WhatsApp"]) {
@@ -97,7 +97,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(captainPage.locator("body")).not.toContainText("sharing-supporter@example.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
   const currentTools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
-  await currentTools.getByRole("button",{name:"Share fundraiser",exact:true}).click();
+  await currentTools.getByRole("button",{name:"Create / replace seller link",exact:true}).click();
   const newUrl=await currentTools.getByTestId("seller-url").innerText();
   expect(newUrl).not.toBe(url);
   await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Send nonbinding request"})).toHaveCount(0);
