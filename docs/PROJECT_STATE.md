@@ -108,24 +108,31 @@ Verified capabilities:
 
 Known follow-up UX refinement: after a browser reload, the seller control returns to `Share fundraiser` because tokens are intentionally shown once and not persisted. Consider clearer copy such as `Create / replace seller link` in a later polish pass so families understand that generating a new link revokes the prior one.
 
+### Admin Learning Hub — ACCEPTED
+
+Hosted/operator acceptance review is complete.
+
+Verified capabilities:
+
+- Admin-only Learning Hub navigation appears in the hosted operator workspace.
+- Search for natural operator language such as `check bounced` returns the relevant returned-check guide.
+- Launch-critical articles are readable, scannable, and linked to related guides.
+- Contextual help from Campaigns routes directly to the correct campaign-preparation article.
+- Family/seller navigation does not expose the Admin Learning Hub.
+- Automated validation is green: lint, typecheck, unit tests, production build, fresh migrations, pgTAP, generated types, fundraising/drawing/money/Seller Sharing concurrency suites, audit continuity, and 29/29 Playwright browser tests.
+- Hosted QA Deploy is green and staging is ready.
+
 ## Current approved action
 
-**Admin Learning Hub: hosted hands-on acceptance review.**
+**Aspire full operator rehearsal.**
 
-Implementation and automated validation are complete on commit `ba3e971efb513717734eaaa3cf6c7038ebe758dc`.
+Run the complete hosted staging path:
 
-Validation status:
+campaign setup → enrollment → ticket allocation → family sharing/selling → captain monitoring → sale → money turn-in/reconciliation → reversal/correction → close sales → freeze/export drawing population → external/physical draw → result/certification → final reconciliation → audit verification.
 
-- lint, typecheck, unit tests, and production build: green
-- fresh migration application and pgTAP: green
-- generated database types: green
-- fundraising, drawing, money, and Seller Sharing concurrency suites: green
-- audit continuity checkpoint: green
-- Playwright browser suite: 29 / 29 passed
-- Hosted QA Deploy: green
-- Netlify staging deploy: ready
+Use synthetic data only. Preserve the current accepted Money Custody, Seller Sharing, Learning Hub, authorization, tenant isolation, immutable ledger, ticket inventory, drawing integrity, idempotency, and audit behavior.
 
-Current gate: perform a short admin/operator hands-on review of the Learning Hub in hosted staging. Verify admin navigation, search, one launch-critical article, contextual help links, mobile usability, and that family/seller users cannot access the admin Learning Hub. Do not mark this slice accepted or begin the full Aspire operator rehearsal until this hands-on review passes.
+Produce a go-live blocker list categorized as Product, Operations, Compliance/legal, Training, and Infrastructure. Keep PR #2 draft/unmerged until explicit approval.
 
 Blueprint: `docs/ADMIN_LEARNING_HUB.md`.
 
