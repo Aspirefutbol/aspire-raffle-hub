@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MoneyTotals } from "@/components/money/balances";
 import { MoneyOperationForm } from "@/components/money/operation-form";
+import { HelpLink } from "@/components/learning/help-link";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { can, requireOrgContext } from "@/lib/auth/org-context";
@@ -20,7 +21,7 @@ export default async function MoneyPage({ params }: { params: Promise<{ orgSlug:
   const sellers = new Map(money.sellers.map((s) => [s.id, s.name]));
   return <>
     <PageHeader title="Money & reconciliation" description="Track sales, money turned in, checks, deposits, and corrections without erasing history."
-      breadcrumb={<Link href={`/o/${orgSlug}/campaigns/${campaignId}`}>Campaign</Link>} />
+      breadcrumb={<Link href={`/o/${orgSlug}/campaigns/${campaignId}`}>Campaign</Link>} actions={can(ctx, "organization.manage") && <HelpLink orgSlug={orgSlug} article="understand-money-balances" label="Money guide" />} />
     <MoneyTotals balances={money.totals} />
     <p className="my-4 text-sm text-muted">Money received is cash or checks turned in, minus refunds and returned checks. Reconciled money excludes uncleared checks. Deposits are historical records, not a bank balance. Money actions do not change ticket validity or the drawing.</p>
     {(canReceive || canAdjust) && <Card className="mb-5"><CardHeader title="Record money movement" description="Every entry stays in the audit history. Add a reason and use a correcting entry instead of deleting or rewriting past activity." /><CardBody><MoneyOperationForm orgSlug={orgSlug} campaignId={campaignId} money={money} canReceive={canReceive} canAdjust={canAdjust} /></CardBody></Card>}
