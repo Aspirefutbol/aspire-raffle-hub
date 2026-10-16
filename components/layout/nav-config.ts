@@ -1,6 +1,6 @@
 import type { Permission } from "@/lib/permissions";
 
-export type NavIcon = "dashboard" | "people" | "teams" | "campaigns" | "reports" | "settings";
+export type NavIcon = "dashboard" | "people" | "teams" | "campaigns" | "learn" | "reports" | "settings";
 
 export interface NavItem {
   label: string;
@@ -24,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Teams", href: "/teams", icon: "teams", permission: "roster.read" },
   { label: "Campaigns", href: "/campaigns", icon: "campaigns", permission: "campaigns.read" },
+  { label: "Learning Hub", href: "/learn", icon: "learn", permission: "organization.manage" },
   { label: "My fundraising", href: "/fundraising", icon: "campaigns", permission: "roster.read_own_family" },
   { label: "Team fundraising", href: "/team-fundraising", icon: "teams", permission: "roster.read_assigned_teams" },
   { label: "Reports", href: "/reports", icon: "reports", permission: "roster.read" },
