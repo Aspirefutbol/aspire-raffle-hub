@@ -213,14 +213,15 @@ Verified:
 - trigger-only functions are no longer directly executable by authenticated/API roles
 - future functions inherit the same deny-by-default public/anonymous posture
 - regression coverage was added in `supabase/tests/function_privileges.test.sql`
-- staging migration: `20261019000100_function_privilege_hardening.sql`
+- staging migrations: `20261019000100_security_acl_hardening.sql` and `20261019205330_function_privilege_hardening.sql`
 
 Supabase Advisor still reports authenticated `SECURITY DEFINER` functions because the application intentionally exposes permission-checked RPCs and uses SECURITY DEFINER helper functions for scoped/RLS behavior. These must be reviewed individually, not bulk-revoked, because blanket removal would break the app's authorization model.
 
-Two remaining security items before production sign-off:
+Remaining security gate before production sign-off:
 
-- Supabase Auth leaked-password protection is currently disabled and should be enabled in the project Auth settings.
-- Two internal tables report RLS enabled without policies; both currently have no anon/authenticated/service-role DML grants. Treat this as an intentional internal-table pattern unless the design changes.
+- Supabase Auth leaked-password protection is currently disabled. Hosted QA now treats this as a hard gate: it must either enable the setting with the staging management token or verify that it was enabled manually before deployment can pass.
+
+The prior RLS-without-policy advisor notices for the two internal tables were resolved by explicit deny-all client policies in `20261019000100_security_acl_hardening.sql`.
 
 ## Production gate
 
