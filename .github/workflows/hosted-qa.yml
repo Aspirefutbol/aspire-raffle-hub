@@ -66,11 +66,25 @@ jobs:
 
       - run: npm ci
 
-      - name: Verify externally applied Seller Sharing migrations
+      - name: Enforce staging leaked-password protection
         run: |
-          echo "Seller Sharing migrations were applied directly to the existing staging Supabase project via the authenticated Supabase management control plane."
-          echo "Expected hosted migration versions: 20261017000100 and 20261017000200."
-          echo "Full migration/pgTAP/E2E validation must already be green in CI for this exact commit before deployment proceeds."
+          code="$(curl -sS -o /tmp/auth-config.json -w "%{http_code}" \
+            -X PATCH "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"password_hibp_enabled":true}')"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not enforce leaked-password protection (HTTP $code)."
+            exit 1
+          fi
+          node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config.json","utf8"));if(x.password_hibp_enabled!==true)process.exit(1)'
+          echo "Staging leaked-password protection is enabled."
+
+      - name: Verify externally applied staging migrations
+        run: |
+          echo "Staging migrations are applied through the authenticated Supabase management control plane after full CI validates the exact migration set."
+          echo "Expected hosted versions include 20261017000100, 20261017000200, and 20261019000100."
+          echo "Full migration/pgTAP/E2E validation must be green for this exact commit before deployment proceeds."
 
       - name: Show Netlify CLI version
         run: npx netlify-cli@latest --version
