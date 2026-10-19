@@ -5,7 +5,7 @@ select plan(6);
 
 select is(
   (
-    select coalesce(array_agg(p.proname order by p.proname), array[]::text[])
+    select coalesce(array_agg(p.proname::text order by p.proname), array[]::text[])
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
@@ -31,14 +31,26 @@ select is(
 );
 
 select ok(
-  not has_table_privilege('anon', 'public.campaign_ticket_counters', 'SELECT,INSERT,UPDATE,DELETE')
-  and not has_table_privilege('authenticated', 'public.campaign_ticket_counters', 'SELECT,INSERT,UPDATE,DELETE'),
+  not has_table_privilege('anon', 'public.campaign_ticket_counters', 'SELECT')
+  and not has_table_privilege('anon', 'public.campaign_ticket_counters', 'INSERT')
+  and not has_table_privilege('anon', 'public.campaign_ticket_counters', 'UPDATE')
+  and not has_table_privilege('anon', 'public.campaign_ticket_counters', 'DELETE')
+  and not has_table_privilege('authenticated', 'public.campaign_ticket_counters', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.campaign_ticket_counters', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.campaign_ticket_counters', 'UPDATE')
+  and not has_table_privilege('authenticated', 'public.campaign_ticket_counters', 'DELETE'),
   'campaign ticket counters have no client DML privileges'
 );
 
 select ok(
-  not has_table_privilege('anon', 'public.seller_request_limits', 'SELECT,INSERT,UPDATE,DELETE')
-  and not has_table_privilege('authenticated', 'public.seller_request_limits', 'SELECT,INSERT,UPDATE,DELETE'),
+  not has_table_privilege('anon', 'public.seller_request_limits', 'SELECT')
+  and not has_table_privilege('anon', 'public.seller_request_limits', 'INSERT')
+  and not has_table_privilege('anon', 'public.seller_request_limits', 'UPDATE')
+  and not has_table_privilege('anon', 'public.seller_request_limits', 'DELETE')
+  and not has_table_privilege('authenticated', 'public.seller_request_limits', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.seller_request_limits', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.seller_request_limits', 'UPDATE')
+  and not has_table_privilege('authenticated', 'public.seller_request_limits', 'DELETE'),
   'seller request limits have no client DML privileges'
 );
 
