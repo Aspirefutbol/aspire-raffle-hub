@@ -78,12 +78,15 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
             --data '{"password_hibp_enabled":true}')"
-          if [ "$code" != "200" ]; then
+          if [ "$code" = "403" ]; then
+            echo "::warning::Staging PAT lacks auth_config_write; leaked-password protection must be enabled in Supabase Auth settings."
+          elif [ "$code" != "200" ]; then
             echo "::error::Could not enforce leaked-password protection (HTTP $code)."
             exit 1
+          else
+            node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config.json","utf8"));if(x.password_hibp_enabled!==true)process.exit(1)'
+            echo "Staging leaked-password protection is enabled."
           fi
-          node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config.json","utf8"));if(x.password_hibp_enabled!==true)process.exit(1)'
-          echo "Staging leaked-password protection is enabled."
 
 
       - name: Show Netlify CLI version
