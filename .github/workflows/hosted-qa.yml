@@ -66,6 +66,20 @@ jobs:
 
       - run: npm ci
 
+      - name: Link staging Supabase project
+        run: npx supabase link --project-ref "$STAGING_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Preview pending staging migrations
+        run: npx supabase db push --linked --dry-run
+
+      - name: Apply pending staging migrations
+        run: npx supabase db push --linked
+
+      - name: Verify staging migration history
+        run: |
+          npx supabase migration list --linked | tee /tmp/migrations.txt
+          grep -q "20261019000100" /tmp/migrations.txt
+
       - name: Enforce staging leaked-password protection
         run: |
           code="$(curl -sS -o /tmp/auth-config.json -w "%{http_code}" \
@@ -80,11 +94,6 @@ jobs:
           node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config.json","utf8"));if(x.password_hibp_enabled!==true)process.exit(1)'
           echo "Staging leaked-password protection is enabled."
 
-      - name: Verify externally applied staging migrations
-        run: |
-          echo "Staging migrations are applied through the authenticated Supabase management control plane after full CI validates the exact migration set."
-          echo "Expected hosted versions include 20261017000100, 20261017000200, and 20261019000100."
-          echo "Full migration/pgTAP/E2E validation must be green for this exact commit before deployment proceeds."
 
       - name: Show Netlify CLI version
         run: npx netlify-cli@latest --version
