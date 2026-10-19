@@ -66,18 +66,42 @@ jobs:
 
       - run: npm ci
 
-      - name: Link staging Supabase project
-        run: npx supabase link --project-ref "$STAGING_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Resolve staging IPv4 session-pooler URL
+        run: |
+          code="$(curl -sS -o /tmp/pooler.json -w "%{http_code}" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/config/database/pooler" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read staging pooler config (HTTP $code)."
+            exit 1
+          fi
+          STAGING_DB_URL="$(node <<'NODE'
+          const fs = require("fs");
+          const rows = JSON.parse(fs.readFileSync("/tmp/pooler.json", "utf8"));
+          if (!Array.isArray(rows) || rows.length === 0) throw new Error("No pooler config returned");
+          const p = rows.find((x) => x.database_type === "PRIMARY") || rows[0];
+          const host = p.db_host;
+          const user = p.db_user || ("postgres." + process.env.STAGING_PROJECT_REF);
+          const database = p.db_name || "postgres";
+          if (!host) throw new Error("Pooler host missing");
+          const password = process.env.SUPABASE_DB_PASSWORD;
+          const url = "postgresql://" + encodeURIComponent(user) + ":" + encodeURIComponent(password)
+            + "@" + host + ":5432/" + encodeURIComponent(database) + "?sslmode=require";
+          process.stdout.write(url);
+          NODE
+          )"
+          echo "::add-mask::$STAGING_DB_URL"
+          echo "STAGING_DB_URL=$STAGING_DB_URL" >> "$GITHUB_ENV"
 
       - name: Preview pending staging migrations
-        run: npx supabase db push --linked --dry-run
+        run: npx supabase db push --db-url "$STAGING_DB_URL" --dry-run
 
       - name: Apply pending staging migrations
-        run: npx supabase db push --linked
+        run: npx supabase db push --db-url "$STAGING_DB_URL"
 
       - name: Verify staging migration history
         run: |
-          npx supabase migration list --linked | tee /tmp/migrations.txt
+          npx supabase migration list --db-url "$STAGING_DB_URL" | tee /tmp/migrations.txt
           grep -q "20261019000100" /tmp/migrations.txt
 
       - name: Enforce staging leaked-password protection
