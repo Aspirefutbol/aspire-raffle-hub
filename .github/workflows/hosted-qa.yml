@@ -78,15 +78,27 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
             --data '{"password_hibp_enabled":true}')"
-          if [ "$code" = "403" ]; then
-            echo "::warning::Staging PAT lacks auth_config_write; leaked-password protection must be enabled in Supabase Auth settings."
-          elif [ "$code" != "200" ]; then
-            echo "::error::Could not enforce leaked-password protection (HTTP $code)."
-            exit 1
-          else
+          if [ "$code" = "200" ]; then
             node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config.json","utf8"));if(x.password_hibp_enabled!==true)process.exit(1)'
             echo "Staging leaked-password protection is enabled."
+            exit 0
           fi
+
+          if [ "$code" = "403" ]; then
+            echo "Staging PAT cannot write Auth config; verifying the existing setting instead."
+            read_code="$(curl -sS -o /tmp/auth-config-read.json -w "%{http_code}" \
+              "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/config/auth" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+            if [ "$read_code" = "200" ] && node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config-read.json","utf8"));process.exit(x.password_hibp_enabled===true?0:1)'; then
+              echo "Staging leaked-password protection is already enabled."
+              exit 0
+            fi
+            echo "::error::Leaked-password protection is not verifiably enabled. Enable it in Supabase Authentication → Providers → Email, then rerun Hosted QA."
+            exit 1
+          fi
+
+          echo "::error::Could not enforce leaked-password protection (HTTP $code)."
+          exit 1
 
 
       - name: Show Netlify CLI version
