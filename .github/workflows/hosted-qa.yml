@@ -85,15 +85,19 @@ jobs:
           fi
 
           if [ "$code" = "403" ]; then
-            echo "Staging PAT cannot write Auth config; verifying the existing setting instead."
-            read_code="$(curl -sS -o /tmp/auth-config-read.json -w "%{http_code}" \
-              "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/config/auth" \
+            echo "Staging PAT cannot write Auth config; verifying with Supabase Security Advisors."
+            advisor_code="$(curl -sS -o /tmp/security-advisors.json -w "%{http_code}" \
+              "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/advisors/security?lint_type=sql" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
-            if [ "$read_code" = "200" ] && node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config-read.json","utf8"));process.exit(x.password_hibp_enabled===true?0:1)'; then
-              echo "Staging leaked-password protection is already enabled."
+            if [ "$advisor_code" != "200" ]; then
+              echo "::error::Could not verify Supabase Security Advisors (HTTP $advisor_code). The staging PAT needs advisors_read permission."
+              exit 1
+            fi
+            if node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/security-advisors.json","utf8"));const lints=x.lints||[];process.exit(lints.some(l=>l.name==="auth_leaked_password_protection")?1:0)'; then
+              echo "Supabase Security Advisors confirm leaked-password protection is enabled."
               exit 0
             fi
-            echo "::error::Leaked-password protection is not verifiably enabled. Enable it in Supabase Authentication → Providers → Email, then rerun Hosted QA."
+            echo "::error::Supabase Security Advisors still report leaked-password protection disabled."
             exit 1
           fi
 
