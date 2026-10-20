@@ -99,11 +99,11 @@ select ok(exists (select 1 from public.audit_events where action = 'ORGANIZATION
                   and actor_id = '00000000-0000-0000-0000-00000000aa01'),
   'protected change is audited with actor, fields and reason');
 
-select lives_ok($ select public.platform_update_organization(
+select lives_ok($q$select public.platform_update_organization(
   '20000000-0000-0000-0000-00000000000a',
   '{"platform_config":{"texas_crea_compliance_required":false}}',
   'Synthetic hardening fixture only'
-) $, 'platform admin can explicitly opt a synthetic fixture out of Texas compliance');
+)$q$, 'platform admin can explicitly opt a synthetic fixture out of Texas compliance');
 
 -- ---------------------------------------------------------------------------
 -- 3. Identity: profile email read-only; exact email lookup
