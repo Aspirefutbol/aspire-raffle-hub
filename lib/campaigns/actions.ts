@@ -5,7 +5,7 @@ import { type ActionResult, describeDbError, fail, ok, orgAction } from "@/lib/a
 import { can } from "@/lib/auth/org-context";
 import { createClient } from "@/lib/supabase/server";
 import { canTransition, editableFieldsFilter, isCampaignStatus, transitionNeedsReason, transitionPermission } from "./lifecycle";
-import { createCampaignSchema, transitionCampaignSchema, updateCampaignSchema } from "./schemas";
+import { confirmCampaignComplianceSchema, createCampaignSchema, transitionCampaignSchema, updateCampaignSchema } from "./schemas";
 
 // Campaign setup keeps the existing lifecycle and readiness checks. Fundraising
 // inventory and sale mutations use separate transactional database functions.
@@ -79,5 +79,19 @@ export async function transitionCampaign(orgSlug: string, input: unknown): Promi
     if (error) return fail(describeDbError(error));
     refresh(orgSlug);
     return ok({ status: data ?? to }, `Campaign moved to ${to}`);
+  });
+}
+
+
+export async function confirmCampaignCompliance(orgSlug: string, input: unknown): Promise<ActionResult> {
+  return orgAction(orgSlug, "campaigns.activate", confirmCampaignComplianceSchema, input, async (ctx, data) => {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("confirm_campaign_compliance", {
+      p_campaign_id: data.campaign_id,
+      p_reason: data.reason,
+    });
+    if (error) return fail(describeDbError(error));
+    refresh(orgSlug);
+    return ok(undefined, "Texas compliance attestation recorded");
   });
 }
