@@ -11,10 +11,12 @@ create function pg_temp.as_user(p_key text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object(
     'sub', pg_temp.id('user-' || p_key), 'role', 'authenticated')::text, true);
 $$;
-create function pg_temp.participant() returns uuid language sql stable security definer set search_path='' as $$
+create function pg_temp.participant() returns uuid language sql stable security definer set search_path='' as $
   select id from public.campaign_participants
   where campaign_id=pg_temp.id('campaign-main') and player_id=pg_temp.id('player-a1');
-$$;
+$;
+create temporary table compliance_sale(result jsonb);
+grant select,insert on pg_temp.compliance_sale to authenticated;
 
 insert into auth.users(id,email,email_confirmed_at)
 select pg_temp.id('user-'||actor), actor||'@compliance.test', now()
@@ -122,8 +124,6 @@ select is(public.prepare_campaign_inventory(pg_temp.id('org-a'),pg_temp.id('camp
   2,'pilot player receives assigned immutable ticket inventory');
 
 select pg_temp.as_user('family');
-create temporary table compliance_sale(result jsonb);
-grant select,insert on pg_temp.compliance_sale to authenticated;
 insert into pg_temp.compliance_sale values(public.record_campaign_sale(
   pg_temp.id('org-a'),pg_temp.id('campaign-main'),pg_temp.participant(),'compliance-sale',
   'Synthetic Buyer',1,500,'cash','buyer@compliance.test','555-0100','Compliance ticket test'
