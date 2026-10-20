@@ -2,7 +2,7 @@
 -- disclosure artifact, authorization, immutability, and void history.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(37);
 
 create function pg_temp.id(p_key text) returns uuid language sql immutable as $$
   select md5('raffle-pgtap-compliance:' || p_key)::uuid;
@@ -28,7 +28,7 @@ insert into public.organizations(
 ) values (
   pg_temp.id('org-a'),'Aspire Test','aspire-compliance','Aspire Sports Group',
   'TEXAS_CREA_OFFLINE_PAYMENT','123 Compliance Way','Houston','TX','77001','US',
-  'support@compliance.test','{"texas_crea_compliance_required":true}'::jsonb
+  'support@compliance.test','{}'::jsonb
 );
 
 insert into public.organization_members(id,organization_id,user_id)
@@ -68,6 +68,9 @@ insert into public.campaigns(
 
 set local role authenticated;
 select pg_temp.as_user('admin-director');
+
+select ok(public.campaign_compliance_required(pg_temp.id('org-a')),
+  'Texas CREA jurisdiction automatically requires controlled-pilot compliance');
 
 select ok('prize description'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
   'readiness requires a prize description');
