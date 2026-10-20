@@ -98,6 +98,10 @@ reconciling funds are separate operations.
 These are required launch gaps, not optional polish. Any new implementation
 scope should have concrete acceptance criteria and review before it is started.
 
+## Production go-live handoff
+
+Use [PRODUCTION_GO_LIVE_RUNBOOK.md](./PRODUCTION_GO_LIVE_RUNBOOK.md) as the final operational checklist between accepted staging and any live raffle involving real families, real tickets, or real money. A green staging gate does not override any NO-GO item in that runbook.
+
 ## Planning target and production gate
 
 The first-slice, money/reconciliation, drawing/export, and hosted operator rehearsal stages are now accepted on the staging lane. Keep the remaining schedule adjustable around legal/compliance review and production operations. Passing staging acceptance does not establish live production authorization.
