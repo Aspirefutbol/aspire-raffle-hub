@@ -89,10 +89,10 @@ select throws_ok($q$select public.confirm_campaign_compliance(
 )$q$,'42501',null,'campaign manager cannot perform director compliance attestation');
 
 select pg_temp.as_user('admin-director');
-select lives_ok($update public.campaigns set
+select lives_ok($q$update public.campaigns set
   charitable_purpose='Support youth soccer financial aid and player development',
   raffle_year_sequence=1
-  where id=pg_temp.id('campaign-main')$,'authorized admin can prepare campaign compliance disclosures');
+  where id=pg_temp.id('campaign-main')$q$,'authorized admin can prepare campaign compliance disclosures');
 
 select lives_ok($q$select public.upsert_campaign_prize(
   pg_temp.id('org-a'),pg_temp.id('campaign-main'),null,
