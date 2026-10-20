@@ -1730,7 +1730,7 @@ isOneToOne: false
 { Args: { "p_organization_id": string,"p_request_id": string,"p_sale_id"?: string,"p_status": string }; Returns: undefined
                            },
 "upsert_campaign_prize":
-{ Args: { "p_campaign_id": string,"p_description": string,"p_evidence_ref": string,"p_fair_value_cents": number,"p_name": string,"p_organization_id": string,"p_possession_basis": string,"p_prize_id": string,"p_source": string }; Returns: string
+{ Args: { "p_campaign_id": string,"p_description": string,"p_evidence_ref": string,"p_fair_value_cents": number,"p_name": string,"p_organization_id": string,"p_possession_basis": string,"p_prize_id"?: string,"p_source": string }; Returns: string
                            },
 "verify_audit_chain":
 { Args: { "p_organization_id": string }; Returns: {
