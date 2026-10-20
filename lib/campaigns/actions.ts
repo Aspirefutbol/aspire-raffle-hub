@@ -89,6 +89,9 @@ export async function confirmCampaignCompliance(orgSlug: string, input: unknown)
     const { error } = await supabase.rpc("confirm_campaign_compliance", {
       p_campaign_id: data.campaign_id,
       p_reason: data.reason,
+      p_entity_confirmed: data.entity_confirmed,
+      p_raffle_count_confirmed: data.raffle_count_confirmed,
+      p_prize_sales_confirmed: data.prize_sales_confirmed,
     });
     if (error) return fail(describeDbError(error));
     refresh(orgSlug);
