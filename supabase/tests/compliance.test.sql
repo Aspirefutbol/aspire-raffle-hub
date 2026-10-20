@@ -94,11 +94,11 @@ select lives_ok($update public.campaigns set
   raffle_year_sequence=1
   where id=pg_temp.id('campaign-main')$,'authorized admin can prepare campaign compliance disclosures');
 
-select lives_ok($select public.upsert_campaign_prize(
+select lives_ok($q$select public.upsert_campaign_prize(
   pg_temp.id('org-a'),pg_temp.id('campaign-main'),null,
   'Training package','Donated synthetic training package valued over $10',
   25000,'DONATED','OWNED_OR_POSSESSED','SYNTHETIC-DONATION-EVIDENCE'
-)$,'authorized admin can document a structured non-cash prize');
+)$q$,'authorized admin can document a structured non-cash prize');
 
 select throws_ok($q$select public.confirm_campaign_compliance(
   pg_temp.id('campaign-main'),'Attempted incomplete compliance attestation',true,true,false
