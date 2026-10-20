@@ -8,6 +8,7 @@ import { ComplianceConfirmationButton } from "@/components/campaigns/compliance-
 import { EnrollmentButton } from "@/components/campaigns/enrollment-sheet";
 import { LifecycleControls } from "@/components/campaigns/lifecycle-controls";
 import { GoalButton, InventoryButton, WithdrawButton } from "@/components/campaigns/participant-actions";
+import { PrizeRecordsCard } from "@/components/campaigns/prize-records";
 import { HelpLink } from "@/components/learning/help-link";
 import { CampaignStatusBadge, GoalProgress } from "@/components/campaigns/progress";
 import { RecordSaleButton, ReverseSaleButton } from "@/components/campaigns/sale-sheets";
@@ -43,7 +44,7 @@ export default async function CampaignPage({ params, searchParams }: { params: P
     canManage ? listSeasons(ctx.organization.id) : Promise.resolve([]), canManage ? listTeams(ctx.organization.id) : Promise.resolve([]),
   ]);
   if (!setup || !allProgress || !isCampaignStatus(setup.campaign.status)) notFound();
-  const { campaign, readiness } = setup;
+  const { campaign, readiness, prizes } = setup;
   const visible = filters.team || filters.player ? progress : allProgress;
   if (!visible) notFound();
   const status = setup.campaign.status;
@@ -51,6 +52,7 @@ export default async function CampaignPage({ params, searchParams }: { params: P
   const drawingCertified = drawing?.events.some((event) => event.snapshot_id === drawing.current_snapshot_id && event.event_type === "CERTIFIED");
   const editable = canManage && ["DRAFT", "READY", "ACTIVE"].includes(status);
   const canEnroll = canManage && ["DRAFT", "READY", "ACTIVE"].includes(status);
+  const canManagePrizes = canManage && ["DRAFT", "READY"].includes(status);
   const participants = visible.participants;
   const activePlayers = participants.filter((player) => player.status === "active");
   const topSellers = [...activePlayers].filter((player) => player.tickets_sold > 0).sort((a, b) => b.raised_cents - a.raised_cents).slice(0, 5);
@@ -61,7 +63,8 @@ export default async function CampaignPage({ params, searchParams }: { params: P
   const complianceRequired = complianceAttestationMissing || campaign.compliance_confirmed_at !== null;
   const compliancePrerequisitesMissing = readiness.some((item) => [
     "organization legal name", "organization legal address", "ticket price", "drawing date",
-    "prize description", "charitable purpose", "raffle calendar-year number", "Texas CREA jurisdiction profile",
+    "charitable purpose", "raffle calendar-year number", "Texas CREA jurisdiction profile",
+    "at least one documented non-cash prize", "valid prize source/value/possession evidence",
   ].includes(item));
   const complianceCurrent = Boolean(campaign.compliance_confirmed_at && !complianceAttestationMissing);
 
@@ -69,17 +72,18 @@ export default async function CampaignPage({ params, searchParams }: { params: P
     <PageHeader breadcrumb={<Link href={`/o/${orgSlug}/campaigns`} className="hover:text-ink">Campaigns</Link>} title={<span className="flex items-center gap-3">{campaign.name}<CampaignStatusBadge status={status} /></span>} description={campaign.description || "Raffle progress and recorded offline collections."} actions={<>{can(ctx, "organization.manage") && <HelpLink orgSlug={orgSlug} article="prepare-campaign" label="Campaign guide" />}{visible.recent_sales.length > 0 && <ButtonLink href="#sales-actions" variant="secondary">Sales & corrections</ButtonLink>}{canReadMoney(ctx) && <ButtonLink href={`/o/${orgSlug}/campaigns/${campaignId}/money`} variant="secondary">Money & reconciliation</ButtonLink>}<ButtonLink href={`/o/${orgSlug}/campaigns/${campaignId}/drawing`} variant="secondary">Drawing</ButtonLink>{editable && <CampaignSheetButton orgSlug={orgSlug} campaign={campaign} seasons={seasons.filter((season) => !season.archived_at)} />}<LifecycleControls orgSlug={orgSlug} campaignId={campaign.id} status={status} canManage={canManage} canActivate={can(ctx, "campaigns.activate")} missingReadiness={readiness.length > 0} /></>} />
     {drawing && <Card className="mb-5"><CardHeader title="Drawing" action={<Badge tone={drawingCertified ? "success" : drawing.current_snapshot_id ? "info" : "warning"}>{drawingCertified ? "Certified" : drawing.current_snapshot_id ? "Entries frozen" : "Not frozen"}</Badge>} /><CardBody><p className="text-sm text-ink-soft">{drawingCertified ? "External results and Director certification are retained. Financial reconciliation remains separate." : drawing.current_snapshot_id ? "The immutable population is frozen. Retain exports, conduct the approved physical or external drawing, and record its evidence." : "Review readiness and freeze eligible entries before the physical or external drawing."}</p><Link href={`/o/${orgSlug}/campaigns/${campaignId}/drawing`} className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-brand-700 hover:underline">Open drawing →</Link></CardBody></Card>}
     {(status === "DRAFT" || status === "READY") && <WorkflowPanel className="mb-5" icon={<ListChecks aria-hidden className="size-4" />} title="Activation readiness" description="Action center · The director can activate after these requirements are complete."><div className="grid gap-4 md:grid-cols-2"><div>{readiness.length ? <><p className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-800"><CircleAlert aria-hidden className="size-4" />Complete before activation</p><ul className="space-y-1.5 text-sm text-ink-soft">{readiness.map((missing) => <li key={missing} className="flex gap-2"><span aria-hidden>•</span>{missing.charAt(0).toUpperCase() + missing.slice(1)}</li>)}</ul></> : <p className="flex items-center gap-2 text-sm font-medium text-emerald-700"><CheckCircle2 aria-hidden className="size-4" />All activation requirements are complete</p>}</div><div className="space-y-2 text-sm text-ink-soft"><p>Ticket price: {campaign.ticket_price_cents ? formatMoney(campaign.ticket_price_cents) : "Not set"} · Prefix: {campaign.ticket_prefix || "Not set"}</p><p>Sales: {formatDateTime(campaign.starts_at, ctx.organization.timezone)} → {formatDateTime(campaign.sales_close_at, ctx.organization.timezone)}</p><p>Drawing: {formatDateTime(campaign.draw_at, ctx.organization.timezone)}</p><p>Legal operator: {ctx.organization.legalName || ctx.organization.name}</p><p>Jurisdiction: {campaign.jurisdiction_mode?.replace(/_/g, " ") || "Applied from organization at activation"}</p><p className="text-xs text-muted">Legal/operator address and support contact are checked against organization settings. Ticket disclosures lock at activation.</p><Link href={`/o/${orgSlug}/settings`} className="inline-flex min-h-11 items-center font-medium text-brand-700 hover:underline">View organization settings →</Link></div></div></WorkflowPanel>}
+    {complianceRequired && <PrizeRecordsCard orgSlug={orgSlug} campaignId={campaign.id} prizes={prizes} canManage={canManage} editable={canManagePrizes} />}
     {(status === "DRAFT" || status === "READY") && complianceRequired && <WorkflowPanel className="mb-5" icon={<ShieldCheck aria-hidden className="size-4" />} title="Texas compliance review" description="Action center · Required disclosures and the director/operator attestation are fingerprinted together before activation.">
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2 text-sm text-ink-soft">
           <p><span className="font-medium text-ink">Legal operator:</span> {ctx.organization.legalName || ctx.organization.name}</p>
           <p><span className="font-medium text-ink">Raffle number this year:</span> {campaign.raffle_year_sequence ?? "Not set"}</p>
-          <p><span className="font-medium text-ink">Prize description:</span> {campaign.prize_description || "Not set"}</p>
+          <p><span className="font-medium text-ink">Documented prizes:</span> {prizes.length ? `${prizes.length} active` : "None recorded"}</p>
           <p><span className="font-medium text-ink">Charitable purpose:</span> {campaign.charitable_purpose || "Not set"}</p>
         </div>
         <div className="space-y-3">
           {complianceCurrent ? <p className="flex items-center gap-2 text-sm font-medium text-emerald-700"><CheckCircle2 aria-hidden className="size-4" />Current compliance attestation recorded {formatDateTime(campaign.compliance_confirmed_at, ctx.organization.timezone)}</p> : <p className="flex items-center gap-2 text-sm font-medium text-amber-800"><CircleAlert aria-hidden className="size-4" />Director/operator attestation is missing or stale.</p>}
-          <p className="text-xs text-muted">Changing ticket price, drawing date, rules, prize description, charitable purpose, raffle-year number, or the organization legal identity/address invalidates the current fingerprint before activation.</p>
+          <p className="text-xs text-muted">Changing ticket price, drawing date, rules, prize records, charitable purpose, raffle-year number, or the organization legal identity/address invalidates the current fingerprint before activation.</p>
           {can(ctx, "campaigns.activate") && !complianceCurrent && <ComplianceConfirmationButton orgSlug={orgSlug} campaignId={campaign.id} disabled={compliancePrerequisitesMissing} />}
         </div>
       </div>
