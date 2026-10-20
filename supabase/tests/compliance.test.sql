@@ -95,9 +95,14 @@ select lives_ok($q$update public.campaigns set
   where id=pg_temp.id('campaign-main')$q$,'authorized admin can prepare campaign compliance disclosures');
 
 select lives_ok($q$select public.upsert_campaign_prize(
-  pg_temp.id('org-a'),pg_temp.id('campaign-main'),null,
-  'Training package','Donated synthetic training package valued over $10',
-  25000,'DONATED','OWNED_OR_POSSESSED','SYNTHETIC-DONATION-EVIDENCE'
+  p_organization_id => pg_temp.id('org-a'),
+  p_campaign_id => pg_temp.id('campaign-main'),
+  p_name => 'Training package',
+  p_description => 'Donated synthetic training package valued over $10',
+  p_fair_value_cents => 25000,
+  p_source => 'DONATED',
+  p_possession_basis => 'OWNED_OR_POSSESSED',
+  p_evidence_ref => 'SYNTHETIC-DONATION-EVIDENCE'
 )$q$,'authorized admin can document a structured non-cash prize');
 
 select throws_ok($q$select public.confirm_campaign_compliance(
@@ -118,10 +123,15 @@ select is((select compliance_confirmed_by from public.campaigns where id=pg_temp
   pg_temp.id('user-admin-director'),'attestation records the director actor');
 
 select lives_ok($q$select public.upsert_campaign_prize(
-  pg_temp.id('org-a'),pg_temp.id('campaign-main'),
-  (select id from public.campaign_prizes where campaign_id=pg_temp.id('campaign-main') and archived_at is null limit 1),
-  'Training package','Updated donated synthetic training package valued over $10',
-  25000,'DONATED','OWNED_OR_POSSESSED','SYNTHETIC-DONATION-EVIDENCE'
+  p_organization_id => pg_temp.id('org-a'),
+  p_campaign_id => pg_temp.id('campaign-main'),
+  p_name => 'Training package',
+  p_description => 'Updated donated synthetic training package valued over $10',
+  p_fair_value_cents => 25000,
+  p_source => 'DONATED',
+  p_possession_basis => 'OWNED_OR_POSSESSED',
+  p_evidence_ref => 'SYNTHETIC-DONATION-EVIDENCE',
+  p_prize_id => (select id from public.campaign_prizes where campaign_id=pg_temp.id('campaign-main') and archived_at is null limit 1)
 )$q$,'pre-activation structured prize disclosure may be corrected');
 select is((select compliance_confirmed_at from public.campaigns where id=pg_temp.id('campaign-main')),
   null::timestamptz,'changing reviewed disclosure clears the prior confirmation');
