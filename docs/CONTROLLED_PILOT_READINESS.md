@@ -36,14 +36,19 @@ Existing Netlify project:
 - current deploy: old manual/static one-page deploy from 2026-10-02
 - no site environment variables configured
 - no current Raffle Hub application/runtime attached
+- **director decision 2026-10-20: use this project as the production Raffle Hub shell**
 
-This site is suitable as a production shell if Aspire confirms it is the intended public production project.
+Recommendation: keep the Netlify project name and later attach a branded custom domain (for example a raffle subdomain) rather than creating another Netlify project.
 
 ### Production Supabase does not yet exist
 
 Current Supabase account contains staging projects only for Raffle Hub, Studio, and Aspire One.
 
-Create a **separate Aspire Raffle Hub Production Supabase project** only after cost/organization confirmation and after the legal entity to operate the raffle is confirmed.
+Director decision 2026-10-20: create **Aspire Raffle Hub Production** in the same Supabase organization as Raffle Hub Staging.
+
+Supabase quoted the additional project at **$10/month**. Creation is pending explicit approval of that recurring cost.
+
+The production project must remain separate from staging and start from migrations only, with no synthetic staging rows copied into it.
 
 Never point the production Netlify site at the staging Supabase project.
 
@@ -57,6 +62,12 @@ Primary sources:
 - Texas Attorney General raffle guidance: https://www.texasattorneygeneral.gov/consumer-protection/charities-nonprofits/charitable-raffles-and-casinopoker-nights
 
 ### A1. Qualified organization — BLOCKING
+
+Aspire's current entity chain, as confirmed by the directors on 2026-10-20:
+
+- federal tax-exempt history/name: **FC Cypress Inc**
+- current Texas legal entity name: **Aspire Sports Group**
+- intended raffle operator: **Aspire Sports Group**, subject to retaining the name-change/tax-exemption evidence tying the two names to the same exempt organization
 
 Texas permits a raffle only for a qualified organization.
 
@@ -80,10 +91,11 @@ This is a strong eligibility lead but is **not the final legal sign-off**.
 
 Required evidence before live raffle:
 
-- IRS determination letter or current IRS TEOS confirmation
-- Texas formation / current entity record
-- confirmation that **FC Cypress Inc** is the legal raffle operator
-- confirmation that the Aspire-branded raffle may be conducted under that entity
+- original/current IRS determination or TEOS evidence for the exempt organization
+- Texas certificate of amendment / filed name-change evidence showing **FC Cypress Inc → Aspire Sports Group**
+- current Texas entity record showing **Aspire Sports Group**
+- IRS name-change reporting evidence and preferably an IRS affirmation letter reflecting **Aspire Sports Group**
+- confirmation that the Aspire-branded raffle may be conducted by **Aspire Sports Group**
 - confirmation that its organizational activity/proceeds satisfy CREA charitable-purpose requirements
 - confirmation of the number of raffles already awarded by that entity in the current calendar year
 
