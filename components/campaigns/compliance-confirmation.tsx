@@ -20,6 +20,9 @@ export function ComplianceConfirmationButton({ orgSlug, campaignId, disabled = f
     const form = new FormData(event.currentTarget);
     run(() => confirmCampaignCompliance(orgSlug, {
       campaign_id: campaignId,
+      entity_confirmed: form.get("entity_confirmed") === "on",
+      raffle_count_confirmed: form.get("raffle_count_confirmed") === "on",
+      prize_sales_confirmed: form.get("prize_sales_confirmed") === "on",
       reason: form.get("reason"),
     }), { onSuccess: () => setOpen(false) });
   }
