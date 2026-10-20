@@ -2,7 +2,7 @@
 -- disclosure artifact, authorization, immutability, and void history.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(38);
 
 create function pg_temp.id(p_key text) returns uuid language sql immutable as $$
   select md5('raffle-pgtap-compliance:' || p_key)::uuid;
@@ -72,8 +72,8 @@ select pg_temp.as_user('admin-director');
 select ok(public.campaign_compliance_required(pg_temp.id('org-a')),
   'Texas CREA jurisdiction automatically requires controlled-pilot compliance');
 
-select ok('prize description'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
-  'readiness requires a prize description');
+select ok('at least one documented non-cash prize'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
+  'readiness requires a structured non-cash prize record');
 select ok('charitable purpose'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
   'readiness requires the charitable purpose');
 select ok('raffle calendar-year number'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
@@ -89,11 +89,16 @@ select throws_ok($q$select public.confirm_campaign_compliance(
 )$q$,'42501',null,'campaign manager cannot perform director compliance attestation');
 
 select pg_temp.as_user('admin-director');
-select lives_ok($$update public.campaigns set
-  prize_description='Donated synthetic training package valued over $10',
+select lives_ok($update public.campaigns set
   charitable_purpose='Support youth soccer financial aid and player development',
   raffle_year_sequence=1
-  where id=pg_temp.id('campaign-main')$$,'authorized admin can prepare compliance disclosures');
+  where id=pg_temp.id('campaign-main')$,'authorized admin can prepare campaign compliance disclosures');
+
+select lives_ok($select public.upsert_campaign_prize(
+  pg_temp.id('org-a'),pg_temp.id('campaign-main'),null,
+  'Training package','Donated synthetic training package valued over $10',
+  25000,'DONATED','OWNED_OR_POSSESSED','SYNTHETIC-DONATION-EVIDENCE'
+)$,'authorized admin can document a structured non-cash prize');
 
 select throws_ok($q$select public.confirm_campaign_compliance(
   pg_temp.id('campaign-main'),'Attempted incomplete compliance attestation',true,true,false
@@ -112,9 +117,12 @@ select is(cardinality(public.campaign_readiness(pg_temp.id('campaign-main'))),0,
 select is((select compliance_confirmed_by from public.campaigns where id=pg_temp.id('campaign-main')),
   pg_temp.id('user-admin-director'),'attestation records the director actor');
 
-select lives_ok($$update public.campaigns set
-  prize_description='Updated donated synthetic training package valued over $10'
-  where id=pg_temp.id('campaign-main')$$,'pre-activation compliance disclosure may be corrected');
+select lives_ok($select public.upsert_campaign_prize(
+  pg_temp.id('org-a'),pg_temp.id('campaign-main'),
+  (select id from public.campaign_prizes where campaign_id=pg_temp.id('campaign-main') and archived_at is null limit 1),
+  'Training package','Updated donated synthetic training package valued over $10',
+  25000,'DONATED','OWNED_OR_POSSESSED','SYNTHETIC-DONATION-EVIDENCE'
+)$,'pre-activation structured prize disclosure may be corrected');
 select is((select compliance_confirmed_at from public.campaigns where id=pg_temp.id('campaign-main')),
   null::timestamptz,'changing reviewed disclosure clears the prior confirmation');
 select ok('current Texas compliance attestation'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
@@ -156,8 +164,8 @@ select is((public.sale_ticket_receipt(
 )->>'ticket_price_cents')::integer,500,'ticket artifact carries face-value price');
 select is((public.sale_ticket_receipt(
   pg_temp.id('org-a'),(select (result->>'sale_id')::uuid from pg_temp.compliance_sale)
-)->>'prize_description'),'Updated donated synthetic training package valued over $10',
-  'ticket artifact carries attested prize description');
+)->>'prize_description'),'Training package: Updated donated synthetic training package valued over $10 (estimated value $250.00)',
+  'ticket artifact carries canonical structured prize description');
 select is(jsonb_array_length(public.sale_ticket_receipt(
   pg_temp.id('org-a'),(select (result->>'sale_id')::uuid from pg_temp.compliance_sale)
 )->'tickets'),1,'ticket artifact contains the issued ticket');
