@@ -11,10 +11,10 @@ create function pg_temp.as_user(p_key text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object(
     'sub', pg_temp.id('user-' || p_key), 'role', 'authenticated')::text, true);
 $$;
-create function pg_temp.participant() returns uuid language sql stable security definer set search_path='' as $
+create function pg_temp.participant() returns uuid language sql stable security definer set search_path='' as $func$
   select id from public.campaign_participants
   where campaign_id=pg_temp.id('campaign-main') and player_id=pg_temp.id('player-a1');
-$;
+$func$;
 create temporary table compliance_sale(result jsonb);
 grant select,insert on pg_temp.compliance_sale to authenticated;
 
