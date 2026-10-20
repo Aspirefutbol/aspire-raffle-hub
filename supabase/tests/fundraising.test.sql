@@ -69,11 +69,13 @@ from unnest(array['admin', 'director', 'manager', 'finance', 'captain',
   'corrector', 'admin-director', 'outsider', 'unlinked', 'org-b-admin', 'shared-family']) actor;
 
 insert into public.organizations (id, name, slug, legal_name, jurisdiction_profile,
-  address_line1, city, region, support_email) values
+  address_line1, city, region, support_email, platform_config) values
   (pg_temp.id('org-a'), 'Fundraising Org A', 'fundraising-org-a', 'Fundraising Org A Inc',
-    'TEXAS_CREA_OFFLINE_PAYMENT', '1 Test Street', 'Houston', 'TX', 'support@fundraising.test'),
+    'TEXAS_CREA_OFFLINE_PAYMENT', '1 Test Street', 'Houston', 'TX', 'support@fundraising.test',
+    '{"texas_crea_compliance_required":false}'::jsonb),
   (pg_temp.id('org-b'), 'Fundraising Org B', 'fundraising-org-b', 'Fundraising Org B Inc',
-    'TEXAS_CREA_OFFLINE_PAYMENT', '2 Test Street', 'Austin', 'TX', 'support@other.test');
+    'TEXAS_CREA_OFFLINE_PAYMENT', '2 Test Street', 'Austin', 'TX', 'support@other.test',
+    '{"texas_crea_compliance_required":false}'::jsonb);
 
 insert into public.organization_members (id, organization_id, user_id)
 select pg_temp.id('member-' || actor), pg_temp.id('org-a'), pg_temp.id('user-' || actor)
