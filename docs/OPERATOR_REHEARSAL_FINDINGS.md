@@ -1,6 +1,6 @@
 # Aspire Operator Rehearsal — Findings Log
 
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-20_
 
 This file records what the hosted Aspire operator rehearsal has actually proven, the friction discovered during real operator use, and what still remains before a controlled pilot.
 
@@ -8,7 +8,7 @@ Primary synthetic campaign:
 
 - Name: **OPERATOR REHEARSAL — Aspire Pilot**
 - Campaign ID: `5a892877-1b83-4a3b-94d3-7a6e3aa2fb12`
-- Current lifecycle: **ACTIVE**
+- Current lifecycle: **DRAWN**
 - Ticket price: **$5.00**
 - Ticket prefix: **OR1**
 - Participants: **3 active**
@@ -220,25 +220,44 @@ For future same-session operator rehearsals, use a compressed but valid syntheti
 
 Until Oct. 18, this rehearsal can still complete money resolution, reversal/correction, sales close when appropriate, drawing-readiness review, freeze, and export. Do not alter the locked draw date directly in the database merely to make the rehearsal finish early.
 
-## Current next rehearsal steps
+## Final lifecycle acceptance — PASSED
 
-The rehearsal is now complete through reversal/correction and clean money reconciliation.
+The hosted operator rehearsal completed successfully on 2026-10-20.
 
-Timing gates for the locked rehearsal disclosures:
+Final accepted sequence:
 
-- Sales close: **2026-10-17 11:24 AM America/Chicago**
-- Disclosed drawing time: **2026-10-18 11:24 AM America/Chicago**
+1. Sales closed through the hosted operator UI after the disclosed cutoff.
+2. A post-close sale attempt was blocked; database verification showed zero sales created after closure.
+3. Drawing population frozen as Snapshot v1:
+   - snapshot ID: `e98c4d68-28ad-403d-813a-104ed6e38d09`
+   - eligible tickets: 2
+   - total face value: $10.00
+   - manifest SHA-256: `d4cc47b6f7a501623461807c8a3172172f7ec5d25cfc24098461865dfd9ecaea`
+   - tickets: `OR1-000009`, `OR1-000011`
+4. CSV and JSON frozen-population exports completed and were recorded:
+   - CSV SHA-256: `1eb6134e862e48f97e6b1fbf6ff5a006e7a9b46e07746be8dbfd51b19efec9e9`
+   - JSON SHA-256: `577c3e6353ca660537e350cf7c46b755a166b0b9ad981b5eaf8a204f187661b3`
+5. Synthetic external result recorded for eligible ticket `OR1-000009`:
+   - result ID: `504194f6-14f8-4ace-b917-a320706d2c1d`
+   - result SHA-256: `cfee6bc55dec364b0df913edc21f3842ca3bf20b8d3ef07e77696f6fd5ca0810`
+6. Director certification completed:
+   - certification event ID: `1a7c36c5-ef56-4ee9-9770-ed9cfe90a35f`
+   - ordered-results SHA-256: `3243aa5bbc522b487f53c80364466ddbb5bef54ce2e815d3d214fb7519487dea`
+7. Campaign moved `CLOSED → DRAWN` through the hosted UI.
+8. Final reconciliation verified:
+   - active sales: 2 / $10.00
+   - money expected: $10.00
+   - money received: $10.00
+   - money due: $0.00
+   - uncleared checks: $0.00
+   - exceptions: $0.00
+   - tickets: 9 ALLOCATED / 2 ISSUED / 1 VOIDED
+9. Final snapshot integrity passed: count, entry hashes, manifest, source-ledger anchors, audit anchor, and ledger continuity all green.
+10. Final hash-chain verification passed for audit, campaign, ticket, and money ledgers.
 
-Do not alter these locked timestamps just to advance the rehearsal.
+The operator rehearsal therefore satisfies the hosted staging product/infrastructure acceptance path in `docs/OPERATOR_REHEARSAL.md`.
 
-1. At or after the disclosed sales-close time, close sales through the hosted operator UI.
-2. Verify a post-close sale is blocked.
-3. Freeze drawing population.
-4. Export frozen population.
-5. At or after the disclosed drawing time, record the synthetic external/physical result.
-6. Certify drawing.
-7. Move campaign to DRAWN.
-8. Complete final money/ticket reconciliation and audit verification.
+This does **not** remove the separate live-operation legal/compliance gates listed below.
 
 ## Current go-live blocker log
 
@@ -297,6 +316,12 @@ Final production review must still confirm production secrets, backups/monitorin
 
 ## Exit status
 
-The rehearsal is **not yet accepted**.
+**HOSTED OPERATOR REHEARSAL: PASSED.**
 
-The system has successfully passed returned-check handling, full money resolution, sale reversal, linked correction, fresh-ticket issuance, credit transfer, and hash-chain verification. The remaining acceptance work is time-gated: close sales and post-close blocking after Oct. 17 at 11:24 AM CDT, then drawing freeze/export and the external result/certification flow at or after Oct. 18 at 11:24 AM CDT.
+The end-to-end staging workflow has now been exercised through the intended operator UI from campaign setup through final DRAWN status, including Seller Sharing, offline sales, custody/reconciliation, returned-check handling, reversal/correction, close-sales enforcement, immutable drawing freeze, protected exports, external-result evidence, Director certification, final reconciliation, and hash-chain verification.
+
+No unresolved **product** or **staging infrastructure** blocker was identified for a controlled synthetic/pilot-readiness environment.
+
+PR #2 remains **draft and unmerged** pending explicit approval.
+
+Live raffle operation remains separately blocked on the documented legal/compliance and production-operations gates.
