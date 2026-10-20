@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { Sheet } from "@/components/ui/sheet";
 import { recordCampaignSale, reverseCampaignSale } from "@/lib/fundraising/actions";
@@ -96,6 +96,7 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
             <p className="text-sm text-ink-soft">{receipt.quantity} ticket{receipt.quantity === 1 ? "" : "s"} issued for {formatMoney(receipt.amount_cents)}. Payment was recorded offline.</p>
             <div className="rounded-card border border-emerald-200 bg-emerald-50 p-4"><h3 className="mb-2 text-sm font-semibold text-emerald-900">Ticket numbers</h3><ul className="flex flex-wrap gap-2">{receipt.ticket_numbers.map((number) => <li key={number} className="rounded-control bg-white px-2 py-1 font-mono text-sm text-emerald-900">{number}</li>)}</ul></div>
             <p className="text-xs text-muted">The sale, ticket, money, and activity history were recorded together.</p>
+            <ButtonLink href={`/o/${orgSlug}/tickets/${receipt.sale_id}`} variant="secondary">View / print tickets</ButtonLink>
           </div>
         ) : (
           <form id={`sale-${participant.id}`} onSubmit={submit} className="space-y-4">
