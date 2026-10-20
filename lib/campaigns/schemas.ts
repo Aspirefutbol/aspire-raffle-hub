@@ -27,6 +27,9 @@ export const campaignFieldsSchema = z.object({
   draw_at: optionalTimestamp,
   support_email: optionalEmail,
   support_phone: optionalPhone,
+  prize_description: optionalText(4_000),
+  charitable_purpose: optionalText(2_000),
+  raffle_year_sequence: z.number().int().min(1).max(4).nullish().transform((v) => v ?? null),
   rules_text: optionalText(20_000),
 });
 
@@ -38,4 +41,9 @@ export const transitionCampaignSchema = z.object({
   campaign_id: id,
   to: z.enum(CAMPAIGN_STATUSES),
   reason: optionalText(500),
+});
+
+export const confirmCampaignComplianceSchema = z.object({
+  campaign_id: id,
+  reason: requiredText("Compliance attestation reason", 500).min(3, "Give a reason of at least 3 characters."),
 });
