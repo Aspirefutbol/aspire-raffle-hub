@@ -45,6 +45,9 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await draft.getByLabel("Drawing date", { exact: true }).fill(await localTimestamp(page, Date.now() + 8 * day));
   await draft.getByLabel("Support email", { exact: true }).fill("support@aspire.test");
   await draft.getByLabel("Support phone", { exact: true }).fill("7135550101");
+  await draft.getByLabel("Prize description(s)", { exact: true }).fill("Donated synthetic coaching package and equipment bundle");
+  await draft.getByLabel("Charitable purpose of proceeds", { exact: true }).fill("Support Aspire youth soccer financial aid and player development");
+  await draft.getByLabel("Raffle number this calendar year", { exact: true }).fill("1");
   await draft.getByRole("button", { name: "Create draft", exact: true }).click();
   await expect(page).toHaveURL(/\/o\/aspire\/campaigns\/[0-9a-f-]+$/);
   const campaignId = z.uuid().parse(new URL(page.url()).pathname.split("/").at(-1));
@@ -147,11 +150,23 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(receipt.getByText("2 tickets issued for $10.00. Payment was recorded offline.", { exact: true })).toBeVisible();
     await expect(receipt.getByRole("listitem")).toHaveText(issuedNumbers);
     await family.screenshot({ path: testInfo.outputPath("desktop-family-ticket-receipt.png"), fullPage: true });
-    await receipt.getByRole("button", { name: "Done", exact: true }).click();
-    await expect(playerCard.getByText("Amount raised", { exact: true }).locator("..").getByText("$10.00", { exact: true })).toBeVisible();
-    await expect(playerCard.getByText("Tickets sold", { exact: true }).locator("..").getByText("2", { exact: true })).toBeVisible();
-    await expect(playerCard.getByText("2 tickets available", { exact: true })).toBeVisible();
-    await expect(playerCard.getByRole("progressbar", { name: "Personal fundraising goal", exact: true })).toHaveAttribute("value", "10");
+    await receipt.getByRole("link", { name: "View / print tickets", exact: true }).click();
+    await expect(family.getByRole("heading", { name: "Issued raffle tickets", exact: true })).toBeVisible();
+    await expect(family.getByRole("button", { name: "Print tickets", exact: true })).toBeVisible();
+    await expect(family.getByTestId("issued-ticket")).toHaveCount(2);
+    for (const number of issuedNumbers) await expect(family.getByTestId("issued-ticket").filter({ hasText: number })).toBeVisible();
+    await expect(family.getByText("Aspire Sports Group", { exact: true }).first()).toBeVisible();
+    await expect(family.getByText("100 Example Way (dev placeholder)", { exact: true }).first()).toBeVisible();
+    await expect(family.getByText("$5.00", { exact: true }).first()).toBeVisible();
+    await expect(family.getByText("Donated synthetic coaching package and equipment bundle", { exact: true }).first()).toBeVisible();
+    await expect(family.getByText("Prize award / drawing date", { exact: true }).first()).toBeVisible();
+    await family.screenshot({ path: testInfo.outputPath("desktop-family-printable-tickets.png"), fullPage: true });
+    await family.goto(`/o/aspire/fundraising/${campaignId}`);
+    const refreshedPlayerCard = family.getByTestId("family-player-card");
+    await expect(refreshedPlayerCard.getByText("Amount raised", { exact: true }).locator("..").getByText("$10.00", { exact: true })).toBeVisible();
+    await expect(refreshedPlayerCard.getByText("Tickets sold", { exact: true }).locator("..").getByText("2", { exact: true })).toBeVisible();
+    await expect(refreshedPlayerCard.getByText("2 tickets available", { exact: true })).toBeVisible();
+    await expect(refreshedPlayerCard.getByRole("progressbar", { name: "Personal fundraising goal", exact: true })).toHaveAttribute("value", "10");
     await family.screenshot({ path: testInfo.outputPath("desktop-family-progress.png"), fullPage: true });
 
     await family.goto(`/o/aspire/team-fundraising/${campaignId}`);
@@ -185,8 +200,13 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await expectStat(page, "Tickets sold", "0");
   await expect(originalRow.getByText("Reversed", { exact: true })).toBeVisible();
   expect((await progress()).totals.raised_cents).toBe(0);
+  await originalRow.getByRole("link", { name: "View / print ticket", exact: true }).click();
+  await expect(page.getByText("VOIDED — NOT ELIGIBLE FOR DRAWING", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(issuedNumbers[0]!, { exact: true })).toBeVisible();
+  await page.goto(`/o/aspire/campaigns/${campaignId}`);
+  const refreshedOriginalRow = page.getByTestId(`campaign-sale-${originalSale.id}`);
 
-  await originalRow.getByRole("button", { name: "Record correction", exact: true }).click();
+  await refreshedOriginalRow.getByRole("button", { name: "Record correction", exact: true }).click();
   const correction = page.getByRole("dialog", { name: "Record sale", exact: true });
   await correction.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Corrected desktop cash buyer");
   await correction.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("2");
@@ -205,8 +225,8 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   const replacementSale = finalProgress.recent_sales.find((record) => record.corrects_sale_id === originalSale.id);
   if (!replacementSale) throw new Error("The replacement must retain its original sale association");
   expect(finalProgress.recent_sales.find((record) => record.id === originalSale.id)?.replacement_sale_id).toBe(replacementSale.id);
-  await expect(originalRow.getByRole("button", { name: "Record correction", exact: true })).toHaveCount(0);
-  await expect(originalRow.getByText("Corrected", { exact: true })).toBeVisible();
+  await expect(refreshedOriginalRow.getByRole("button", { name: "Record correction", exact: true })).toHaveCount(0);
+  await expect(refreshedOriginalRow.getByText("Corrected", { exact: true })).toBeVisible();
   await expect(page.getByTestId(`campaign-sale-${replacementSale.id}`).getByText("Correction", { exact: true })).toBeVisible();
   const salesResult = await admin.from("campaign_sales").select("id,corrects_sale_id,buyer_name,amount_cents,quantity")
     .eq("campaign_id", campaignId);
