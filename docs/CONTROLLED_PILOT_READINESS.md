@@ -40,15 +40,31 @@ Existing Netlify project:
 
 Recommendation: keep the Netlify project name and later attach a branded custom domain (for example a raffle subdomain) rather than creating another Netlify project.
 
-### Production Supabase does not yet exist
+### Production Supabase — CREATED
 
-Current Supabase account contains staging projects only for Raffle Hub, Studio, and Aspire One.
+Director approved the quoted **$10/month** recurring cost on 2026-10-20.
 
-Director decision 2026-10-20: create **Aspire Raffle Hub Production** in the same Supabase organization as Raffle Hub Staging.
+Production project:
 
-Supabase quoted the additional project at **$10/month**. Creation is pending explicit approval of that recurring cost.
+- name: **Aspire Raffle Hub Production**
+- project ref: `bsjjzewifpbngbasdvew`
+- region: `us-east-2`
+- status at creation: `ACTIVE_HEALTHY`
+- production URL: `https://bsjjzewifpbngbasdvew.supabase.co`
+- separate from staging; no synthetic data copied
+- initial migration history: empty
+- initial Supabase security advisors: no findings
+- modern publishable key provisioned
 
-The production project must remain separate from staging and start from migrations only, with no synthetic staging rows copied into it.
+The existing `aspirerafflehub` Netlify project now has only the production public values configured:
+
+- `NEXT_PUBLIC_SUPABASE_URL` → production project
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → production publishable key
+- `NEXT_PUBLIC_SITE_URL` → `https://aspirerafflehub.netlify.app`
+
+The server secret remains intentionally unset until production auth/invitation setup. The production application has not been deployed over the old static shell yet.
+
+Production schema bootstrap must use the tracked migration files with Supabase CLI `db push` so the 21 timestamped migration versions match staging exactly. A manual-only GitHub workflow `.github/workflows/production-bootstrap.yml` has been added for this purpose. It requires production-only credentials and never seeds or resets production.
 
 Never point the production Netlify site at the staging Supabase project.
 
