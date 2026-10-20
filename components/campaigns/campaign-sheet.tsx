@@ -51,7 +51,7 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
       ticket_prefix: text("ticket_prefix") || null,
       starts_at: timestamp("starts_at"), sales_close_at: timestamp("sales_close_at"), draw_at: timestamp("draw_at"),
       support_email: text("support_email"), support_phone: text("support_phone"),
-      prize_description: text("prize_description"), charitable_purpose: text("charitable_purpose"),
+      charitable_purpose: text("charitable_purpose"),
       raffle_year_sequence: text("raffle_year_sequence") ? Number(text("raffle_year_sequence")) : null,
       rules_text: text("rules_text"),
     });
@@ -98,7 +98,7 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
           <h3 className="text-sm font-semibold text-ink">Texas CREA pilot disclosures</h3>
           <p className="mt-1 text-xs text-muted">These fields feed the launch gate and issued ticket artifact. They lock after activation.</p>
           <div className="mt-4 space-y-4">
-            <Field label="Prize description(s)" htmlFor="campaign-prize-description" error={errors.prize_description} hint="Describe each raffle prize that should appear on the issued ticket."><Textarea id="campaign-prize-description" name="prize_description" disabled={locked("prize_description")} maxLength={4000} rows={4} defaultValue={campaign?.prize_description ?? ""} /></Field>
+            <p className="rounded-control border border-line bg-surface p-3 text-xs text-muted">Prize descriptions are generated from the structured Prize compliance records on the campaign page. Add or edit prizes there before Director attestation.</p>
             <Field label="Charitable purpose of proceeds" htmlFor="campaign-charitable-purpose" error={errors.charitable_purpose} hint="State the approved charitable use of raffle proceeds."><Textarea id="campaign-charitable-purpose" name="charitable_purpose" disabled={locked("charitable_purpose")} maxLength={2000} rows={3} defaultValue={campaign?.charitable_purpose ?? ""} /></Field>
             <Field label="Raffle number this calendar year" htmlFor="campaign-raffle-year-sequence" error={errors.raffle_year_sequence} hint="Texas CREA organizations may award prizes in no more than four raffles per calendar year."><Input id="campaign-raffle-year-sequence" name="raffle_year_sequence" disabled={locked("raffle_year_sequence")} type="number" min={1} max={4} defaultValue={campaign?.raffle_year_sequence ?? ""} /></Field>
           </div>
