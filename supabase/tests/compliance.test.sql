@@ -81,9 +81,9 @@ select throws_ok($$select public.transition_campaign(pg_temp.id('campaign-main')
   '23514',null,'campaign cannot become READY while compliance gate is incomplete');
 
 select pg_temp.as_user('manager');
-select throws_ok($select public.confirm_campaign_compliance(
+select throws_ok($q$select public.confirm_campaign_compliance(
   pg_temp.id('campaign-main'),'Manager tried to attest',true,true,true
-)$,'42501',null,'campaign manager cannot perform director compliance attestation');
+)$q$,'42501',null,'campaign manager cannot perform director compliance attestation');
 
 select pg_temp.as_user('admin-director');
 select lives_ok($$update public.campaigns set
@@ -92,9 +92,9 @@ select lives_ok($$update public.campaigns set
   raffle_year_sequence=1
   where id=pg_temp.id('campaign-main')$$,'authorized admin can prepare compliance disclosures');
 
-select throws_ok($select public.confirm_campaign_compliance(
+select throws_ok($q$select public.confirm_campaign_compliance(
   pg_temp.id('campaign-main'),'Attempted incomplete compliance attestation',true,true,false
-)$,'23514',null,'database rejects incomplete compliance confirmation flags');
+)$q$,'23514',null,'database rejects incomplete compliance confirmation flags');
 
 select is(length((public.confirm_campaign_compliance(
   pg_temp.id('campaign-main'),'Reviewed synthetic entity, raffle count, prize and direct-sale plan',
