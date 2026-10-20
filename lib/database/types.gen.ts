@@ -116,6 +116,25 @@ isOneToOne: false
       referencedColumns: ["id","organization_id"]
     }
                   ]
+                },"campaign_prizes": {
+                  Row: {
+                    "archived_at": string | null,"archived_by": string | null,"campaign_id": string,"created_at": string,"created_by": string | null,"description": string,"evidence_ref": string,"fair_value_cents": number,"id": string,"name": string,"organization_id": string,"possession_basis": string,"source": string,"updated_at": string,"updated_by": string | null
+                  }
+                  Insert: {
+                    "archived_at"?: string | null,"archived_by"?: string | null,"campaign_id": string,"created_at"?: string,"created_by"?: string | null,"description": string,"evidence_ref": string,"fair_value_cents": number,"id"?: string,"name": string,"organization_id": string,"possession_basis": string,"source": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"archived_by"?: string | null,"campaign_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string,"evidence_ref"?: string,"fair_value_cents"?: number,"id"?: string,"name"?: string,"organization_id"?: string,"possession_basis"?: string,"source"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_prizes_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    }
+                  ]
                 },"campaign_sales": {
                   Row: {
                     "amount_cents": number,"buyer_email": string | null,"buyer_name": string,"buyer_phone": string | null,"campaign_id": string,"collection_event_id": string,"corrects_sale_id": string | null,"created_at": string,"created_by": string,"id": string,"idempotency_key": string,"notes": string | null,"organization_id": string,"participant_id": string,"payment_method": string,"quantity": number,"request_fingerprint": string,"sold_at": string
@@ -1317,6 +1336,9 @@ isOneToOne: false
 "allocate_campaign_tickets":
 { Args: { "p_campaign_id": string,"p_organization_id": string,"p_participant_id": string,"p_quantity": number }; Returns: string
                            },
+"archive_campaign_prize":
+{ Args: { "p_organization_id": string,"p_prize_id": string,"p_reason": string }; Returns: undefined
+                           },
 "archive_team":
 { Args: { "p_organization_id": string,"p_team_id": string }; Returns: number
                            },
@@ -1360,6 +1382,9 @@ isOneToOne: false
                            },
 "campaign_money":
 { Args: { "p_campaign_id": string,"p_organization_id": string,"p_view"?: string }; Returns: Json
+                           },
+"campaign_prize_ticket_description":
+{ Args: { "p_campaign_id": string }; Returns: string
                            },
 "campaign_progress":
 { Args: { "p_campaign_id": string,"p_organization_id": string,"p_player_id"?: string,"p_team_id"?: string,"p_view"?: string }; Returns: Json
@@ -1545,6 +1570,9 @@ isOneToOne: false
 "has_platform_permission":
 { Args: { "p_permission": string }; Returns: boolean
                            },
+"invalidate_campaign_compliance":
+{ Args: { "p_campaign_id": string,"p_reason": string }; Returns: undefined
+                           },
 "is_org_member":
 { Args: { "p_organization_id": string }; Returns: boolean
                            },
@@ -1700,6 +1728,9 @@ isOneToOne: false
                            },
 "update_seller_request_status":
 { Args: { "p_organization_id": string,"p_request_id": string,"p_sale_id"?: string,"p_status": string }; Returns: undefined
+                           },
+"upsert_campaign_prize":
+{ Args: { "p_campaign_id": string,"p_description": string,"p_evidence_ref": string,"p_fair_value_cents": number,"p_name": string,"p_organization_id": string,"p_possession_basis": string,"p_prize_id": string,"p_source": string }; Returns: string
                            },
 "verify_audit_chain":
 { Args: { "p_organization_id": string }; Returns: {
