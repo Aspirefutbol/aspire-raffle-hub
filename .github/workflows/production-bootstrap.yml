@@ -1,0 +1,58 @@
+name: Production Bootstrap
+
+# Manual-only production database bootstrap.
+# No seed/reset/test fixtures. Applies tracked migrations exactly as committed.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    if: github.ref == 'refs/heads/feat/phase-1-fundraising-slice'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.PRODUCTION_SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+      PRODUCTION_PROJECT_REF: bsjjzewifpbngbasdvew
+
+    steps:
+      - name: Require production credentials
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing PRODUCTION_SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing PRODUCTION_DB_PASSWORD"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Supabase CLI
+        run: npm install --global supabase@2.121.0
+
+      - name: Link production project
+        run: supabase link --project-ref "$PRODUCTION_PROJECT_REF"
+
+      - name: Show pending production migrations
+        run: supabase migration list --linked
+
+      - name: Apply tracked migrations only
+        run: supabase db push --linked --yes
+
+      - name: Verify migration history
+        run: supabase migration list --linked
+
+      - name: Production schema smoke
+        run: |
+          supabase db lint --linked --level error
