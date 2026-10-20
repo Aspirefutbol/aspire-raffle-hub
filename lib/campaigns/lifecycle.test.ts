@@ -7,6 +7,7 @@ import {
 } from "./lifecycle";
 
 const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261012000200_campaign_lifecycle.sql"), "utf8");
+const complianceSql = readFileSync(join(__dirname, "../../supabase/migrations/20261020170805_controlled_pilot_compliance.sql"), "utf8");
 
 describe("campaign lifecycle mirror", () => {
   it("transition edges match campaign_transition_allowed()", () => {
@@ -16,8 +17,8 @@ describe("campaign lifecycle mirror", () => {
     expect(mirror).toEqual(edges);
   });
 
-  it("locked fields match campaign_locked_fields()", () => {
-    const body = sql.slice(sql.indexOf("function public.campaign_locked_fields"), sql.indexOf("function public.campaign_transition_allowed"));
+  it("locked fields match the latest campaign_locked_fields()", () => {
+    const body = complianceSql.slice(complianceSql.indexOf("function public.campaign_locked_fields"), complianceSql.indexOf("function public.campaign_compliance_fields"));
     const fields = [...body.matchAll(/'([a-z_]+)', c\./g)].map((m) => m[1]).sort();
     expect([...CAMPAIGN_LOCKED_FIELDS].sort()).toEqual(fields);
   });
