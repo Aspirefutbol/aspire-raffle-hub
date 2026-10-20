@@ -52,6 +52,18 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   const campaignId = z.uuid().parse(new URL(page.url()).pathname.split("/").at(-1));
   await expect(page.getByRole("heading", { level: 1 })).toContainText(campaignName);
 
+  const prize = await admin.rpc("upsert_campaign_prize", {
+    p_organization_id: orgId,
+    p_campaign_id: campaignId,
+    p_name: "Coaching package",
+    p_description: "Donated synthetic coaching package and equipment bundle",
+    p_fair_value_cents: 25_000,
+    p_source: "DONATED",
+    p_possession_basis: "OWNED_OR_POSSESSED",
+    p_evidence_ref: "SYNTHETIC-E2E-DONATION-EVIDENCE",
+  });
+  expect(prize.error).toBeNull();
+
   const progress = async () => {
     const result = await admin.rpc("campaign_progress", {
       p_organization_id: orgId, p_campaign_id: campaignId, p_view: "admin",
@@ -157,7 +169,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(family.getByText("Aspire Sports Group", { exact: true }).first()).toBeVisible();
     await expect(family.getByTestId("issued-ticket").first()).toContainText("100 Example Way (dev placeholder)");
     await expect(family.getByText("$5.00", { exact: true }).first()).toBeVisible();
-    await expect(family.getByText("Donated synthetic coaching package and equipment bundle", { exact: true }).first()).toBeVisible();
+    await expect(family.getByTestId("issued-ticket").first()).toContainText("Coaching package: Donated synthetic coaching package and equipment bundle (estimated value $250.00)");
     await expect(family.getByText("Prize award / drawing date", { exact: true }).first()).toBeVisible();
     await family.screenshot({ path: testInfo.outputPath("desktop-family-printable-tickets.png"), fullPage: true });
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
