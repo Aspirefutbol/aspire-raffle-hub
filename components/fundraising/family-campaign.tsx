@@ -5,7 +5,7 @@ import { RecordSaleButton } from "@/components/campaigns/sale-sheets";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/fundraising/money";
 import type { CampaignParticipantProgress, CampaignProgress } from "@/lib/fundraising/types";
 
@@ -90,6 +90,19 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
           </div>
         </CardBody>
       </Card>
+      {detail && progress.recent_sales.length > 0 && <Card className="mt-5">
+        <CardHeader title="Issued tickets" description="Reopen or print recorded raffle tickets. Reversed sales remain visible as historical records." />
+        <CardBody className="divide-y divide-line p-0">
+          {progress.recent_sales.map((sale) => <div key={sale.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-ink">{sale.ticket_numbers.join(", ")}</p>
+              <p className="mt-1 text-xs text-muted">{formatDateTime(sale.sold_at, timeZone)} · {formatMoney(sale.amount_cents)} · {sale.payment_method === "cash" ? "Cash" : "Check"}</p>
+              {sale.reversed && <Badge className="mt-2" tone="muted">Reversed / voided</Badge>}
+            </div>
+            <ButtonLink href={`/o/${orgSlug}/tickets/${sale.id}`} variant="secondary" size="sm">View / print</ButtonLink>
+          </div>)}
+        </CardBody>
+      </Card>}
     </section>
   );
 }
