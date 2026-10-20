@@ -17,7 +17,7 @@ No other fundraiser type is part of this pilot implementation. Preserve the
 shared organization, roster, authorization, and append-only ledger foundations;
 record future shared capabilities in the backlog without building them now.
 
-The feature branch now also implements [Money Custody & Reconciliation](./money-custody.md) and [guarded drawing operations](./drawing-operations.md). These remain development acceptance slices; operator QA and the complete launch rehearsal are still required. Seller Sharing is not part of the money slice.
+The feature branch also implements [Money Custody & Reconciliation](./money-custody.md), [guarded drawing operations](./drawing-operations.md), and Seller Sharing. The full hosted Aspire operator rehearsal passed on 2026-10-20 across campaign setup, enrollment, sharing, family sale, captain monitoring, money custody/reconciliation, reversal/correction, close/freeze/export, external result certification, final reconciliation, snapshot integrity, and hash-chain verification. Remaining launch work is production/compliance approval and operational ownership, not core staging workflow acceptance.
 
 ## First-slice acceptance
 
@@ -73,11 +73,11 @@ reconciling funds are separate operations.
 | Family access | Intended sellers can sign in and see/sell for the correct family players; invitation/access issues have an operator resolution path. | Existing member/family access plus current scoped sale checks; pilot rehearsal required. |
 | Ticket allocation | Initial stock is assigned, remaining stock is visible, and operators can safely supply additional stock when needed. | Current inventory transactions; confirm the operator workflow is sufficient without a full inventory-management UI. |
 | Sale | A real offline collection can be recorded once and produces the correct issued ticket numbers. | Current manual-sale slice; ticket delivery/receipt expectations still need operator agreement. |
-| Money status | Seller collections, organization receipts, outstanding balances, and check exceptions are distinguishable. | **Development slice implemented:** separate custody balances and check outcomes; operator QA remains. |
+| Money status | Seller collections, organization receipts, outstanding balances, and check exceptions are distinguishable. | **Hosted rehearsal accepted:** separate custody balances, check outcomes, returned-check replacement, and zero-due final reconciliation were exercised end to end. |
 | Totals | Net totals and ticket counts reconcile across organization/team/player scopes without exposing unrelated data. | Current scoped progress slice; later receipt/balance totals must use their own canonical events. |
 | Reversal/Correction | Authorized operators can explain and correct a mistake without deleting history, recycling ticket numbers, or changing drawing eligibility afterward. | Current pre-drawing reversal/correction slice; post-drawing financial-only exceptions require a separate workflow. |
-| Drawing export | Sales are closed and eligible issued tickets can be exported as a reproducible, auditable snapshot, excluding voided tickets. | **Development slice implemented:** frozen snapshots, verified private exports, and external certification; operator drawing/recordkeeping review remains. |
-| Reconciliation | Turn-ins, partial receipts, checks, deposits/batches, and approved discrepancies have a tested operational path. | **Development slice implemented:** append-only turn-ins, allocations, check outcomes, deposits, refunds, credits, and approvals; operator rehearsal remains. |
+| Drawing export | Sales are closed and eligible issued tickets can be exported as a reproducible, auditable snapshot, excluding voided tickets. | **Hosted rehearsal accepted:** close, post-close mutation blocking, freeze, CSV/JSON export, external result recording, Director certification, and DRAWN transition passed. Formal live drawing/recordkeeping procedure still requires operator/compliance approval. |
+| Reconciliation | Turn-ins, partial receipts, checks, deposits/batches, and approved discrepancies have a tested operational path. | **Hosted rehearsal accepted:** append-only turn-ins, allocations, check outcomes, returned-check handling, replacement cash, credits, and final balance verification passed. Live custody ownership and deposit-evidence policy remain launch gates. |
 | Audit | Operators can trace a sale, its tickets, collection, correction, drawing snapshot, and reconciliation; verification/export and incident procedures work. | Existing audit/hash foundations plus exports and operating procedures needed for the pilot. |
 
 ## Pilot acceptance areas, in launch priority
@@ -93,21 +93,14 @@ reconciling funds are separate operations.
    after drawing finalization. Confirm whether winner certification/prize
    records are required in the app or in the approved operator process for this
    pilot; do not treat a CSV alone as a complete drawing workflow.
-3. **Operator launch rehearsal and audit handoff.** Run the entire launch path
-   with representative admin, finance, captain, and family accounts. Verify
-   invitations, replenishment, receipts/ticket delivery expectations, cutoff,
-   corrections, export, reconciliation, audit checks, backups, and support
-   ownership. Resolve any missing mandatory workflow before launch.
+3. **Production launch handoff.** The hosted operator rehearsal has passed with representative roles and the full campaign lifecycle. Before live operation, finalize legal/compliance approval, production secrets/backups/monitoring/domain/email, physical cash/check custody ownership, deposit evidence, returned-check ownership, drawing-evidence retention, support ownership, and the final operator runbook.
 
 These are required launch gaps, not optional polish. Any new implementation
 scope should have concrete acceptance criteria and review before it is started.
 
 ## Planning target and production gate
 
-Use the 4–5 week target to order work: first-slice acceptance, money and
-reconciliation, drawing export, then a complete pilot rehearsal and remediation.
-Keep the schedule adjustable as operator decisions and verified gaps become
-clear; passing the first-slice tests does not establish production readiness.
+The first-slice, money/reconciliation, drawing/export, and hosted operator rehearsal stages are now accepted on the staging lane. Keep the remaining schedule adjustable around legal/compliance review and production operations. Passing staging acceptance does not establish live production authorization.
 
 Before production claims or live raffle operation, the operator and appropriate
 jurisdiction/compliance reviewer must validate eligibility to operate the raffle,
