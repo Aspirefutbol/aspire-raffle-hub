@@ -52,11 +52,11 @@ Verified:
 - request progressed from new → contacted → completed
 - completed request linked to recorded sale `82bacaf2-df17-4cd5-a0f0-01a5d8bf5e9a`
 
-Known follow-up from earlier Seller Sharing acceptance:
+Seller-link wording follow-up:
 
-- After reload, the seller control can read `Share fundraiser` even when replacing an existing one-time token. Consider clearer copy such as `Create / replace seller link`.
-- Category: **Product / low**.
-- Does not block controlled pilot.
+- Resolved. The seller control now reads `Create / replace seller link`, and the helper text explains that creating a replacement invalidates the previous one-time token.
+- Category: **Product / low — resolved**.
+- No controlled-pilot blocker remains from this item.
 
 ### Family sale and captain monitoring
 
@@ -163,7 +163,7 @@ Resolution implemented:
 - help text explains that the operator enters the amount actually received; no separate partial-payment mode is required
 - Learning Hub updated to match the new UI terminology
 
-Status: **Fixed. Learning Hub alignment validation pending latest CI/deploy.**
+Status: **Fixed and aligned with current Learning Hub terminology.**
 
 ### 3. Critical workflow panels did not stand out enough
 
@@ -266,8 +266,8 @@ This does **not** remove the separate live-operation legal/compliance gates list
 **Medium — Money action discoverability**  
 Resolved in rehearsal. Must remain green in final regression and hosted review.
 
-**Low — Seller link replacement wording**  
-One-time link behavior is correct, but returning users can misread `Share fundraiser` as preserving the old token. Copy polish recommended before broad rollout.
+**Low — Seller link replacement wording — RESOLVED**  
+The control now uses `Create / replace seller link` with explicit replacement behavior in the helper text.
 
 ### Operations
 
