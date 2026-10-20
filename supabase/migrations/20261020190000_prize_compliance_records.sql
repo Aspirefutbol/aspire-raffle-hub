@@ -98,13 +98,13 @@ $$;
 create or replace function public.upsert_campaign_prize(
   p_organization_id uuid,
   p_campaign_id uuid,
-  p_prize_id uuid,
   p_name text,
   p_description text,
   p_fair_value_cents bigint,
   p_source text,
   p_possession_basis text,
-  p_evidence_ref text
+  p_evidence_ref text,
+  p_prize_id uuid default null
 )
 returns uuid
 language plpgsql
@@ -354,7 +354,7 @@ $$;
 revoke all on public.campaign_prizes from anon;
 revoke all on function public.campaign_prize_ticket_description(uuid),
   public.invalidate_campaign_compliance(uuid,text),
-  public.upsert_campaign_prize(uuid,uuid,uuid,text,text,bigint,text,text,text),
+  public.upsert_campaign_prize(uuid,uuid,text,text,bigint,text,text,text,uuid),
   public.archive_campaign_prize(uuid,uuid,text) from public,anon;
-grant execute on function public.upsert_campaign_prize(uuid,uuid,uuid,text,text,bigint,text,text,text),
+grant execute on function public.upsert_campaign_prize(uuid,uuid,text,text,bigint,text,text,text,uuid),
   public.archive_campaign_prize(uuid,uuid,text) to authenticated;
