@@ -2,7 +2,7 @@
 -- disclosure artifact, authorization, immutability, and void history.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(36);
 
 create function pg_temp.id(p_key text) returns uuid language sql immutable as $$
   select md5('raffle-pgtap-compliance:' || p_key)::uuid;
@@ -81,8 +81,9 @@ select throws_ok($$select public.transition_campaign(pg_temp.id('campaign-main')
   '23514',null,'campaign cannot become READY while compliance gate is incomplete');
 
 select pg_temp.as_user('manager');
-select throws_ok($$select public.confirm_campaign_compliance(pg_temp.id('campaign-main'),'Manager tried to attest')$$,
-  '42501',null,'campaign manager cannot perform director compliance attestation');
+select throws_ok($select public.confirm_campaign_compliance(
+  pg_temp.id('campaign-main'),'Manager tried to attest',true,true,true
+)$,'42501',null,'campaign manager cannot perform director compliance attestation');
 
 select pg_temp.as_user('admin-director');
 select lives_ok($$update public.campaigns set
@@ -91,9 +92,18 @@ select lives_ok($$update public.campaigns set
   raffle_year_sequence=1
   where id=pg_temp.id('campaign-main')$$,'authorized admin can prepare compliance disclosures');
 
+select throws_ok($select public.confirm_campaign_compliance(
+  pg_temp.id('campaign-main'),'Attempted incomplete compliance attestation',true,true,false
+)$,'23514',null,'database rejects incomplete compliance confirmation flags');
+
 select is(length((public.confirm_campaign_compliance(
-  pg_temp.id('campaign-main'),'Reviewed synthetic entity, raffle count, prize and direct-sale plan'
+  pg_temp.id('campaign-main'),'Reviewed synthetic entity, raffle count, prize and direct-sale plan',
+  true,true,true
 )->>'confirmation_hash')),64,'director attestation stores a SHA-256 fingerprint');
+
+select is((select compliance_attestation->>'entity_eligibility_and_name_change_evidence_reviewed'
+  from public.campaigns where id=pg_temp.id('campaign-main')),'true',
+  'director attestation facts are stored on the campaign');
 select is(cardinality(public.campaign_readiness(pg_temp.id('campaign-main'))),0,
   'current attestation clears activation readiness');
 select is((select compliance_confirmed_by from public.campaigns where id=pg_temp.id('campaign-main')),
@@ -107,7 +117,8 @@ select is((select compliance_confirmed_at from public.campaigns where id=pg_temp
 select ok('current Texas compliance attestation'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
   'edited disclosure returns campaign to compliance hold');
 select is(length((public.confirm_campaign_compliance(
-  pg_temp.id('campaign-main'),'Re-reviewed updated synthetic prize disclosure'
+  pg_temp.id('campaign-main'),'Re-reviewed updated synthetic prize disclosure',
+  true,true,true
 )->>'confirmation_hash')),64,'director can re-attest the updated payload');
 
 select is(public.enroll_campaign_players(
