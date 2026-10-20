@@ -45,5 +45,8 @@ export const transitionCampaignSchema = z.object({
 
 export const confirmCampaignComplianceSchema = z.object({
   campaign_id: id,
+  entity_confirmed: z.literal(true, { error: "Confirm the legal operator and eligibility evidence review." }),
+  raffle_count_confirmed: z.literal(true, { error: "Confirm the raffle-year count and charitable use review." }),
+  prize_sales_confirmed: z.literal(true, { error: "Confirm the prize, sales/promotion, and compensation review." }),
   reason: requiredText("Compliance attestation reason", 500).min(3, "Give a reason of at least 3 characters."),
 });
