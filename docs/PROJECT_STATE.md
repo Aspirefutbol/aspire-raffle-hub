@@ -282,3 +282,29 @@ Validated on feature commit `658cc66a28f53e8e1c4351bcfdb1edde0545c0cb`:
 - PR #2 remains draft and unmerged
 
 The remaining controlled-pilot acceptance work is the hosted operator lifecycle rehearsal: close sales, prove post-close sales are blocked, freeze/export the drawing population, record the synthetic external result, certify, mark DRAWN, and perform final reconciliation/audit verification.
+
+## Operator rehearsal accepted — 2026-10-20
+
+The hosted staging operator rehearsal for `OPERATOR REHEARSAL — Aspire Pilot` is complete and **PASSED**.
+
+Final state:
+
+- campaign lifecycle: `DRAWN`
+- active sales: 2 / $10.00
+- money expected / received / due: $10.00 / $10.00 / $0.00
+- uncleared checks / exceptions: $0.00 / $0.00
+- ticket inventory: 9 ALLOCATED / 2 ISSUED / 1 VOIDED
+- drawing Snapshot v1: `e98c4d68-28ad-403d-813a-104ed6e38d09`
+- eligible drawing tickets: `OR1-000009`, `OR1-000011`
+- manifest SHA-256: `d4cc47b6f7a501623461807c8a3172172f7ec5d25cfc24098461865dfd9ecaea`
+- CSV and JSON exports recorded with authenticated-exporter checksums
+- synthetic external result recorded for `OR1-000009`
+- Director certification recorded
+- final `CLOSED → DRAWN` transition recorded through hosted UI
+- snapshot integrity: PASS
+- audit/campaign/ticket/money hash chains: PASS
+- post-close sale enforcement: PASS with zero sale mutation
+
+Security baseline is also green: leaked-password protection is enabled and the Hosted QA security gate, Netlify deploy, and hosted smoke check passed on the hardened staging lane.
+
+PR #2 remains draft and unmerged until explicit approval. Legal/compliance and live-production operating gates remain separate from this staging product acceptance.
