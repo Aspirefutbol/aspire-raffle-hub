@@ -269,3 +269,16 @@ For future implementation tasks:
 5. Preserve all authorization, RLS, immutable ledger, idempotency, ticket, drawing, money, and audit guarantees.
 6. Keep PR #2 draft/unmerged unless the user explicitly approves a merge.
 7. Stop at the next QA/approval gate and report the exact commit SHA, tests, hosted state, and known gaps.
+
+## Hardened staging baseline — 2026-10-20
+
+Validated on feature commit `658cc66a28f53e8e1c4351bcfdb1edde0545c0cb`:
+
+- full CI passed, including fresh migrations, pgTAP, generated types, DB catalog parity, raffle/drawing/money/sharing concurrency, audit continuity, production build, and browser E2E
+- Hosted QA deploy passed after the staging Supabase PAT was replaced with a scoped read-only token that can read Security Advisors
+- leaked-password protection is enabled; the prior `auth_leaked_password_protection` advisor warning is gone
+- Hosted QA deploy and smoke check are green
+- current Netlify staging deploy is ready
+- PR #2 remains draft and unmerged
+
+The remaining controlled-pilot acceptance work is the hosted operator lifecycle rehearsal: close sales, prove post-close sales are blocked, freeze/export the drawing population, record the synthetic external result, certify, mark DRAWN, and perform final reconciliation/audit verification.
