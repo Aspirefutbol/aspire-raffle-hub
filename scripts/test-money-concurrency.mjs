@@ -127,9 +127,9 @@ async function fixture(name, stock, admin, family) {
   assert.match(slug, /^[a-z0-9-]{1,48}$/);
   await sql(`begin;
     select set_config('request.jwt.claims',jsonb_build_object('sub',${uuid(admin.userId)},'role','authenticated')::text,true);
-    insert into public.organizations(id,name,legal_name,slug,address_line1,city,region,support_email,jurisdiction_profile)
+    insert into public.organizations(id,name,legal_name,slug,address_line1,city,region,support_email,jurisdiction_profile,platform_config)
       values(${uuid(ids.orgId)},'Concurrency fixture','Concurrency Fixture Inc','${slug}',
-        '100 Test Way','Houston','TX','support@example.test','TEXAS_CREA_OFFLINE_PAYMENT');
+        '100 Test Way','Houston','TX','support@example.test','TEXAS_CREA_OFFLINE_PAYMENT',jsonb_build_object('texas_crea_compliance_required',false));
     insert into public.organization_members(id,organization_id,user_id) values
       (${uuid(ids.adminMemberId)},${uuid(ids.orgId)},${uuid(admin.userId)}),
       (${uuid(ids.familyMemberId)},${uuid(ids.orgId)},${uuid(family.userId)});
