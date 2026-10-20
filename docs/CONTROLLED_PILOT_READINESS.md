@@ -433,3 +433,34 @@ Real-money pilot is **GO** only when all are true:
 8. Run an independent security/developer review on the release candidate.
 9. Deploy to production infrastructure with no live campaign activated.
 10. Run production smoke/role checks, then board/director GO/NO-GO.
+
+
+## Production bootstrap verification — 2026-10-20
+
+**PASS**
+
+Aspire Raffle Hub Production (`bsjjzewifpbngbasdvew`) was bootstrapped through the manual production workflow using the tracked repository migrations.
+
+Verified:
+
+- 21 production migrations applied
+- production migration history matches Raffle Hub Staging **exactly**
+- production schema smoke/lint step passed
+- zero staging/synthetic rows copied
+- production row counts at bootstrap:
+  - organizations: 0
+  - members: 0
+  - campaigns: 0
+  - participants: 0
+  - sales: 0
+  - tickets: 0
+  - money events: 0
+  - drawing snapshots: 0
+  - drawing results: 0
+- security advisors show only the expected function-exposure review items:
+  - 2 intentional anonymous supporter SECURITY DEFINER RPCs
+  - 60 authenticated SECURITY DEFINER RPCs already permission-checked by application/database logic
+- no leaked-password warning
+- production remains unseeded and has no real-family data
+
+The next production blockers are product/legal configuration, production auth/SMTP/server secret, compliance-ready ticket/receipt, operator/entity evidence, prize/rules configuration, and final release deployment/smoke.
