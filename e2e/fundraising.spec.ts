@@ -45,7 +45,6 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await draft.getByLabel("Drawing date", { exact: true }).fill(await localTimestamp(page, Date.now() + 8 * day));
   await draft.getByLabel("Support email", { exact: true }).fill("support@aspire.test");
   await draft.getByLabel("Support phone", { exact: true }).fill("7135550101");
-  await draft.getByLabel("Prize description(s)", { exact: true }).fill("Donated synthetic coaching package and equipment bundle");
   await draft.getByLabel("Charitable purpose of proceeds", { exact: true }).fill("Support Aspire youth soccer financial aid and player development");
   await draft.getByLabel("Raffle number this calendar year", { exact: true }).fill("1");
   await draft.getByRole("button", { name: "Create draft", exact: true }).click();
