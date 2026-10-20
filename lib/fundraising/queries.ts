@@ -52,7 +52,17 @@ export async function getCampaignSetup(ctx: OrgContext, campaignId: string) {
     .eq("organization_id", ctx.organization.id).eq("id", checkedId.data).maybeSingle();
   if (error) throw new Error("Could not load campaign setup.");
   if (!campaign) return null;
-  const { data: readiness, error: readinessError } = await supabase.rpc("campaign_readiness", { p_campaign_id: campaign.id });
+  const [{ data: readiness, error: readinessError }, { data: prizes, error: prizesError }] = await Promise.all([
+    supabase.rpc("campaign_readiness", { p_campaign_id: campaign.id }),
+    supabase.from("campaign_prizes")
+      .select("id,name,description,fair_value_cents,source,possession_basis,evidence_ref,archived_at")
+      .eq("organization_id", ctx.organization.id)
+      .eq("campaign_id", campaign.id)
+      .is("archived_at", null)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true }),
+  ]);
   if (readinessError) throw new Error("Could not load campaign readiness.");
-  return { campaign, readiness: readiness ?? [] };
+  if (prizesError) throw new Error("Could not load campaign prize compliance records.");
+  return { campaign, readiness: readiness ?? [], prizes: prizes ?? [] };
 }
