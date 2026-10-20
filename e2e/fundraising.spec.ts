@@ -156,7 +156,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(family.getByTestId("issued-ticket")).toHaveCount(2);
     for (const number of issuedNumbers) await expect(family.getByTestId("issued-ticket").filter({ hasText: number })).toBeVisible();
     await expect(family.getByText("Aspire Sports Group", { exact: true }).first()).toBeVisible();
-    await expect(family.getByText("100 Example Way (dev placeholder)", { exact: true }).first()).toBeVisible();
+    await expect(family.getByTestId("issued-ticket").first()).toContainText("100 Example Way (dev placeholder)");
     await expect(family.getByText("$5.00", { exact: true }).first()).toBeVisible();
     await expect(family.getByText("Donated synthetic coaching package and equipment bundle", { exact: true }).first()).toBeVisible();
     await expect(family.getByText("Prize award / drawing date", { exact: true }).first()).toBeVisible();
