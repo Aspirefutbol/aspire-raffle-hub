@@ -19,6 +19,8 @@ export const CAMPAIGN_TRANSITIONS: Readonly<Record<CampaignStatus, readonly Camp
 export const CAMPAIGN_LOCKED_FIELDS = [
   "name", "campaign_type", "season_id", "ticket_price_cents", "ticket_prefix", "jurisdiction_mode",
   "timezone", "starts_at", "draw_at", "operator_legal_name", "operator_address", "rules_text", "rules_version",
+  "prize_description", "charitable_purpose", "raffle_year_sequence",
+  "compliance_confirmed_at", "compliance_confirmed_by", "compliance_confirmation_hash",
 ] as const;
 
 export function isCampaignStatus(value: string): value is CampaignStatus {
