@@ -355,6 +355,10 @@ revoke all on function public.campaign_compliance_required(uuid),
   public.sale_ticket_receipt(uuid,uuid) from public, anon;
 revoke all on function public.campaign_compliance_payload(public.campaigns,public.organizations),
   public.campaign_compliance_hash(public.campaigns,public.organizations),
-  public.campaign_compliance_fields(public.campaigns) from public,anon,authenticated,service_role;
-grant execute on function public.confirm_campaign_compliance(uuid,text),
+  public.campaign_compliance_fields(public.campaigns) from public,anon;
+grant execute on function public.campaign_compliance_required(uuid),
+  public.campaign_compliance_payload(public.campaigns,public.organizations),
+  public.campaign_compliance_hash(public.campaigns,public.organizations),
+  public.campaign_compliance_fields(public.campaigns),
+  public.confirm_campaign_compliance(uuid,text),
   public.sale_ticket_receipt(uuid,uuid) to authenticated;
