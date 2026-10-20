@@ -50,7 +50,10 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
       default_allocation: text("default_allocation") ? Number(text("default_allocation")) : null,
       ticket_prefix: text("ticket_prefix") || null,
       starts_at: timestamp("starts_at"), sales_close_at: timestamp("sales_close_at"), draw_at: timestamp("draw_at"),
-      support_email: text("support_email"), support_phone: text("support_phone"), rules_text: text("rules_text"),
+      support_email: text("support_email"), support_phone: text("support_phone"),
+      prize_description: text("prize_description"), charitable_purpose: text("charitable_purpose"),
+      raffle_year_sequence: text("raffle_year_sequence") ? Number(text("raffle_year_sequence")) : null,
+      rules_text: text("rules_text"),
     });
     if (!parsed.success) { setErrors(Object.fromEntries(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message]))); return; }
     setErrors({});
@@ -73,7 +76,7 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
 
   return <Sheet open onClose={() => !pending && onClose()} title={campaign ? "Edit raffle campaign" : "New raffle campaign"} description="Configure the raffle before a director activates ticket sales." wide footer={<div className="flex justify-end gap-2"><Button variant="secondary" disabled={pending} onClick={onClose}>Cancel</Button><Button type="submit" form="campaign-form" loading={pending}>{campaign ? "Save changes" : "Create draft"}</Button></div>}>
     <form id="campaign-form" onSubmit={submit} className="space-y-6">
-      {campaign?.status === "ACTIVE" && <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft">Ticket price, prefix, name, season, sales start, drawing date, and raffle rules are locked after activation. Goals, description, sales close, inventory defaults, and support contact remain editable.</p>}
+      {campaign?.status === "ACTIVE" && <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft">Ticket price, prefix, name, season, sales start, drawing date, prize/purpose disclosures, raffle-year number, compliance attestation, and raffle rules are locked after activation. Goals, description, sales close, inventory defaults, and support contact remain editable.</p>}
       <fieldset disabled={pending} className="space-y-4">
         <Field label="Campaign name" htmlFor="campaign-name" required error={errors.name}><Input id="campaign-name" name="name" disabled={locked("name")} required maxLength={120} defaultValue={campaign?.name ?? ""} autoFocus /></Field>
         <Field label="Description" htmlFor="campaign-description" error={errors.description}><Textarea id="campaign-description" name="description" maxLength={2000} defaultValue={campaign?.description ?? ""} /></Field>
@@ -91,8 +94,17 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
         <p className="text-xs text-muted">Dates use your device’s time zone. The legal operator and address come from organization settings at activation.</p>
         <div className="grid gap-4 sm:grid-cols-2">{([ ["starts_at", "Sales start"], ["sales_close_at", "Sales close"], ["draw_at", "Drawing date"] ] as const).map(([key, label]) => <Field key={key} label={label} htmlFor={`campaign-${key}`} error={errors[key]}><Input id={`campaign-${key}`} name={key} disabled={locked(key)} type="datetime-local" defaultValue={localTimestamp(campaign?.[key] ?? null)} /></Field>)}</div>
         <div className="grid gap-4 sm:grid-cols-2"><Field label="Support email" htmlFor="campaign-support-email" hint="Optional if set in organization settings." error={errors.support_email}><Input id="campaign-support-email" name="support_email" type="email" defaultValue={campaign?.support_email ?? ""} /></Field><Field label="Support phone" htmlFor="campaign-support-phone" error={errors.support_phone}><Input id="campaign-support-phone" name="support_phone" type="tel" defaultValue={campaign?.support_phone ?? ""} /></Field></div>
+        <div className="rounded-card border border-line bg-canvas/40 p-4">
+          <h3 className="text-sm font-semibold text-ink">Texas CREA pilot disclosures</h3>
+          <p className="mt-1 text-xs text-muted">These fields feed the launch gate and issued ticket artifact. They lock after activation.</p>
+          <div className="mt-4 space-y-4">
+            <Field label="Prize description(s)" htmlFor="campaign-prize-description" error={errors.prize_description} hint="Describe each raffle prize that should appear on the issued ticket."><Textarea id="campaign-prize-description" name="prize_description" disabled={locked("prize_description")} maxLength={4000} rows={4} defaultValue={campaign?.prize_description ?? ""} /></Field>
+            <Field label="Charitable purpose of proceeds" htmlFor="campaign-charitable-purpose" error={errors.charitable_purpose} hint="State the approved charitable use of raffle proceeds."><Textarea id="campaign-charitable-purpose" name="charitable_purpose" disabled={locked("charitable_purpose")} maxLength={2000} rows={3} defaultValue={campaign?.charitable_purpose ?? ""} /></Field>
+            <Field label="Raffle number this calendar year" htmlFor="campaign-raffle-year-sequence" error={errors.raffle_year_sequence} hint="Texas CREA organizations may award prizes in no more than four raffles per calendar year."><Input id="campaign-raffle-year-sequence" name="raffle_year_sequence" disabled={locked("raffle_year_sequence")} type="number" min={1} max={4} defaultValue={campaign?.raffle_year_sequence ?? ""} /></Field>
+          </div>
+        </div>
         <Field label="Raffle rules" htmlFor="campaign-rules" error={errors.rules_text}><Textarea id="campaign-rules" name="rules_text" disabled={locked("rules_text")} maxLength={20000} rows={5} defaultValue={campaign?.rules_text ?? ""} /></Field>
-        <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft">Offline cash/check sales only. Jurisdiction requirements and activation checks remain enforced.</p>
+        <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft">Offline cash/check sales only. The product records required disclosures and operator attestations; it does not independently determine legal eligibility.</p>
       </fieldset>
     </form>
   </Sheet>;
