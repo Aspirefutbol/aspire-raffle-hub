@@ -117,12 +117,12 @@ select is(cardinality(public.campaign_readiness(pg_temp.id('campaign-main'))),0,
 select is((select compliance_confirmed_by from public.campaigns where id=pg_temp.id('campaign-main')),
   pg_temp.id('user-admin-director'),'attestation records the director actor');
 
-select lives_ok($select public.upsert_campaign_prize(
+select lives_ok($q$select public.upsert_campaign_prize(
   pg_temp.id('org-a'),pg_temp.id('campaign-main'),
   (select id from public.campaign_prizes where campaign_id=pg_temp.id('campaign-main') and archived_at is null limit 1),
   'Training package','Updated donated synthetic training package valued over $10',
   25000,'DONATED','OWNED_OR_POSSESSED','SYNTHETIC-DONATION-EVIDENCE'
-)$,'pre-activation structured prize disclosure may be corrected');
+)$q$,'pre-activation structured prize disclosure may be corrected');
 select is((select compliance_confirmed_at from public.campaigns where id=pg_temp.id('campaign-main')),
   null::timestamptz,'changing reviewed disclosure clears the prior confirmation');
 select ok('current Texas compliance attestation'=any(public.campaign_readiness(pg_temp.id('campaign-main'))),
