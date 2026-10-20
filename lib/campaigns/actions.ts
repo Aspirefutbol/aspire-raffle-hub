@@ -5,7 +5,7 @@ import { type ActionResult, describeDbError, fail, ok, orgAction } from "@/lib/a
 import { can } from "@/lib/auth/org-context";
 import { createClient } from "@/lib/supabase/server";
 import { canTransition, editableFieldsFilter, isCampaignStatus, transitionNeedsReason, transitionPermission } from "./lifecycle";
-import { confirmCampaignComplianceSchema, createCampaignSchema, transitionCampaignSchema, updateCampaignSchema } from "./schemas";
+import { archiveCampaignPrizeSchema, campaignPrizeSchema, confirmCampaignComplianceSchema, createCampaignSchema, transitionCampaignSchema, updateCampaignSchema } from "./schemas";
 
 // Campaign setup keeps the existing lifecycle and readiness checks. Fundraising
 // inventory and sale mutations use separate transactional database functions.
@@ -96,5 +96,41 @@ export async function confirmCampaignCompliance(orgSlug: string, input: unknown)
     if (error) return fail(describeDbError(error));
     refresh(orgSlug);
     return ok(undefined, "Texas compliance attestation recorded");
+  });
+}
+
+
+export async function upsertCampaignPrize(orgSlug: string, input: unknown): Promise<ActionResult<{ id: string }>> {
+  return orgAction(orgSlug, "campaigns.manage", campaignPrizeSchema, input, async (ctx, data) => {
+    const supabase = await createClient();
+    const { data: prizeId, error } = await supabase.rpc("upsert_campaign_prize", {
+      p_organization_id: ctx.organization.id,
+      p_campaign_id: data.campaign_id,
+      p_prize_id: data.prize_id ?? undefined,
+      p_name: data.name,
+      p_description: data.description,
+      p_fair_value_cents: data.fair_value_cents,
+      p_source: data.source,
+      p_possession_basis: data.possession_basis,
+      p_evidence_ref: data.evidence_ref,
+    });
+    if (error) return fail(describeDbError(error));
+    if (!prizeId) return fail("Prize compliance record did not return an ID.");
+    refresh(orgSlug);
+    return ok({ id: prizeId }, data.prize_id ? "Prize compliance record updated" : "Prize compliance record added");
+  });
+}
+
+export async function archiveCampaignPrize(orgSlug: string, input: unknown): Promise<ActionResult> {
+  return orgAction(orgSlug, "campaigns.manage", archiveCampaignPrizeSchema, input, async (ctx, data) => {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("archive_campaign_prize", {
+      p_organization_id: ctx.organization.id,
+      p_prize_id: data.prize_id,
+      p_reason: data.reason,
+    });
+    if (error) return fail(describeDbError(error));
+    refresh(orgSlug);
+    return ok(undefined, "Prize removed from active compliance records");
   });
 }
