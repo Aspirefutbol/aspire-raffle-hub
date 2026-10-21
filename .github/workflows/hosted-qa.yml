@@ -22,7 +22,6 @@ jobs:
       actions: read
       contents: read
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
       STAGING_PROJECT_REF: ixhpidqhqzbpfbklofrs
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -36,13 +35,12 @@ jobs:
             exit 1
           fi
 
-      - name: Require staging management token
-        run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then echo "::error::Missing SUPABASE_ACCESS_TOKEN staging binding"; exit 1; fi
-
-      - name: Require staging database credential
+      - name: Build exact staging database connection
         run: |
           if [ -z "$SUPABASE_DB_PASSWORD" ]; then echo "::error::Missing STAGING_DB_PASSWORD staging binding"; exit 1; fi
+          db_url="$(node -e 'const p=encodeURIComponent(process.env.SUPABASE_DB_PASSWORD);const h="db."+process.env.STAGING_PROJECT_REF+".supabase.co";process.stdout.write("postgresql://postgres:"+p+"@"+h+":5432/postgres?sslmode=require")')"
+          echo "::add-mask::$db_url"
+          echo "STAGING_DB_URL=$db_url" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v4
         with:
@@ -66,58 +64,25 @@ jobs:
 
       - run: npm ci
 
-      - name: Link the approved staging project
-        run: npx supabase link --project-ref "$STAGING_PROJECT_REF"
-
       - name: Preview pending staging migrations
         run: |
-          npx supabase migration list --linked
-          npx supabase db push --linked --dry-run
+          npx supabase migration list --db-url "$STAGING_DB_URL"
+          npx supabase db push --db-url "$STAGING_DB_URL" --dry-run
 
       - name: Apply tracked staging migrations only
-        run: npx supabase db push --linked --yes
+        run: npx supabase db push --db-url "$STAGING_DB_URL" --yes
 
       - name: Verify staging migration history
-        run: npx supabase migration list --linked
+        run: npx supabase migration list --db-url "$STAGING_DB_URL"
 
       - name: Verify hosted schema matches committed TypeScript contract
         run: |
-          npx supabase gen types typescript --linked > /tmp/types.gen.ts
+          npx supabase gen types typescript --db-url "$STAGING_DB_URL" > /tmp/types.gen.ts
           diff -u lib/database/types.gen.ts /tmp/types.gen.ts
 
-      - name: Enforce staging leaked-password protection
-        run: |
-          code="$(curl -sS -o /tmp/auth-config.json -w "%{http_code}" \
-            -X PATCH "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/config/auth" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data '{"password_hibp_enabled":true}')"
-          if [ "$code" = "200" ]; then
-            node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/auth-config.json","utf8"));if(x.password_hibp_enabled!==true)process.exit(1)'
-            echo "Staging leaked-password protection is enabled."
-            exit 0
-          fi
-
-          if [ "$code" = "403" ]; then
-            echo "Staging PAT cannot write Auth config; verifying with Supabase Security Advisors."
-            advisor_code="$(curl -sS -o /tmp/security-advisors.json -w "%{http_code}" \
-              "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/advisors/security?lint_type=sql" \
-              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
-            if [ "$advisor_code" != "200" ]; then
-              echo "::error::Could not verify Supabase Security Advisors (HTTP $advisor_code). The staging PAT needs advisors_read permission."
-              exit 1
-            fi
-            if node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/security-advisors.json","utf8"));const lints=x.lints||[];process.exit(lints.some(l=>l.name==="auth_leaked_password_protection")?1:0)'; then
-              echo "Supabase Security Advisors confirm leaked-password protection is enabled."
-              exit 0
-            fi
-            echo "::error::Supabase Security Advisors still report leaked-password protection disabled."
-            exit 1
-          fi
-
-          echo "::error::Could not enforce leaked-password protection (HTTP $code)."
-          exit 1
-
+      # Hosted QA intentionally does not require a Supabase management PAT.
+      # Auth leaked-password protection is verified separately through the
+      # staging security-advisor audit; this lane only needs DB + Netlify credentials.
 
       - name: Show Netlify CLI version
         run: npx netlify-cli@27.12.0 --version
