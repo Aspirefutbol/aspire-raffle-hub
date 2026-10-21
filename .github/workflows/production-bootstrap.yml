@@ -33,6 +33,43 @@ jobs:
           test -n "$PRODUCTION_DB_URL" || { echo "::error::Missing PRODUCTION_DB_URL"; exit 1; }
           echo "::add-mask::$PRODUCTION_DB_URL"
 
+      - name: Verify production database URL identity
+        run: |
+          node - <<'NODE'
+          const raw = process.env.PRODUCTION_DB_URL;
+          const ref = process.env.PRODUCTION_PROJECT_REF;
+          let url;
+          try {
+            url = new URL(raw);
+          } catch {
+            console.error("PRODUCTION_DB_URL is not a valid Postgres URL.");
+            process.exit(1);
+          }
+
+          const username = decodeURIComponent(url.username || "");
+          const expectedDirectHost = `db.${ref}.supabase.co`;
+          const projectBound =
+            url.hostname === expectedDirectHost ||
+            username === `postgres.${ref}`;
+
+          if (!projectBound) {
+            console.error("PRODUCTION_DB_URL does not identify the approved production Supabase project.");
+            process.exit(1);
+          }
+
+          if (!["postgres:", "postgresql:"].includes(url.protocol)) {
+            console.error("PRODUCTION_DB_URL must use postgres:// or postgresql://.");
+            process.exit(1);
+          }
+
+          if (url.searchParams.get("sslmode") !== "require") {
+            console.error("PRODUCTION_DB_URL must explicitly require SSL with sslmode=require.");
+            process.exit(1);
+          }
+
+          console.log("Production database URL identity and SSL requirement are correct.");
+          NODE
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
