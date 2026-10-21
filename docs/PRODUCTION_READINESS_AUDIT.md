@@ -317,14 +317,16 @@ Do not improvise the order.
 6. Confirm backup/PITR/MFA/recovery posture.
 7. Approve and merge PR #2 to `main`.
 8. Require full CI PASS on the exact `main` commit.
-9. Run Production Bootstrap; review dry-run first.
-10. Confirm migration/type/security-advisor parity.
-11. Run Production App Deploy for the same exact commit.
-12. Run production synthetic smoke and invitation test.
-13. Create exact live campaign.
-14. Two authorized people review live campaign settings/disclosures.
-15. Leadership performs final GO/NO-GO.
-16. Only then invite real families / record live tickets or money.
+9. Run the read-only Production Preflight for that exact commit.
+10. Review the migration dry-run and preflight evidence; do not continue if anything is unexpected.
+11. Run Production Bootstrap for the same exact commit.
+12. Confirm migration/type/security-advisor parity.
+13. Run Production App Deploy for the same exact commit.
+14. Run production synthetic smoke and invitation test.
+15. Create exact live campaign.
+16. Two authorized people review live campaign settings/disclosures.
+17. Leadership performs final GO/NO-GO.
+18. Only then invite real families / record live tickets or money.
 
 ## Audit status summary
 
