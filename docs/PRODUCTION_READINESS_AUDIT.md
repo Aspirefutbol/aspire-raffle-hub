@@ -110,6 +110,16 @@ Do not manually patch production to skip the migration workflow.
 
 **VERIFY before launch:** the GitHub `production` environment must actually require an authorized reviewer. Workflow syntax alone does not guarantee that a reviewer rule is configured.
 
+### Direct production API exposure verification — PASS
+
+A fresh read-only production catalog check on 2026-10-21 confirmed:
+
+- **0** public tables without RLS
+- anonymous SECURITY DEFINER execution is limited exactly to `public_seller_page` and `submit_seller_interest_request`
+- **0** SECURITY DEFINER trigger functions are directly executable by the `authenticated` role
+
+This independently matches the production workflow allowlist contract and confirms the current pre-compliance-migration production schema is not exposing an unexpected public table or privileged trigger RPC.
+
 ### Supabase Security Advisors — PASS WITH EXPECTED WARNINGS
 
 Current production Security Advisors report:
@@ -178,6 +188,8 @@ It is not the current staging-approved application and has no source commit refe
 **VERIFY before launch:** GitHub `production` environment reviewer protection is actually configured.
 
 ### Production Netlify environment — BLOCKER
+
+A fresh Netlify read on 2026-10-21 confirmed the current production project is `aspirerafflehub` on Team Pro and the published deploy is still the manual/drop deploy created 2026-10-02 with no source commit reference.
 
 Current production site variables verified:
 
