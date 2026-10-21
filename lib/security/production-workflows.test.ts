@@ -17,6 +17,9 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("Wait for full CI on this main commit");
     expect(text).toContain("--dry-run");
     expect(text).toContain("Verify production schema matches committed TypeScript contract");
+    expect(text).toContain("Verify production public API exposure contract");
+    expect(text).toContain("public_seller_page,submit_seller_interest_request");
+    expect(text).toContain("not c.relrowsecurity");
     expect(text).toContain("Verify production security advisors");
   });
 
