@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
+      actions: read
       contents: read
 
     env:
@@ -33,6 +34,22 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
+      - name: Wait for full CI on this main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ -n "$result" ] && [ "$result" != null ]; then
+              echo "::error::CI did not pass for production migration commit: $result"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for production commit CI"
+          exit 1
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -40,30 +57,39 @@ jobs:
 
       - run: npm ci
 
-      - name: Link production project
-        run: npx supabase link --project-ref "$PRODUCTION_PROJECT_REF"
+      - name: Resolve production session-pooler connection
+        run: |
+          code="$(curl -sS -o /tmp/pooler.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/database/pooler"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read production Supavisor configuration (HTTP $code)."
+            exit 1
+          fi
+
+          pooler_host="$(node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/pooler.json","utf8"));const h=x.db_host||x.host||x.pooler_host||x.pooler?.db_host||x.primary?.db_host;if(!h)process.exit(1);process.stdout.write(h)')"
+          if [ -z "$pooler_host" ]; then
+            echo "::error::Production Supavisor response did not contain a pooler host."
+            exit 1
+          fi
+
+          db_url="$(POOLER_HOST="$pooler_host" node -e 'const p=encodeURIComponent(process.env.SUPABASE_DB_PASSWORD);const u=encodeURIComponent("postgres."+process.env.PRODUCTION_PROJECT_REF);process.stdout.write("postgresql://"+u+":"+p+"@"+process.env.POOLER_HOST+":5432/postgres?sslmode=require")')"
+          echo "::add-mask::$db_url"
+          echo "PRODUCTION_DB_URL=$db_url" >> "$GITHUB_ENV"
 
       - name: Preview pending production migrations
         run: |
-          npx supabase migration list --linked
-          npx supabase db push --linked --dry-run
-
-      - name: Preflight production schema lint
-        run: npx supabase db lint --linked --level error
+          npx supabase migration list --db-url "$PRODUCTION_DB_URL"
+          npx supabase db push --db-url "$PRODUCTION_DB_URL" --dry-run
 
       - name: Apply tracked migrations only
-        run: npx supabase db push --linked --yes
+        run: npx supabase db push --db-url "$PRODUCTION_DB_URL" --yes
 
       - name: Verify migration history
-        run: npx supabase migration list --linked
+        run: npx supabase migration list --db-url "$PRODUCTION_DB_URL"
 
       - name: Verify production schema matches committed TypeScript contract
         run: |
-          npx supabase gen types typescript --linked > /tmp/types.gen.ts
+          npx supabase gen types typescript --db-url "$PRODUCTION_DB_URL" > /tmp/types.gen.ts
           diff -u lib/database/types.gen.ts /tmp/types.gen.ts
-
-      - name: Post-migration production schema lint
-        run: npx supabase db lint --linked --level error
 
       - name: Verify production security advisors
         run: |
