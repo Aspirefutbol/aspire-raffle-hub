@@ -50,7 +50,12 @@ Before production bootstrap:
 - [ ] Production domain is confirmed.
 - [ ] Production support email/from-address is confirmed.
 - [ ] Production secrets are present only in approved secret stores.
+- [ ] Netlify production has a server-only `SUPABASE_SECRET_KEY` secret; it is not client-prefixed and is not committed.
 - [ ] No staging keys or test credentials are present in production.
+- [ ] Supabase Auth Site URL is the intended production URL/custom domain.
+- [ ] Supabase Auth redirect allowlist contains only intended production callback URLs.
+- [ ] Custom SMTP is configured for production Auth email delivery.
+- [ ] Production invite and magic-link templates have been tested end to end.
 - [ ] Supabase backup/PITR policy is confirmed.
 - [ ] Monitoring and alert ownership are confirmed.
 - [ ] Production access is limited to required operators.
@@ -99,6 +104,7 @@ Use synthetic records only for this smoke.
 Verify:
 
 - [ ] Authorized admin can sign in.
+- [ ] A production invitation email can be sent and accepted with a synthetic address before live users are invited.
 - [ ] Organization legal/settings page loads.
 - [ ] Campaign list loads.
 - [ ] Draft campaign can be created with synthetic data.
