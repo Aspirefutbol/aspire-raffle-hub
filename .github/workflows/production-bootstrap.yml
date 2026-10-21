@@ -91,6 +91,25 @@ jobs:
           console.log("Production Auth configuration passed: canonical Site URL/callback, closed public signup, email Auth, and custom SMTP are configured.");
           NODE
 
+      - name: Verify production database SSL enforcement
+        run: |
+          code="$(curl -sS -o /tmp/ssl-enforcement.json -w "%{http_code}" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/ssl-enforcement" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read production database SSL enforcement (HTTP $code). The production access token must allow database_ssl_config_read."
+            exit 1
+          fi
+
+          SSL_CONFIG_JSON="$(cat /tmp/ssl-enforcement.json)" node - <<'NODE'
+          const config = JSON.parse(process.env.SSL_CONFIG_JSON);
+          if (config?.currentConfig?.database !== true || config?.appliedSuccessfully !== true) {
+            console.error("Production Postgres SSL enforcement is not enabled/applied.");
+            process.exit(1);
+          }
+          console.log("Production Postgres SSL enforcement is enabled.");
+          NODE
+
       - name: Require this main commit to come from a merged pull request
         env:
           GH_TOKEN: ${{ github.token }}
