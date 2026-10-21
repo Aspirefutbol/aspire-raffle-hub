@@ -260,11 +260,13 @@ Until this is verified, repository policy remains a launch check. As defense in 
 
 ## Upcoming Supabase platform change — VERIFY BEFORE 2026-10-30
 
-Supabase is enforcing explicit Data API exposure/grants for existing projects on **2026-10-30**.
+Supabase is changing the default privileges for **new objects created after the rollout** on existing projects on **2026-10-30**. Existing tables keep their current grants; the change means future tables created in `public` will no longer be automatically reachable through the Data API unless the migration explicitly grants the required role privileges.
 
-The application already uses deliberate ACL hardening and explicit function grants in important areas, but the production readiness review should include a final Data API table/function grant check before that platform cutoff.
+The application already uses deliberate ACL hardening and explicit grants in important areas. Treat this as a forward-compatibility requirement for future migrations, not as a reason to bulk-grant or rewrite currently working production access.
 
-**Required resolution:** after the final migrations are applied, run current Security Advisors and verify every app-required table/RPC remains intentionally reachable to its required role and no unintended table/function is exposed.
+**Required resolution:** after the final migrations are applied, run current Security Advisors and verify the intended table/RPC access contract. For every future public-schema table or function that the app needs through Supabase's Data API, include the minimum explicit `GRANT` alongside RLS/policy setup. Do not apply blanket grants to all public objects.
+
+Reference: Supabase changelog, “Breaking Change: Tables not exposed to Data and GraphQL API automatically” (2026-04-28).
 
 ## Legal/compliance — BLOCKER
 
