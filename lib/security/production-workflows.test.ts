@@ -14,6 +14,7 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("environment: production");
     expect(text).toContain("pull-requests: read");
     expect(text).toContain("Verify production Auth configuration");
+    expect(text).toContain("Verify production database SSL enforcement");
     expect(text).toContain("uri_allow_list");
     expect(text).toContain("smtp_host");
     expect(text).toContain("disable_signup");
