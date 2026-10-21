@@ -48,6 +48,7 @@ Owner: production administrator
 Before production bootstrap:
 
 - [ ] Production Supabase project is the intended project.
+- [ ] GitHub `production` environment contains `PRODUCTION_SUPABASE_ACCESS_TOKEN` and `PRODUCTION_DB_URL`; `PRODUCTION_DB_URL` is the production **Session pooler** connection string stored as a secret, never committed.
 - [ ] Production Netlify site is the intended site.
 - [ ] Production domain is confirmed.
 - [ ] Production support email/from-address is confirmed.
