@@ -19,6 +19,18 @@ Do not accept real families, real raffle ticket sales, or real money in producti
 - Public Seller Sharing remains request-only and does not issue tickets or take payment.
 - Drawing remains physical/external; the application freezes, exports, records evidence/results, certifies, and verifies integrity.
 
+## Hosted QA connection regression — RESOLVED
+
+During the 2026-10-21 hardening pass, Hosted QA failed before touching the staging database because the workflow attempted to infer a pooler hostname from the Supavisor Management API response. The endpoint returned HTTP success, but the response shape no longer matched the parser.
+
+Resolution:
+
+- Hosted QA now uses the already-configured `STAGING_DB_URL` Session-pooler secret.
+- Production Bootstrap now requires `PRODUCTION_DB_URL` as an explicit GitHub production-environment secret.
+- Workflow contract tests reject a return to the brittle hostname-inference step.
+
+This was an infrastructure-connection parser failure, not an application, migration, or database-integrity failure.
+
 ## Production database
 
 ### Production project identity — PASS
@@ -78,7 +90,7 @@ Do not manually patch production to skip the migration workflow.
 - verifies production Auth config before migration: canonical Site URL/callback, public signup disabled, email Auth enabled, and custom SMTP present
 - verifies production Postgres SSL enforcement
 - installs dependencies from lockfile
-- resolves the production Supavisor connection
+- requires an explicit secret `PRODUCTION_DB_URL` using Supabase's Session pooler connection string; no brittle Management API hostname inference
 - previews migration list and `db push --dry-run`
 - applies tracked migrations only
 - verifies migration history
@@ -278,6 +290,7 @@ These should be names/roles, not “the club” or “admin”.
 The following were converted from checklist guidance into executable gates:
 
 - exact-main-commit CI requirement
+- explicit staging/production Session-pooler DB URL secrets instead of parsing mutable Supavisor Management API response shapes
 - merged-PR provenance for production commits
 - production Auth URL/callback/signup/email/SMTP verification
 - production database SSL enforcement verification
