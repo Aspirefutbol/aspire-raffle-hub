@@ -73,7 +73,11 @@ Do not paste production secrets into tickets, docs, chat logs, commits, or scree
 
 Owner: production administrator
 
-Use the manual GitHub Actions workflow:
+First run the read-only workflow:
+
+`.github/workflows/production-preflight.yml`
+
+Review its migration dry-run and environment/security evidence. Only after that exact-commit preflight passes should you run:
 
 `.github/workflows/production-bootstrap.yml`
 
