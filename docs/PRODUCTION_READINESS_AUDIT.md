@@ -31,6 +31,21 @@ Verified Supabase production project:
 - PostgreSQL: 17.11
 - Current project status: healthy
 
+### Current production data state — PASS / EMPTY SHELL
+
+A read-only count check on 2026-10-21 confirmed production currently contains:
+
+- 0 Auth users
+- 0 organizations
+- 0 organization members
+- 0 players
+- 0 campaigns
+- 0 campaign sales
+- 0 money events
+- 0 tickets
+
+No live family, raffle, ticket, or money data is currently present in the production database. This materially reduces first-bootstrap migration risk, but does not relax any migration, backup, or launch gate.
+
 ### Production migration parity — BLOCKER
 
 Production currently ends at:
