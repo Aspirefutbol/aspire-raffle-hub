@@ -106,6 +106,55 @@ jobs:
           npx supabase gen types typescript --db-url "$PRODUCTION_DB_URL" > /tmp/types.gen.ts
           diff -u lib/database/types.gen.ts /tmp/types.gen.ts
 
+      - name: Verify production public API exposure contract
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client >/dev/null
+          fi
+
+          tables_without_rls="$(psql "$PRODUCTION_DB_URL" -Atqc "
+            select count(*)
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public'
+              and c.relkind = 'r'
+              and not c.relrowsecurity;
+          ")"
+          if [ "$tables_without_rls" != "0" ]; then
+            echo "::error::Production has $tables_without_rls public table(s) without RLS."
+            exit 1
+          fi
+
+          anon_privileged="$(psql "$PRODUCTION_DB_URL" -Atqc "
+            select coalesce(string_agg(p.proname, ',' order by p.proname), '')
+            from pg_proc p
+            join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public'
+              and p.prosecdef
+              and has_function_privilege('anon', p.oid, 'EXECUTE');
+          ")"
+          if [ "$anon_privileged" != "public_seller_page,submit_seller_interest_request" ]; then
+            echo "::error::Anonymous SECURITY DEFINER exposure does not match the approved two-function allowlist."
+            exit 1
+          fi
+
+          authenticated_trigger_exec="$(psql "$PRODUCTION_DB_URL" -Atqc "
+            select count(*)
+            from pg_proc p
+            join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public'
+              and p.prosecdef
+              and p.prorettype = 'trigger'::regtype
+              and has_function_privilege('authenticated', p.oid, 'EXECUTE');
+          ")"
+          if [ "$authenticated_trigger_exec" != "0" ]; then
+            echo "::error::Authenticated users can directly execute $authenticated_trigger_exec privileged trigger function(s)."
+            exit 1
+          fi
+
+          echo "Production API exposure contract passed: all public tables use RLS, anonymous privileged RPCs match the approved allowlist, and trigger functions are not directly executable."
+
       - name: Verify production security advisors
         run: |
           code="$(curl -sS -o /tmp/security-advisors.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/advisors/security?lint_type=sql"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
