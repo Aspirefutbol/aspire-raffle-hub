@@ -121,12 +121,21 @@ jobs:
             fi
           }
 
+          require_prefix() {
+            key="$1"
+            prefix="$2"
+            if ! printf '%s\n' "$env_dump" | grep -Eq "^$key=$prefix"; then
+              echo "::error::Production Netlify environment variable $key is missing or is not using the approved modern key format."
+              exit 1
+            fi
+          }
+
           require_exact "NEXT_PUBLIC_SITE_URL" "$PRODUCTION_URL"
           require_exact "NEXT_PUBLIC_SUPABASE_URL" "$EXPECTED_SUPABASE_URL"
-          require_key "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-          require_key "SUPABASE_SECRET_KEY"
+          require_prefix "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "sb_publishable_"
+          require_prefix "SUPABASE_SECRET_KEY" "sb_secret_"
 
-          echo "Required production Netlify environment keys are present and production public URLs match."
+          echo "Required production Netlify environment keys are present, use modern Supabase key formats, and production public URLs match."
 
       - name: Deploy exact main commit to production site
         run: npx netlify-cli@27.12.0 deploy --build --prod --site "$NETLIFY_SITE_ID" --message "production $(git rev-parse --short HEAD)"
