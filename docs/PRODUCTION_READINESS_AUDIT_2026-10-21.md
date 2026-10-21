@@ -28,15 +28,19 @@ Production must remain free of live raffle data until every item in the GO secti
 
 Remediation committed during this audit:
 
-- Hosted QA now links the staging project itself.
+- CI now runs deterministically on pushes to the hosted-QA feature branch as well as on `main`.
+- Full CI now includes database lint after the fresh migration + pgTAP gate.
+- Hosted QA reads the project's exact Supavisor/session-pooler host from the Supabase Management API instead of guessing the cluster index.
+- It builds a masked IPv4-compatible database URL using the already-scoped staging database password; no broad Supabase CLI PAT is required.
 - It previews pending migrations.
-- It applies only committed migrations with `db push`.
-- It verifies migration history.
-- It regenerates linked TypeScript types and diffs them against the committed contract.
-- It lints the linked staging schema before the Netlify deploy.
+- It applies only committed migrations with `db push --db-url`.
+- It verifies remote migration history.
+- It regenerates hosted TypeScript types through the same database connection and diffs them against the committed contract.
 - It continues to enforce leaked-password protection and hosted privacy smoke checks.
 
-This item is closed only after the new Hosted QA run passes and the remote migration list contains the full branch history.
+The first hardened Hosted QA attempt correctly stopped before any staging mutation because the existing management token was not a CLI PAT. The workflow was then changed to the least-privilege pooler/password model above rather than expanding token privileges.
+
+This item is closed only after the corrected Hosted QA run passes and the remote migration list contains the full branch history.
 
 ### Supabase production
 
@@ -60,10 +64,12 @@ At audit start, production migration history stopped at `20261019205330_function
 Remediation committed during this audit:
 
 - Production database migrations may run only from merged `main`.
-- The job remains manual and protected by the GitHub `production` environment.
+- The job remains manual and uses the GitHub `production` environment.
+- It waits for full CI on the exact `main` commit before database access.
 - It uses the repo-pinned Supabase CLI via `npm ci`.
+- It reads the exact production Supavisor/session-pooler host from the Management API and uses the scoped production database password; no broad CLI PAT is required.
 - It previews pending migrations with a dry run.
-- It runs linked schema lint before and after the migration.
+- Full local CI performs database lint against the exact committed migration chain before production is eligible.
 - It applies only committed migrations.
 - It verifies remote migration history.
 - It regenerates production TypeScript types and diffs them against the committed contract.
@@ -76,6 +82,19 @@ Approved anonymous privileged endpoints:
 - `submit_seller_interest_request`
 
 Production migrations must not be run from the feature branch.
+
+## Repository and release governance — manual verification required
+
+The repository API returned no repository rulesets. The available GitHub connector is not authorized to read classic branch-protection or environment-protection settings, so those controls cannot be certified from this audit.
+
+Before merge/production:
+
+- [ ] Confirm `main` blocks unreviewed direct pushes through branch protection or an equivalent repository rule.
+- [ ] Confirm the GitHub `production` environment requires an authorized reviewer.
+- [ ] Confirm both manual production workflows are bound to that protected environment.
+- [ ] Keep PR #2 draft/unmerged until the technical and Aspire-owned gates are explicitly approved.
+
+Workflow-level controls are present, but they do not substitute for repository/environment governance.
 
 ## Supabase advisor baseline
 
