@@ -22,7 +22,8 @@ jobs:
       actions: read
       contents: read
     env:
-      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+      STAGING_POOLER_HOST: ${{ vars.STAGING_POOLER_HOST }}
       STAGING_PROJECT_REF: ixhpidqhqzbpfbklofrs
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: 6da8219b-6bb1-4029-bd4a-a71e7d6eb4c1
@@ -35,52 +36,45 @@ jobs:
             exit 1
           fi
 
-      - name: Verify staging session-pooler connection
+      - name: Build validated staging session-pooler connection
         run: |
-          if [ -z "$STAGING_DB_URL" ]; then
-            echo "::error::Missing STAGING_DB_URL. Add the staging Supabase Session pooler connection string as a GitHub staging-environment secret."
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::Missing STAGING_DB_PASSWORD staging secret."
             exit 1
           fi
-          echo "::add-mask::$STAGING_DB_URL"
+          if [ -z "$STAGING_POOLER_HOST" ]; then
+            echo "::error::Missing STAGING_POOLER_HOST staging environment variable. Copy only the hostname from Supabase Connect → Session pooler."
+            exit 1
+          fi
 
-          node - <<'NODE'
-          const raw = process.env.STAGING_DB_URL;
+          db_url="$(node - <<'NODE'
+          const host = process.env.STAGING_POOLER_HOST;
           const ref = process.env.STAGING_PROJECT_REF;
-          let url;
-          try {
-            url = new URL(raw);
-          } catch {
-            console.error("STAGING_DB_URL is not a valid Postgres URL.");
+          const password = process.env.SUPABASE_DB_PASSWORD;
+
+          if (!host.endsWith(".pooler.supabase.com")) {
+            console.error("STAGING_POOLER_HOST must be a Supabase shared-pooler hostname.");
+            process.exit(1);
+          }
+          if (host.includes("/") || host.includes(":")) {
+            console.error("STAGING_POOLER_HOST must contain only the hostname, with no protocol or port.");
             process.exit(1);
           }
 
-          if (!["postgres:", "postgresql:"].includes(url.protocol)) {
-            console.error("STAGING_DB_URL must use postgres:// or postgresql://.");
-            process.exit(1);
-          }
-          const username = decodeURIComponent(url.username || "");
-          if (username !== `postgres.${ref}`) {
-            console.error("STAGING_DB_URL username does not identify the approved staging project.");
-            process.exit(1);
-          }
-          if (!url.hostname.endsWith(".pooler.supabase.com")) {
-            console.error("STAGING_DB_URL must use a Supabase pooler host, not the direct IPv6 database host.");
-            process.exit(1);
-          }
-          if (url.port !== "5432") {
-            console.error("STAGING_DB_URL must use the session-pooler port 5432.");
-            process.exit(1);
-          }
-          if (url.searchParams.get("sslmode") !== "require") {
-            console.error("STAGING_DB_URL must explicitly require SSL with sslmode=require.");
-            process.exit(1);
-          }
-          if (!url.password) {
-            console.error("STAGING_DB_URL is missing the database password.");
-            process.exit(1);
-          }
-          console.log("Staging session-pooler connection identity is correct.");
+          const url = new URL("postgresql://placeholder/postgres");
+          url.username = `postgres.${ref}`;
+          url.password = password;
+          url.hostname = host;
+          url.port = "5432";
+          url.pathname = "/postgres";
+          url.searchParams.set("sslmode", "require");
+          process.stdout.write(url.toString());
           NODE
+          )"
+
+          echo "::add-mask::$db_url"
+          echo "STAGING_DB_URL=$db_url" >> "$GITHUB_ENV"
+          echo "Validated staging session-pooler host for project $STAGING_PROJECT_REF."
 
       - uses: actions/checkout@v4
         with:
