@@ -24,6 +24,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.PRODUCTION_SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
       PRODUCTION_PROJECT_REF: bsjjzewifpbngbasdvew
+      PRODUCTION_URL: https://aspirerafflehub.netlify.app
 
     steps:
       - name: Require production credentials
@@ -34,6 +35,61 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+
+      - name: Verify production Auth configuration
+        run: |
+          code="$(curl -sS -o /tmp/auth-config.json -w "%{http_code}" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read production Supabase Auth configuration (HTTP $code). The production access token must allow auth_config_read."
+            exit 1
+          fi
+
+          node - <<'NODE'
+          const fs = require("fs");
+          const config = JSON.parse(fs.readFileSync("/tmp/auth-config.json", "utf8"));
+          const expectedSite = process.env.PRODUCTION_URL;
+          const failures = [];
+
+          if (config.site_url !== expectedSite) {
+            failures.push(`site_url must equal ${expectedSite}`);
+          }
+
+          const allow = String(config.uri_allow_list || "")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+          const callbackAllowed = allow.some((value) =>
+            value === `${expectedSite}/**` ||
+            value === `${expectedSite}/auth/confirm` ||
+            value.startsWith(`${expectedSite}/auth/confirm?`)
+          );
+          if (!callbackAllowed) {
+            failures.push("uri_allow_list must allow the production /auth/confirm callback");
+          }
+
+          if (config.disable_signup !== true) {
+            failures.push("public Auth signup must be disabled");
+          }
+          if (config.external_email_enabled !== true) {
+            failures.push("email Auth must be enabled");
+          }
+
+          for (const key of ["smtp_admin_email", "smtp_host", "smtp_port", "smtp_user", "smtp_pass"]) {
+            if (!String(config[key] || "").trim()) {
+              failures.push(`${key} must be configured for custom production SMTP`);
+            }
+          }
+
+          if (failures.length) {
+            console.error("Production Auth configuration blockers:");
+            for (const failure of failures) console.error(`- ${failure}`);
+            process.exit(1);
+          }
+
+          console.log("Production Auth configuration passed: canonical Site URL/callback, closed public signup, email Auth, and custom SMTP are configured.");
+          NODE
 
       - name: Require this main commit to come from a merged pull request
         env:
