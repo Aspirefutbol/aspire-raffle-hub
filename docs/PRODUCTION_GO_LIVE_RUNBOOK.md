@@ -60,7 +60,9 @@ Before production bootstrap:
 - [ ] Monitoring and alert ownership are confirmed.
 - [ ] Production access is limited to required operators.
 - [ ] Leaked-password protection and hardened function ACL posture remain enabled.
-- [ ] Production environment protection/approval is enabled for the manual bootstrap workflow.
+- [ ] `main` is protected against unreviewed direct pushes through branch protection or an equivalent repository rule.
+- [ ] The GitHub `production` environment requires an authorized reviewer before either production workflow can start.
+- [ ] Production environment protection/approval is enabled for both the database migration and application deploy workflows.
 
 Do not paste production secrets into tickets, docs, chat logs, commits, or screenshots.
 
