@@ -1,7 +1,7 @@
 name: Production Bootstrap
 
-# Manual-only production database bootstrap.
-# No seed/reset/test fixtures. Applies tracked migrations exactly as committed.
+# Manual-only production database migration lane.
+# Runs only from merged main. No seed/reset/test fixtures. Applies tracked migrations exactly as committed.
 on:
   workflow_dispatch:
 
@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   bootstrap:
-    if: github.ref == 'refs/heads/feat/phase-1-fundraising-slice'
+    if: github.ref == 'refs/heads/main'
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -38,21 +38,51 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install Supabase CLI
-        run: npm install --global supabase@2.121.0
+      - run: npm ci
 
       - name: Link production project
-        run: supabase link --project-ref "$PRODUCTION_PROJECT_REF"
+        run: npx supabase link --project-ref "$PRODUCTION_PROJECT_REF"
 
-      - name: Show pending production migrations
-        run: supabase migration list --linked
+      - name: Preview pending production migrations
+        run: |
+          npx supabase migration list --linked
+          npx supabase db push --linked --dry-run
+
+      - name: Preflight production schema lint
+        run: npx supabase db lint --linked --level error
 
       - name: Apply tracked migrations only
-        run: supabase db push --linked --yes
+        run: npx supabase db push --linked --yes
 
       - name: Verify migration history
-        run: supabase migration list --linked
+        run: npx supabase migration list --linked
 
-      - name: Production schema smoke
+      - name: Verify production schema matches committed TypeScript contract
         run: |
-          supabase db lint --linked --level error
+          npx supabase gen types typescript --linked > /tmp/types.gen.ts
+          diff -u lib/database/types.gen.ts /tmp/types.gen.ts
+
+      - name: Post-migration production schema lint
+        run: npx supabase db lint --linked --level error
+
+      - name: Verify production security advisors
+        run: |
+          code="$(curl -sS -o /tmp/security-advisors.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/advisors/security?lint_type=sql"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read Supabase Security Advisors (HTTP $code)."
+            exit 1
+          fi
+          node - <<'NODE'
+          const fs = require("fs");
+          const payload = JSON.parse(fs.readFileSync("/tmp/security-advisors.json", "utf8"));
+          const lints = payload.lints || [];
+          const blockers = lints.filter((lint) =>
+            String(lint.level || "").toUpperCase() === "ERROR" ||
+            lint.name === "auth_leaked_password_protection"
+          );
+          if (blockers.length) {
+            console.error("Production security advisor blockers:", blockers.map((lint) => lint.name));
+            process.exit(1);
+          }
+          console.log("Production Security Advisors contain no blocking ERROR lint and leaked-password protection is enabled.");
+          NODE
