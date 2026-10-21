@@ -13,6 +13,8 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("github.ref == 'refs/heads/main'");
     expect(text).toContain("environment: production");
     expect(text).toContain("pull-requests: read");
+    expect(text).toContain("PRODUCTION_DB_URL");
+    expect(text).not.toContain("Resolve production session-pooler connection");
     expect(text).toContain("Verify production Auth configuration");
     expect(text).toContain("Verify production database SSL enforcement");
     expect(text).toContain("uri_allow_list");
@@ -26,6 +28,13 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("public_seller_page,submit_seller_interest_request");
     expect(text).toContain("not c.relrowsecurity");
     expect(text).toContain("Verify production security advisors");
+  });
+
+  it("uses the explicit hosted staging database connection instead of inferring Supavisor response shape", () => {
+    const text = workflow("hosted-qa.yml");
+    expect(text).toContain("STAGING_DB_URL");
+    expect(text).toContain("Missing STAGING_DB_URL staging binding");
+    expect(text).not.toContain("Resolve staging session-pooler connection");
   });
 
   it("blocks production app deploy until the same commit passed bootstrap and environment preflight", () => {
