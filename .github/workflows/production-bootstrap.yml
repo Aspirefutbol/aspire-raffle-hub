@@ -178,6 +178,30 @@ jobs:
           echo "::error::Timed out waiting for production commit CI"
           exit 1
 
+      - name: Require successful read-only production preflight for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            success_count=$(gh run list --workflow production-preflight.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
+            if [ "$success_count" -gt 0 ]; then
+              echo "Read-only Production Preflight passed for this exact commit."
+              exit 0
+            fi
+
+            active_count=$(gh run list --workflow production-preflight.yml --commit "$GITHUB_SHA" --json status --jq '[.[] | select(.status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending")] | length')
+            if [ "$active_count" -gt 0 ]; then
+              echo "Production Preflight is still running for this commit."
+              sleep 20
+              continue
+            fi
+
+            echo "::error::No successful read-only Production Preflight exists for this exact main commit. Run it, review the migration dry-run, then start Production Bootstrap."
+            exit 1
+          done
+          echo "::error::Timed out waiting for Production Preflight on this exact main commit."
+          exit 1
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
