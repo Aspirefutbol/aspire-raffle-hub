@@ -22,7 +22,7 @@ jobs:
 
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.PRODUCTION_SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+      PRODUCTION_DB_URL: ${{ secrets.PRODUCTION_DB_URL }}
       PRODUCTION_PROJECT_REF: bsjjzewifpbngbasdvew
       PRODUCTION_URL: https://aspirerafflehub.netlify.app
 
@@ -30,7 +30,8 @@ jobs:
       - name: Require production credentials
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing PRODUCTION_SUPABASE_ACCESS_TOKEN"; exit 1; }
-          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing PRODUCTION_DB_PASSWORD"; exit 1; }
+          test -n "$PRODUCTION_DB_URL" || { echo "::error::Missing PRODUCTION_DB_URL"; exit 1; }
+          echo "::add-mask::$PRODUCTION_DB_URL"
 
       - uses: actions/checkout@v4
         with:
@@ -146,24 +147,6 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      - name: Resolve production session-pooler connection
-        run: |
-          code="$(curl -sS -o /tmp/pooler.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/database/pooler"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
-          if [ "$code" != "200" ]; then
-            echo "::error::Could not read production Supavisor configuration (HTTP $code)."
-            exit 1
-          fi
-
-          pooler_host="$(node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/pooler.json","utf8"));const h=x.db_host||x.host||x.pooler_host||x.pooler?.db_host||x.primary?.db_host;if(!h)process.exit(1);process.stdout.write(h)')"
-          if [ -z "$pooler_host" ]; then
-            echo "::error::Production Supavisor response did not contain a pooler host."
-            exit 1
-          fi
-
-          db_url="$(POOLER_HOST="$pooler_host" node -e 'const p=encodeURIComponent(process.env.SUPABASE_DB_PASSWORD);const u=encodeURIComponent("postgres."+process.env.PRODUCTION_PROJECT_REF);process.stdout.write("postgresql://"+u+":"+p+"@"+process.env.POOLER_HOST+":5432/postgres?sslmode=require")')"
-          echo "::add-mask::$db_url"
-          echo "PRODUCTION_DB_URL=$db_url" >> "$GITHUB_ENV"
 
       - name: Preview pending production migrations
         run: |
