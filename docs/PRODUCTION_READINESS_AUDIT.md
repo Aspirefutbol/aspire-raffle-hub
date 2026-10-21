@@ -31,6 +31,11 @@ Resolution:
 
 This was an infrastructure-connection parser failure, not an application, migration, or database-integrity failure.
 
+
+### Staging migration parity re-verification — PASS
+
+On 2026-10-21, Aspire Raffle Hub Staging was brought to the current committed migration set through `20261020202500_ticket_prize_receipt_fallback`. Migration-history versions were reconciled to the committed filenames, the structured prize schema is present, and Supabase Security Advisors still show only the expected privileged-RPC warning classes. The next Hosted QA run is intended to prove the refreshed GitHub staging database credential and hosted app deploy path against this exact schema baseline.
+
 ## Production database
 
 ### Production project identity — PASS
