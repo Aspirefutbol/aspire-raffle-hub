@@ -22,7 +22,7 @@ jobs:
       actions: read
       contents: read
     env:
-      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
       STAGING_PROJECT_REF: ixhpidqhqzbpfbklofrs
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: 6da8219b-6bb1-4029-bd4a-a71e7d6eb4c1
@@ -35,12 +35,52 @@ jobs:
             exit 1
           fi
 
-      - name: Build exact staging database connection
+      - name: Verify staging session-pooler connection
         run: |
-          if [ -z "$SUPABASE_DB_PASSWORD" ]; then echo "::error::Missing STAGING_DB_PASSWORD staging binding"; exit 1; fi
-          db_url="$(node -e 'const p=encodeURIComponent(process.env.SUPABASE_DB_PASSWORD);const h="db."+process.env.STAGING_PROJECT_REF+".supabase.co";process.stdout.write("postgresql://postgres:"+p+"@"+h+":5432/postgres?sslmode=require")')"
-          echo "::add-mask::$db_url"
-          echo "STAGING_DB_URL=$db_url" >> "$GITHUB_ENV"
+          if [ -z "$STAGING_DB_URL" ]; then
+            echo "::error::Missing STAGING_DB_URL. Add the staging Supabase Session pooler connection string as a GitHub staging-environment secret."
+            exit 1
+          fi
+          echo "::add-mask::$STAGING_DB_URL"
+
+          node - <<'NODE'
+          const raw = process.env.STAGING_DB_URL;
+          const ref = process.env.STAGING_PROJECT_REF;
+          let url;
+          try {
+            url = new URL(raw);
+          } catch {
+            console.error("STAGING_DB_URL is not a valid Postgres URL.");
+            process.exit(1);
+          }
+
+          if (!["postgres:", "postgresql:"].includes(url.protocol)) {
+            console.error("STAGING_DB_URL must use postgres:// or postgresql://.");
+            process.exit(1);
+          }
+          const username = decodeURIComponent(url.username || "");
+          if (username !== `postgres.${ref}`) {
+            console.error("STAGING_DB_URL username does not identify the approved staging project.");
+            process.exit(1);
+          }
+          if (!url.hostname.endsWith(".pooler.supabase.com")) {
+            console.error("STAGING_DB_URL must use a Supabase pooler host, not the direct IPv6 database host.");
+            process.exit(1);
+          }
+          if (url.port !== "5432") {
+            console.error("STAGING_DB_URL must use the session-pooler port 5432.");
+            process.exit(1);
+          }
+          if (url.searchParams.get("sslmode") !== "require") {
+            console.error("STAGING_DB_URL must explicitly require SSL with sslmode=require.");
+            process.exit(1);
+          }
+          if (!url.password) {
+            console.error("STAGING_DB_URL is missing the database password.");
+            process.exit(1);
+          }
+          console.log("Staging session-pooler connection identity is correct.");
+          NODE
 
       - uses: actions/checkout@v4
         with:
@@ -80,9 +120,8 @@ jobs:
           npx supabase gen types typescript --db-url "$STAGING_DB_URL" > /tmp/types.gen.ts
           diff -u lib/database/types.gen.ts /tmp/types.gen.ts
 
-      # Hosted QA intentionally does not require a Supabase management PAT.
-      # Auth leaked-password protection is verified separately through the
-      # staging security-advisor audit; this lane only needs DB + Netlify credentials.
+      # Hosted QA intentionally uses the least-privilege staging DB connection
+      # and does not require a broad Supabase management PAT.
 
       - name: Show Netlify CLI version
         run: npx netlify-cli@27.12.0 --version
