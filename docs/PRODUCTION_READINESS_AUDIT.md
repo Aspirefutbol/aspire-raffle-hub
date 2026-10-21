@@ -348,6 +348,10 @@ Do not improvise the order.
 | Broad-scale DB performance tuning | POST-LAUNCH |
 | Supabase Oct. 30 Data API grant transition | VERIFY |
 
+## Manual administrator handoff
+
+Use [PRODUCTION_MANUAL_SETUP_CHECKLIST.md](./PRODUCTION_MANUAL_SETUP_CHECKLIST.md) for the exact GitHub, Supabase, and Netlify dashboard settings that require human administration before merge/deploy.
+
 ## Bottom line
 
 **Raffle Hub is staging-ready, but not yet production-live-ready.**
