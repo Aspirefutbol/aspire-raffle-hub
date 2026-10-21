@@ -46,6 +46,8 @@ jobs:
         run: npx supabase db reset
       - name: pgTAP (RLS, permissions, lifecycle, ledgers, audit chain)
         run: npx supabase test db
+      - name: Database lint
+        run: npx supabase db lint --local --level error
       - name: Generated types are current
         run: |
           npm run db:types
