@@ -76,13 +76,22 @@ jobs:
           const fs = require("fs");
           const payload = JSON.parse(fs.readFileSync("/tmp/security-advisors.json", "utf8"));
           const lints = payload.lints || [];
+          const allowedAnonSecurityDefiners = new Set([
+            "public_seller_page",
+            "submit_seller_interest_request",
+          ]);
+          const unexpectedAnon = lints
+            .filter((lint) => lint.name === "anon_security_definer_function_executable")
+            .flatMap((lint) => lint.findings || [])
+            .filter((finding) => !allowedAnonSecurityDefiners.has(finding.metadata?.name));
           const blockers = lints.filter((lint) =>
             String(lint.level || "").toUpperCase() === "ERROR" ||
             lint.name === "auth_leaked_password_protection"
           );
-          if (blockers.length) {
+          if (blockers.length || unexpectedAnon.length) {
             console.error("Production security advisor blockers:", blockers.map((lint) => lint.name));
+            console.error("Unexpected anonymous SECURITY DEFINER functions:", unexpectedAnon.map((finding) => finding.metadata?.name));
             process.exit(1);
           }
-          console.log("Production Security Advisors contain no blocking ERROR lint and leaked-password protection is enabled.");
+          console.log("Production Security Advisors contain no blocking ERROR lint, leaked-password protection is enabled, and anonymous privileged RPCs match the approved allowlist.");
           NODE
