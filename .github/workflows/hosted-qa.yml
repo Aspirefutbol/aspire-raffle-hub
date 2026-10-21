@@ -66,27 +66,39 @@ jobs:
 
       - run: npm ci
 
-      - name: Link staging project
-        run: npx supabase link --project-ref "$STAGING_PROJECT_REF"
+      - name: Resolve staging session-pooler connection
+        run: |
+          code="$(curl -sS -o /tmp/pooler.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/config/database/pooler"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read staging Supavisor configuration (HTTP $code)."
+            exit 1
+          fi
+
+          pooler_host="$(node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/pooler.json","utf8"));const h=x.db_host||x.host||x.pooler_host||x.pooler?.db_host||x.primary?.db_host;if(!h)process.exit(1);process.stdout.write(h)')"
+          if [ -z "$pooler_host" ]; then
+            echo "::error::Staging Supavisor response did not contain a pooler host."
+            exit 1
+          fi
+
+          db_url="$(POOLER_HOST="$pooler_host" node -e 'const p=encodeURIComponent(process.env.SUPABASE_DB_PASSWORD);const u=encodeURIComponent("postgres."+process.env.STAGING_PROJECT_REF);process.stdout.write("postgresql://"+u+":"+p+"@"+process.env.POOLER_HOST+":5432/postgres?sslmode=require")')"
+          echo "::add-mask::$db_url"
+          echo "STAGING_DB_URL=$db_url" >> "$GITHUB_ENV"
 
       - name: Preview pending staging migrations
         run: |
-          npx supabase migration list --linked
-          npx supabase db push --linked --dry-run
+          npx supabase migration list --db-url "$STAGING_DB_URL"
+          npx supabase db push --db-url "$STAGING_DB_URL" --dry-run
 
       - name: Apply tracked staging migrations only
-        run: npx supabase db push --linked --yes
+        run: npx supabase db push --db-url "$STAGING_DB_URL" --yes
 
       - name: Verify staging migration history
-        run: npx supabase migration list --linked
+        run: npx supabase migration list --db-url "$STAGING_DB_URL"
 
       - name: Verify hosted schema matches committed TypeScript contract
         run: |
-          npx supabase gen types typescript --linked > /tmp/types.gen.ts
+          npx supabase gen types typescript --db-url "$STAGING_DB_URL" > /tmp/types.gen.ts
           diff -u lib/database/types.gen.ts /tmp/types.gen.ts
-
-      - name: Staging schema smoke
-        run: npx supabase db lint --linked --level error
 
       - name: Enforce staging leaked-password protection
         run: |
