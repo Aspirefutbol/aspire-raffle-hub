@@ -53,18 +53,22 @@ Do not manually patch production to skip the migration workflow.
 
 ### Production bootstrap workflow — PASS WITH ENVIRONMENT DEPENDENCY
 
-`.github/workflows/production-bootstrap.yml` is appropriately conservative:
+`.github/workflows/production-bootstrap.yml` is now fail-closed:
 
 - manual dispatch only
 - executes only from `main`
 - uses GitHub `production` environment
+- rejects a `main` commit unless GitHub associates it with a merged PR
 - waits for full CI on the exact production commit
+- verifies production Auth config before migration: canonical Site URL/callback, public signup disabled, email Auth enabled, and custom SMTP present
+- verifies production Postgres SSL enforcement
 - installs dependencies from lockfile
 - resolves the production Supavisor connection
 - previews migration list and `db push --dry-run`
 - applies tracked migrations only
 - verifies migration history
 - generates production TypeScript types and diffs them against committed types
+- directly verifies the production public API exposure contract: all public tables use RLS, anonymous privileged RPCs equal the two approved Seller Sharing functions, and privileged trigger functions are not directly executable
 - checks Supabase Security Advisors
 - uses a pinned production project ref
 
@@ -117,13 +121,18 @@ It is not the current staging-approved application and has no source commit refe
 
 ### Production application deploy workflow — PASS WITH ENVIRONMENT DEPENDENCY
 
-`.github/workflows/production-deploy.yml`:
+`.github/workflows/production-deploy.yml` is now fail-closed:
 
 - manual dispatch only
 - executes only from `main`
 - uses GitHub `production` environment
+- rejects a `main` commit unless GitHub associates it with a merged PR
 - waits for CI success on the exact commit
+- refuses application deployment until Production Bootstrap has succeeded for the **same exact commit**
 - uses a pinned Netlify CLI version
+- verifies required Netlify production environment keys before build
+- verifies `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_SUPABASE_URL` match the approved production resources
+- requires `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and the server-only `SUPABASE_SECRET_KEY` to be present
 - deploys to the explicit production site ID
 - smoke-tests `/login`
 - smoke-tests the public seller-link route
@@ -199,7 +208,7 @@ Unable to verify with the connected GitHub integration:
 - production environment requires an authorized human reviewer
 - only appropriate administrators can approve production bootstrap/deploy
 
-Until this is verified, production workflows are safe by design but not proven safe by repository policy.
+Until this is verified, repository policy remains a launch check. As defense in depth, both production workflows now independently reject commits that did not reach `main` through a merged pull request, and CI tests protect those workflow contracts from accidental removal.
 
 ## Upcoming Supabase platform change — VERIFY BEFORE 2026-10-30
 
@@ -248,6 +257,25 @@ Named owners are still required for:
 - user/support escalation owner
 
 These should be names/roles, not “the club” or “admin”.
+
+## Technical hardening completed during this audit
+
+The following were converted from checklist guidance into executable gates:
+
+- exact-main-commit CI requirement
+- merged-PR provenance for production commits
+- production Auth URL/callback/signup/email/SMTP verification
+- production database SSL enforcement verification
+- migration dry-run before apply
+- production migration/type parity
+- production RLS and anonymous privileged-RPC allowlist verification
+- Security Advisor gate
+- application deploy blocked until database bootstrap succeeds for the same commit
+- Netlify production environment key and resource-identity checks
+- post-deploy login/public-route privacy smoke checks
+- unit tests that assert the critical production workflow safeguards remain present
+
+The remaining NO-GO items are therefore environment configuration, legal/operational ownership, or the intentionally deferred merge/bootstrap/deploy itself—not missing deployment guardrail code.
 
 ## Final launch sequence
 
