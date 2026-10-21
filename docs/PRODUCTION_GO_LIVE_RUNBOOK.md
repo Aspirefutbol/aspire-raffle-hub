@@ -222,6 +222,8 @@ If an operator sees an uncertain result, duplicate-looking action, incorrect bal
 
 ## Final launch record
 
+Use [PRODUCTION_ACTIVATION_RECORD_TEMPLATE.md](./PRODUCTION_ACTIVATION_RECORD_TEMPLATE.md) as the retained evidence record for the approved production commit, preflight/bootstrap/deploy runs, smoke tests, legal approval, named operators, and final GO/NO-GO.
+
 Retain one launch record containing:
 
 - production commit SHA
