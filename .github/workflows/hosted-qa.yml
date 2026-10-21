@@ -66,10 +66,27 @@ jobs:
 
       - run: npm ci
 
-      - name: Confirm externally applied staging migration gate
+      - name: Link staging project
+        run: npx supabase link --project-ref "$STAGING_PROJECT_REF"
+
+      - name: Preview pending staging migrations
         run: |
-          echo "Database migration 20261019000100 was applied through the authenticated Supabase database control plane after exact migration/pgTAP/E2E CI validation."
-          echo "Remote migration history was reconciled to the committed version before this deploy."
+          npx supabase migration list --linked
+          npx supabase db push --linked --dry-run
+
+      - name: Apply tracked staging migrations only
+        run: npx supabase db push --linked --yes
+
+      - name: Verify staging migration history
+        run: npx supabase migration list --linked
+
+      - name: Verify hosted schema matches committed TypeScript contract
+        run: |
+          npx supabase gen types typescript --linked > /tmp/types.gen.ts
+          diff -u lib/database/types.gen.ts /tmp/types.gen.ts
+
+      - name: Staging schema smoke
+        run: npx supabase db lint --linked --level error
 
       - name: Enforce staging leaked-password protection
         run: |
