@@ -1,0 +1,92 @@
+name: Production App Deploy
+
+# Manual-only production application deployment.
+# Runs only from merged main after the exact commit has passed full CI.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-app-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 708004ca-d3af-4677-9a5c-c29cb98f914b
+      PRODUCTION_URL: https://aspirerafflehub.netlify.app
+
+    steps:
+      - name: Require production Netlify credential
+        run: |
+          test -n "$NETLIFY_AUTH_TOKEN" || { echo "::error::Missing NETLIFY_AUTH_TOKEN in the production GitHub environment/repository secrets."; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Wait for full CI on this main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ -n "$result" ] && [ "$result" != null ]; then
+              echo "::error::CI did not pass for production commit: $result"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for production commit CI"
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Show pinned Netlify CLI version
+        run: npx netlify-cli@27.12.0 --version
+
+      - name: Deploy exact main commit to production site
+        run: npx netlify-cli@27.12.0 deploy --build --prod --site "$NETLIFY_SITE_ID" --message "production $(git rev-parse --short HEAD)"
+
+      - name: Smoke-check production
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code="$(curl -sS -o /tmp/login.html -w "%{http_code}" "$PRODUCTION_URL/login" || true)"
+            if [ "$code" = "200" ] && grep -qi "sign in" /tmp/login.html; then
+              echo "Production login smoke check passed."
+
+              public_code=$(curl -sS -D /tmp/public-headers -o /tmp/public.html -w "%{http_code}" "$PRODUCTION_URL/s/0000000000000000000000000000000000000000000000000000000000000000")
+              if [ "$public_code" != "404" ] && [ "$public_code" != "200" ]; then
+                echo "::error::Public link route unexpectedly redirects/fails ($public_code)"
+                exit 1
+              fi
+              if ! grep -qi 'x-robots-tag:.*noindex' /tmp/public-headers; then
+                echo "::error::Missing public noindex header"
+                exit 1
+              fi
+              if grep -qi 'Send nonbinding request' /tmp/public.html; then
+                echo "::error::Invalid public link exposed a request form"
+                exit 1
+              fi
+              echo "Production public route privacy smoke check passed."
+              exit 0
+            fi
+            echo "Attempt $attempt: production not ready yet (HTTP $code)."
+            sleep 10
+          done
+          echo "::error::Production smoke check did not pass."
+          exit 1
