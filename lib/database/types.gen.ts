@@ -116,15 +116,134 @@ isOneToOne: false
       referencedColumns: ["id","organization_id"]
     }
                   ]
-                },"campaigns": {
+                },"campaign_prizes": {
                   Row: {
-                    "activated_at": string | null,"activated_by": string | null,"archived_at": string | null,"archived_by": string | null,"campaign_type": string,"closed_at": string | null,"closed_by": string | null,"created_at": string,"created_by": string | null,"default_allocation": number | null,"description": string | null,"draw_at": string | null,"drawn_at": string | null,"drawn_by": string | null,"family_target_tickets": number | null,"goal_amount_cents": number | null,"id": string,"jurisdiction_mode": string | null,"name": string,"operator_address": Json | null,"operator_legal_name": string | null,"organization_id": string,"rules_text": string | null,"rules_version": number,"sales_close_at": string | null,"season_id": string | null,"settings": NonNullable<Json>,"starts_at": string | null,"status": string,"support_email": string | null,"support_phone": string | null,"ticket_prefix": string | null,"ticket_price_cents": number | null,"timezone": string | null,"updated_at": string,"updated_by": string | null,"campaign_locked_fields": Json | null
+                    "archived_at": string | null,"archived_by": string | null,"campaign_id": string,"created_at": string,"created_by": string | null,"description": string,"evidence_ref": string,"fair_value_cents": number,"id": string,"name": string,"organization_id": string,"possession_basis": string,"source": string,"updated_at": string,"updated_by": string | null
                   }
                   Insert: {
-                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"closed_at"?: string | null,"closed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name": string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id": string,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "archived_at"?: string | null,"archived_by"?: string | null,"campaign_id": string,"created_at"?: string,"created_by"?: string | null,"description": string,"evidence_ref": string,"fair_value_cents": number,"id"?: string,"name": string,"organization_id": string,"possession_basis": string,"source": string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"closed_at"?: string | null,"closed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name"?: string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id"?: string,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "archived_at"?: string | null,"archived_by"?: string | null,"campaign_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string,"evidence_ref"?: string,"fair_value_cents"?: number,"id"?: string,"name"?: string,"organization_id"?: string,"possession_basis"?: string,"source"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_prizes_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    }
+                  ]
+                },"campaign_sales": {
+                  Row: {
+                    "amount_cents": number,"buyer_email": string | null,"buyer_name": string,"buyer_phone": string | null,"campaign_id": string,"collection_event_id": string,"corrects_sale_id": string | null,"created_at": string,"created_by": string,"id": string,"idempotency_key": string,"notes": string | null,"organization_id": string,"participant_id": string,"payment_method": string,"quantity": number,"request_fingerprint": string,"sold_at": string
+                  }
+                  Insert: {
+                    "amount_cents": number,"buyer_email"?: string | null,"buyer_name": string,"buyer_phone"?: string | null,"campaign_id": string,"collection_event_id": string,"corrects_sale_id"?: string | null,"created_at"?: string,"created_by"?: string,"id"?: string,"idempotency_key": string,"notes"?: string | null,"organization_id": string,"participant_id": string,"payment_method": string,"quantity": number,"request_fingerprint": string,"sold_at"?: string
+                  }
+                  Update: {
+                    "amount_cents"?: number,"buyer_email"?: string | null,"buyer_name"?: string,"buyer_phone"?: string | null,"campaign_id"?: string,"collection_event_id"?: string,"corrects_sale_id"?: string | null,"created_at"?: string,"created_by"?: string,"id"?: string,"idempotency_key"?: string,"notes"?: string | null,"organization_id"?: string,"participant_id"?: string,"payment_method"?: string,"quantity"?: number,"request_fingerprint"?: string,"sold_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_sales_collection_event_id_organization_id_campaig_fkey"
+      columns: ["collection_event_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_events"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "campaign_sales_corrects_sale_id_organization_id_campaign_i_fkey"
+      columns: ["corrects_sale_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    },{
+      foreignKeyName: "campaign_sales_corrects_sale_id_organization_id_campaign_i_fkey"
+      columns: ["corrects_sale_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    },{
+      foreignKeyName: "campaign_sales_participant_id_organization_id_campaign_id_fkey"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
+                },"campaign_seller_links": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"expires_at": string,"id": string,"opaque_token_hash": string,"organization_id": string,"participant_id": string,"revoked_at": string | null,"seller_user_id": string
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"expires_at": string,"id"?: string,"opaque_token_hash": string,"organization_id": string,"participant_id": string,"revoked_at"?: string | null,"seller_user_id": string
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"expires_at"?: string,"id"?: string,"opaque_token_hash"?: string,"organization_id"?: string,"participant_id"?: string,"revoked_at"?: string | null,"seller_user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_seller_links_participant_id_organization_id_campa_fkey"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
+                },"campaign_team_goals": {
+                  Row: {
+                    "campaign_id": string,"goal_amount_cents": number | null,"id": string,"organization_id": string,"team_id": string,"updated_at": string,"updated_by": string | null
+                  }
+                  Insert: {
+                    "campaign_id": string,"goal_amount_cents"?: number | null,"id"?: string,"organization_id": string,"team_id": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "campaign_id"?: string,"goal_amount_cents"?: number | null,"id"?: string,"organization_id"?: string,"team_id"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_team_goals_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "campaign_team_goals_team_id_organization_id_fkey"
+      columns: ["team_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "teams"
+      referencedColumns: ["id","organization_id"]
+    }
+                  ]
+                },"campaign_ticket_counters": {
+                  Row: {
+                    "campaign_id": string,"next_sequence": number,"organization_id": string
+                  }
+                  Insert: {
+                    "campaign_id": string,"next_sequence"?: number,"organization_id": string
+                  }
+                  Update: {
+                    "campaign_id"?: string,"next_sequence"?: number,"organization_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_ticket_counters_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    }
+                  ]
+                },"campaigns": {
+                  Row: {
+                    "activated_at": string | null,"activated_by": string | null,"archived_at": string | null,"archived_by": string | null,"campaign_type": string,"charitable_purpose": string | null,"closed_at": string | null,"closed_by": string | null,"compliance_attestation": Json | null,"compliance_confirmation_hash": string | null,"compliance_confirmed_at": string | null,"compliance_confirmed_by": string | null,"created_at": string,"created_by": string | null,"default_allocation": number | null,"description": string | null,"draw_at": string | null,"drawn_at": string | null,"drawn_by": string | null,"family_target_tickets": number | null,"goal_amount_cents": number | null,"id": string,"jurisdiction_mode": string | null,"name": string,"operator_address": Json | null,"operator_legal_name": string | null,"organization_id": string,"player_goal_default_cents": number | null,"prize_description": string | null,"raffle_year_sequence": number | null,"rules_text": string | null,"rules_version": number,"sales_close_at": string | null,"season_id": string | null,"settings": NonNullable<Json>,"starts_at": string | null,"status": string,"support_email": string | null,"support_phone": string | null,"team_goal_default_cents": number | null,"ticket_prefix": string | null,"ticket_price_cents": number | null,"timezone": string | null,"updated_at": string,"updated_by": string | null,"campaign_compliance_fields": Json | null,"campaign_locked_fields": Json | null
+                  }
+                  Insert: {
+                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"charitable_purpose"?: string | null,"closed_at"?: string | null,"closed_by"?: string | null,"compliance_attestation"?: Json | null,"compliance_confirmation_hash"?: string | null,"compliance_confirmed_at"?: string | null,"compliance_confirmed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name": string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id": string,"player_goal_default_cents"?: number | null,"prize_description"?: string | null,"raffle_year_sequence"?: number | null,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"team_goal_default_cents"?: number | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"charitable_purpose"?: string | null,"closed_at"?: string | null,"closed_by"?: string | null,"compliance_attestation"?: Json | null,"compliance_confirmation_hash"?: string | null,"compliance_confirmed_at"?: string | null,"compliance_confirmed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name"?: string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id"?: string,"player_goal_default_cents"?: number | null,"prize_description"?: string | null,"raffle_year_sequence"?: number | null,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"team_goal_default_cents"?: number | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -139,6 +258,136 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "seasons"
       referencedColumns: ["id","organization_id"]
+    }
+                  ]
+                },"drawing_events": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"created_by": string,"event_type": string,"id": string,"idempotency_key": string,"metadata": NonNullable<Json>,"organization_id": string,"reason": string | null,"request_fingerprint": string,"snapshot_id": string
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"created_by"?: string,"event_type": string,"id"?: string,"idempotency_key": string,"metadata"?: NonNullable<Json>,"organization_id": string,"reason"?: string | null,"request_fingerprint": string,"snapshot_id": string
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"created_by"?: string,"event_type"?: string,"id"?: string,"idempotency_key"?: string,"metadata"?: NonNullable<Json>,"organization_id"?: string,"reason"?: string | null,"request_fingerprint"?: string,"snapshot_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "drawing_events_snapshot_id_organization_id_campaign_id_fkey"
+      columns: ["snapshot_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "drawing_snapshots"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
+                },"drawing_results": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"created_by": string,"drawn_at": string,"evidence_ref": string | null,"id": string,"idempotency_key": string,"location": string,"method": string,"operator_name": string,"organization_id": string,"reason": string,"request_fingerprint": string,"result": string,"result_hash": string,"snapshot_id": string,"ticket_number": string,"winning_ticket_id": string,"witnesses": NonNullable<Json>
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"created_by"?: string,"drawn_at": string,"evidence_ref"?: string | null,"id"?: string,"idempotency_key": string,"location": string,"method": string,"operator_name": string,"organization_id": string,"reason": string,"request_fingerprint": string,"result": string,"result_hash": string,"snapshot_id": string,"ticket_number": string,"winning_ticket_id": string,"witnesses": NonNullable<Json>
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"created_by"?: string,"drawn_at"?: string,"evidence_ref"?: string | null,"id"?: string,"idempotency_key"?: string,"location"?: string,"method"?: string,"operator_name"?: string,"organization_id"?: string,"reason"?: string,"request_fingerprint"?: string,"result"?: string,"result_hash"?: string,"snapshot_id"?: string,"ticket_number"?: string,"winning_ticket_id"?: string,"witnesses"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "drawing_results_snapshot_id_organization_id_campaign_id_fkey"
+      columns: ["snapshot_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "drawing_snapshots"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "drawing_results_snapshot_id_winning_ticket_id_organization_fkey"
+      columns: ["snapshot_id","winning_ticket_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "drawing_snapshot_entries"
+      referencedColumns: ["snapshot_id","ticket_id","organization_id","campaign_id"]
+    }
+                  ]
+                },"drawing_snapshot_entries": {
+                  Row: {
+                    "buyer_email": string | null,"buyer_name": string,"buyer_phone": string | null,"campaign_id": string,"entry_hash": string,"face_value_cents": number,"issued_at": string,"organization_id": string,"participant_id": string,"player_id": string,"player_name": string,"sale_id": string,"seller_user_id": string,"sequence_number": number,"snapshot_id": string,"team_id": string | null,"team_name": string | null,"ticket_id": string,"ticket_number": string
+                  }
+                  Insert: {
+                    "buyer_email"?: string | null,"buyer_name": string,"buyer_phone"?: string | null,"campaign_id": string,"entry_hash": string,"face_value_cents": number,"issued_at": string,"organization_id": string,"participant_id": string,"player_id": string,"player_name": string,"sale_id": string,"seller_user_id": string,"sequence_number": number,"snapshot_id": string,"team_id"?: string | null,"team_name"?: string | null,"ticket_id": string,"ticket_number": string
+                  }
+                  Update: {
+                    "buyer_email"?: string | null,"buyer_name"?: string,"buyer_phone"?: string | null,"campaign_id"?: string,"entry_hash"?: string,"face_value_cents"?: number,"issued_at"?: string,"organization_id"?: string,"participant_id"?: string,"player_id"?: string,"player_name"?: string,"sale_id"?: string,"seller_user_id"?: string,"sequence_number"?: number,"snapshot_id"?: string,"team_id"?: string | null,"team_name"?: string | null,"ticket_id"?: string,"ticket_number"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "drawing_snapshot_entries_participant_id_organization_id_ca_fkey"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "drawing_snapshot_entries_player_id_organization_id_fkey"
+      columns: ["player_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "player_directory"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "drawing_snapshot_entries_player_id_organization_id_fkey"
+      columns: ["player_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "players"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "drawing_snapshot_entries_sale_id_organization_id_campaign__fkey"
+      columns: ["sale_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    },{
+      foreignKeyName: "drawing_snapshot_entries_sale_id_organization_id_campaign__fkey"
+      columns: ["sale_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    },{
+      foreignKeyName: "drawing_snapshot_entries_snapshot_id_organization_id_campa_fkey"
+      columns: ["snapshot_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "drawing_snapshots"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "drawing_snapshot_entries_team_id_organization_id_fkey"
+      columns: ["team_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "teams"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "drawing_snapshot_entries_ticket_id_organization_id_campaig_fkey"
+      columns: ["ticket_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "tickets"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
+                },"drawing_snapshots": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"created_by": string,"disclosures": NonNullable<Json>,"id": string,"idempotency_key": string,"manifest": NonNullable<Json>,"manifest_hash": string,"organization_id": string,"prize_readiness_confirmed": boolean,"reason": string,"request_fingerprint": string,"source_ledger_heads": NonNullable<Json>,"supersedes_snapshot_id": string | null,"ticket_count": number,"total_face_value_cents": number,"version": number
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"created_by"?: string,"disclosures": NonNullable<Json>,"id"?: string,"idempotency_key": string,"manifest": NonNullable<Json>,"manifest_hash": string,"organization_id": string,"prize_readiness_confirmed": boolean,"reason": string,"request_fingerprint": string,"source_ledger_heads": NonNullable<Json>,"supersedes_snapshot_id"?: string | null,"ticket_count": number,"total_face_value_cents": number,"version": number
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"created_by"?: string,"disclosures"?: NonNullable<Json>,"id"?: string,"idempotency_key"?: string,"manifest"?: NonNullable<Json>,"manifest_hash"?: string,"organization_id"?: string,"prize_readiness_confirmed"?: boolean,"reason"?: string,"request_fingerprint"?: string,"source_ledger_heads"?: NonNullable<Json>,"supersedes_snapshot_id"?: string | null,"ticket_count"?: number,"total_face_value_cents"?: number,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "drawing_snapshots_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "drawing_snapshots_supersedes_snapshot_id_organization_id_c_fkey"
+      columns: ["supersedes_snapshot_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "drawing_snapshots"
+      referencedColumns: ["id","organization_id","campaign_id"]
     }
                   ]
                 },"guardian_user_links": {
@@ -315,6 +564,104 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"money_custody_allocations": {
+                  Row: {
+                    "amount_cents": number,"bucket": string,"campaign_id": string,"event_id": string,"id": string,"organization_id": string,"receipt_id": string | null,"sale_id": string
+                  }
+                  Insert: {
+                    "amount_cents": number,"bucket": string,"campaign_id": string,"event_id": string,"id"?: string,"organization_id": string,"receipt_id"?: string | null,"sale_id": string
+                  }
+                  Update: {
+                    "amount_cents"?: number,"bucket"?: string,"campaign_id"?: string,"event_id"?: string,"id"?: string,"organization_id"?: string,"receipt_id"?: string | null,"sale_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "money_custody_allocations_event_id_organization_id_campaig_fkey"
+      columns: ["event_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_custody_events"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_allocations_receipt_id_organization_id_campa_fkey"
+      columns: ["receipt_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_custody_events"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_allocations_sale_id_organization_id_campaign_fkey"
+      columns: ["sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_allocations_sale_id_organization_id_campaign_fkey"
+      columns: ["sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
+                },"money_custody_events": {
+                  Row: {
+                    "actor_id": string,"amount_cents": number,"campaign_id": string,"exception_id": string | null,"id": string,"idempotency_key": string,"kind": string,"occurred_at": string,"organization_id": string,"payment_method": string | null,"reason": string,"receipt_id": string | null,"reference": string | null,"request_fingerprint": string,"sale_id": string | null,"seller_id": string,"target_sale_id": string | null
+                  }
+                  Insert: {
+                    "actor_id": string,"amount_cents": number,"campaign_id": string,"exception_id"?: string | null,"id"?: string,"idempotency_key": string,"kind": string,"occurred_at"?: string,"organization_id": string,"payment_method"?: string | null,"reason": string,"receipt_id"?: string | null,"reference"?: string | null,"request_fingerprint": string,"sale_id"?: string | null,"seller_id": string,"target_sale_id"?: string | null
+                  }
+                  Update: {
+                    "actor_id"?: string,"amount_cents"?: number,"campaign_id"?: string,"exception_id"?: string | null,"id"?: string,"idempotency_key"?: string,"kind"?: string,"occurred_at"?: string,"organization_id"?: string,"payment_method"?: string | null,"reason"?: string,"receipt_id"?: string | null,"reference"?: string | null,"request_fingerprint"?: string,"sale_id"?: string | null,"seller_id"?: string,"target_sale_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "money_custody_events_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "money_custody_events_exception_id_organization_id_campaign_fkey"
+      columns: ["exception_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_custody_events"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_events_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "money_custody_events_receipt_id_organization_id_campaign_i_fkey"
+      columns: ["receipt_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_custody_events"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_events_sale_id_organization_id_campaign_id_fkey"
+      columns: ["sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_events_sale_id_organization_id_campaign_id_fkey"
+      columns: ["sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_events_target_sale_id_organization_id_campai_fkey"
+      columns: ["target_sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "money_custody_events_target_sale_id_organization_id_campai_fkey"
+      columns: ["target_sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
                 },"money_events": {
                   Row: {
                     "actor_id": string | null,"amount_cents": number,"approved_by": string | null,"batch_ref": string | null,"campaign_id": string,"chain_pos": number,"event_type": string,"id": string,"metadata": NonNullable<Json>,"occurred_at": string,"organization_id": string,"participant_id": string | null,"payment_method": string | null,"prev_hash": string,"reason": string | null,"reverses_event_id": string | null,"row_hash": string
@@ -344,6 +691,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "campaign_participants"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "money_events_participant_scope_fk"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
     },{
       foreignKeyName: "money_events_reverses_event_id_fkey"
       columns: ["reverses_event_id"]
@@ -628,6 +981,43 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"sale_reversals": {
+                  Row: {
+                    "approved_by": string,"campaign_id": string,"collection_event_id": string,"created_at": string,"created_by": string,"id": string,"organization_id": string,"reason": string,"reversal_event_id": string,"sale_id": string
+                  }
+                  Insert: {
+                    "approved_by": string,"campaign_id": string,"collection_event_id": string,"created_at"?: string,"created_by"?: string,"id"?: string,"organization_id": string,"reason": string,"reversal_event_id": string,"sale_id": string
+                  }
+                  Update: {
+                    "approved_by"?: string,"campaign_id"?: string,"collection_event_id"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"organization_id"?: string,"reason"?: string,"reversal_event_id"?: string,"sale_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sale_reversals_collection_event_id_organization_id_campaig_fkey"
+      columns: ["collection_event_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_events"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "sale_reversals_reversal_event_id_organization_id_campaign__fkey"
+      columns: ["reversal_event_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_events"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "sale_reversals_sale_id_organization_id_campaign_id_fkey"
+      columns: ["sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "sale_reversals_sale_id_organization_id_campaign_id_fkey"
+      columns: ["sale_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
                 },"seasons": {
                   Row: {
                     "archived_at": string | null,"created_at": string,"created_by": string | null,"ends_on": string | null,"id": string,"is_current": boolean,"name": string,"organization_id": string,"starts_on": string | null,"updated_at": string,"updated_by": string | null
@@ -646,6 +1036,69 @@ isOneToOne: false
       referencedRelation: "organizations"
       referencedColumns: ["id"]
     }
+                  ]
+                },"seller_interest_requests": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"id": string,"note": string,"organization_id": string,"participant_id": string,"preferred_contact": string,"request_fingerprint": string,"requested_quantity": number,"seller_link_id": string,"submission_key": string,"supporter_email": string | null,"supporter_name": string,"supporter_phone": string | null
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"id"?: string,"note"?: string,"organization_id": string,"participant_id": string,"preferred_contact": string,"request_fingerprint": string,"requested_quantity": number,"seller_link_id": string,"submission_key": string,"supporter_email"?: string | null,"supporter_name": string,"supporter_phone"?: string | null
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"id"?: string,"note"?: string,"organization_id"?: string,"participant_id"?: string,"preferred_contact"?: string,"request_fingerprint"?: string,"requested_quantity"?: number,"seller_link_id"?: string,"submission_key"?: string,"supporter_email"?: string | null,"supporter_name"?: string,"supporter_phone"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "seller_interest_requests_seller_link_id_organization_id_ca_fkey"
+      columns: ["seller_link_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "campaign_seller_links"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    }
+                  ]
+                },"seller_request_events": {
+                  Row: {
+                    "actor_id": string | null,"created_at": string,"id": string,"organization_id": string,"request_id": string,"sale_id": string | null,"status": string
+                  }
+                  Insert: {
+                    "actor_id"?: string | null,"created_at"?: string,"id"?: string,"organization_id": string,"request_id": string,"sale_id"?: string | null,"status": string
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"created_at"?: string,"id"?: string,"organization_id"?: string,"request_id"?: string,"sale_id"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "seller_request_events_request_id_organization_id_fkey"
+      columns: ["request_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "seller_interest_requests"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "seller_request_events_sale_id_fkey"
+      columns: ["sale_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "seller_request_events_sale_id_fkey"
+      columns: ["sale_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"seller_request_limits": {
+                  Row: {
+                    "attempts": number,"bucket": string,"window_at": string
+                  }
+                  Insert: {
+                    "attempts": number,"bucket": string,"window_at": string
+                  }
+                  Update: {
+                    "attempts"?: number,"bucket"?: string,"window_at"?: string
+                  }
+                  Relationships: [
+                    
                   ]
                 },"team_memberships": {
                   Row: {
@@ -740,6 +1193,25 @@ isOneToOne: false
       referencedColumns: ["id","organization_id"]
     }
                   ]
+                },"ticket_allocations": {
+                  Row: {
+                    "campaign_id": string,"created_at": string,"created_by": string,"id": string,"organization_id": string,"participant_id": string,"quantity": number
+                  }
+                  Insert: {
+                    "campaign_id": string,"created_at"?: string,"created_by"?: string,"id"?: string,"organization_id": string,"participant_id": string,"quantity": number
+                  }
+                  Update: {
+                    "campaign_id"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"organization_id"?: string,"participant_id"?: string,"quantity"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ticket_allocations_participant_id_organization_id_campaign_fkey"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
                 },"ticket_events": {
                   Row: {
                     "actor_id": string | null,"campaign_id": string,"chain_pos": number,"event_type": string,"id": string,"idempotency_key": string | null,"metadata": NonNullable<Json>,"occurred_at": string,"organization_id": string,"participant_id": string | null,"prev_hash": string,"reason": string | null,"replaces_ticket_id": string | null,"row_hash": string,"ticket_id": string
@@ -765,10 +1237,66 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"tickets": {
+                  Row: {
+                    "allocation_id": string | null,"campaign_id": string,"created_at": string,"created_by": string,"id": string,"organization_id": string,"participant_id": string | null,"sale_id": string | null,"sequence_number": number,"status": string,"ticket_number": string
+                  }
+                  Insert: {
+                    "allocation_id"?: string | null,"campaign_id": string,"created_at"?: string,"created_by"?: string,"id"?: string,"organization_id": string,"participant_id"?: string | null,"sale_id"?: string | null,"sequence_number": number,"status"?: string,"ticket_number": string
+                  }
+                  Update: {
+                    "allocation_id"?: string | null,"campaign_id"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"organization_id"?: string,"participant_id"?: string | null,"sale_id"?: string | null,"sequence_number"?: number,"status"?: string,"ticket_number"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tickets_allocation_id_organization_id_campaign_id_particip_fkey"
+      columns: ["allocation_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "ticket_allocations"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    },{
+      foreignKeyName: "tickets_campaign_id_organization_id_fkey"
+      columns: ["campaign_id","organization_id"]
+isOneToOne: false
+      referencedRelation: "campaigns"
+      referencedColumns: ["id","organization_id"]
+    },{
+      foreignKeyName: "tickets_participant_id_organization_id_campaign_id_fkey"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    },{
+      foreignKeyName: "tickets_sale_id_organization_id_campaign_id_participant_id_fkey"
+      columns: ["sale_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "campaign_sales"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    },{
+      foreignKeyName: "tickets_sale_id_organization_id_campaign_id_participant_id_fkey"
+      columns: ["sale_id","organization_id","campaign_id","participant_id"]
+isOneToOne: false
+      referencedRelation: "money_sale_balances"
+      referencedColumns: ["id","organization_id","campaign_id","participant_id"]
+    }
+                  ]
                 }
           }
           Views: {
-            "player_directory": {
+            "money_sale_balances": {
+                  Row: {
+                    "adjustment_cents": number | null,"campaign_id": string | null,"deposited_cents": number | null,"exception_cents": number | null,"expected_cents": number | null,"id": string | null,"organization_id": string | null,"participant_id": string | null,"payment_method": string | null,"received_cents": number | null,"recorded_cents": number | null,"seller_id": string | null,"sold_at": string | null,"uncleared_cents": number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "campaign_sales_participant_id_organization_id_campaign_id_fkey"
+      columns: ["participant_id","organization_id","campaign_id"]
+isOneToOne: false
+      referencedRelation: "campaign_participants"
+      referencedColumns: ["id","organization_id","campaign_id"]
+    }
+                  ]
+                },"player_directory": {
                   Row: {
                     "archived_at": string | null,"created_at": string | null,"date_of_birth": string | null,"external_player_id": string | null,"first_name": string | null,"gender": string | null,"household_id": string | null,"household_name": string | null,"id": string | null,"last_name": string | null,"notes": string | null,"organization_id": string | null,"preferred_name": string | null,"primary_guardian_email": string | null,"primary_guardian_id": string | null,"primary_guardian_name": string | null,"primary_guardian_phone": string | null,"search_text": string | null,"season_id": string | null,"season_name": string | null,"source": string | null,"source_import_id": string | null,"status": string | null,"team_id": string | null,"team_name": string | null,"updated_at": string | null
                   }
@@ -805,6 +1333,12 @@ isOneToOne: false
 "add_players_to_household":
 { Args: { "p_household_id": string,"p_organization_id": string,"p_player_ids": (string)[] }; Returns: number
                            },
+"allocate_campaign_tickets":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_participant_id": string,"p_quantity": number }; Returns: string
+                           },
+"archive_campaign_prize":
+{ Args: { "p_organization_id": string,"p_prize_id": string,"p_reason": string }; Returns: undefined
+                           },
 "archive_team":
 { Args: { "p_organization_id": string,"p_team_id": string }; Returns: number
                            },
@@ -831,8 +1365,29 @@ isOneToOne: false
 "bulk_set_player_team":
 { Args: { "p_organization_id": string,"p_player_ids": (string)[],"p_team_id": string }; Returns: number
                            },
+"campaign_compliance_fields":
+{ Args: { "c": Database["public"]['Tables']["campaigns"]['Row'] }; Returns: Json
+                           },
+"campaign_compliance_hash":
+{ Args: { "c": Database["public"]['Tables']["campaigns"]['Row'],"o": Database["public"]['Tables']["organizations"]['Row'] }; Returns: string
+                           },
+"campaign_compliance_payload":
+{ Args: { "c": Database["public"]['Tables']["campaigns"]['Row'],"o": Database["public"]['Tables']["organizations"]['Row'] }; Returns: Json
+                           },
+"campaign_compliance_required":
+{ Args: { "p_organization_id": string }; Returns: boolean
+                           },
 "campaign_locked_fields":
 { Args: { "c": Database["public"]['Tables']["campaigns"]['Row'] }; Returns: Json
+                           },
+"campaign_money":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_view"?: string }; Returns: Json
+                           },
+"campaign_prize_ticket_description":
+{ Args: { "p_campaign_id": string }; Returns: string
+                           },
+"campaign_progress":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_player_id"?: string,"p_team_id"?: string,"p_view"?: string }; Returns: Json
                            },
 "campaign_readiness":
 { Args: { "p_campaign_id": string }; Returns: (string)[]
@@ -852,11 +1407,29 @@ isOneToOne: false
 "can_assign_role":
 { Args: { "p_organization_id": string,"p_role_key": string }; Returns: boolean
                            },
+"can_issue_campaign_participant":
+{ Args: { "p_organization_id": string,"p_participant_id": string }; Returns: boolean
+                           },
+"can_manage_seller_participant":
+{ Args: { "p_org": string,"p_participant": string }; Returns: boolean
+                           },
+"can_read_fundraising_participant":
+{ Args: { "p_participant_id": string,"p_view"?: string }; Returns: boolean
+                           },
+"can_read_fundraising_sale":
+{ Args: { "p_sale_id": string }; Returns: boolean
+                           },
+"certify_drawing":
+{ Args: { "p_idempotency_key": string,"p_organization_id": string,"p_reason": string,"p_snapshot_id": string }; Returns: Json
+                           },
 "chain_payload":
 { Args: { "p_row": Json }; Returns: string
                            },
 "commit_player_import":
 { Args: { "p_import_id": string }; Returns: Json
+                           },
+"confirm_campaign_compliance":
+{ Args: { "p_campaign_id": string,"p_entity_confirmed": boolean,"p_prize_sales_confirmed": boolean,"p_raffle_count_confirmed": boolean,"p_reason": string }; Returns: Json
                            },
 "create_guardian":
 { Args: { "p_guardian": Json,"p_household_id": string,"p_make_primary"?: boolean,"p_organization_id": string,"p_player_ids"?: (string)[] }; Returns: string
@@ -864,14 +1437,141 @@ isOneToOne: false
 "create_player":
 { Args: { "p_guardian"?: Json,"p_household"?: Json,"p_organization_id": string,"p_player": Json,"p_team_id"?: string }; Returns: string
                            },
+"drawing_current_snapshot":
+{ Args: { "p_campaign_id": string }; Returns: string
+                           },
+"drawing_eligible_entries":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_snapshot_id": string }; Returns: {
+              "buyer_email": string | null,
+"buyer_name": string,
+"buyer_phone": string | null,
+"campaign_id": string,
+"entry_hash": string,
+"face_value_cents": number,
+"issued_at": string,
+"organization_id": string,
+"participant_id": string,
+"player_id": string,
+"player_name": string,
+"sale_id": string,
+"seller_user_id": string,
+"sequence_number": number,
+"snapshot_id": string,
+"team_id": string | null,
+"team_name": string | null,
+"ticket_id": string,
+"ticket_number": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "drawing_snapshot_entries"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
+"drawing_has_export_authority":
+{ Args: { "p_organization_id": string }; Returns: boolean
+                           },
+"drawing_integrity":
+{ Args: { "p_snapshot_id": string }; Returns: Json
+                           },
+"drawing_lock_campaign":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_permission": string }; Returns: {
+              "activated_at": string | null,
+"activated_by": string | null,
+"archived_at": string | null,
+"archived_by": string | null,
+"campaign_type": string,
+"charitable_purpose": string | null,
+"closed_at": string | null,
+"closed_by": string | null,
+"compliance_attestation": Json | null,
+"compliance_confirmation_hash": string | null,
+"compliance_confirmed_at": string | null,
+"compliance_confirmed_by": string | null,
+"created_at": string,
+"created_by": string | null,
+"default_allocation": number | null,
+"description": string | null,
+"draw_at": string | null,
+"drawn_at": string | null,
+"drawn_by": string | null,
+"family_target_tickets": number | null,
+"goal_amount_cents": number | null,
+"id": string,
+"jurisdiction_mode": string | null,
+"name": string,
+"operator_address": Json | null,
+"operator_legal_name": string | null,
+"organization_id": string,
+"player_goal_default_cents": number | null,
+"prize_description": string | null,
+"raffle_year_sequence": number | null,
+"rules_text": string | null,
+"rules_version": number,
+"sales_close_at": string | null,
+"season_id": string | null,
+"settings": NonNullable<Json>,
+"starts_at": string | null,
+"status": string,
+"support_email": string | null,
+"support_phone": string | null,
+"team_goal_default_cents": number | null,
+"ticket_prefix": string | null,
+"ticket_price_cents": number | null,
+"timezone": string | null,
+"updated_at": string,
+"updated_by": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "campaigns"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"drawing_manifest":
+{ Args: { "p_entries_hash": string,"p_snapshot": Database["public"]['Tables']["drawing_snapshots"]['Row'] }; Returns: Json
+                           },
+"drawing_overview":
+{ Args: { "p_campaign_id": string,"p_organization_id": string }; Returns: Json
+                           },
+"drawing_readiness":
+{ Args: { "p_campaign_id": string,"p_organization_id": string }; Returns: Json
+                           },
+"drawing_snapshot_export":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_organization_id": string,"p_snapshot_id": string }; Returns: Json
+                           },
+"drawing_source_heads":
+{ Args: { "p_campaign_id": string,"p_organization_id": string }; Returns: Json
+                           },
+"drawing_validate_request":
+{ Args: { "p_key": string,"p_reason": string }; Returns: undefined
+                           },
+"enroll_campaign_players":
+{ Args: { "p_all_active"?: boolean,"p_campaign_id": string,"p_goal_amount_cents"?: number,"p_organization_id": string,"p_player_ids"?: (string)[],"p_team_ids"?: (string)[] }; Returns: number
+                           },
 "escape_like":
 { Args: { "p_text": string }; Returns: string
+                           },
+"export_drawing_snapshot":
+{ Args: { "p_export_sha256": string,"p_format": string,"p_idempotency_key": string,"p_organization_id": string,"p_snapshot_id": string }; Returns: Json
+                           },
+"freeze_drawing":
+{ Args: { "p_campaign_id": string,"p_idempotency_key": string,"p_organization_id": string,"p_prize_readiness_confirmed"?: boolean,"p_reason": string }; Returns: Json
+                           },
+"fundraising_campaigns":
+{ Args: { "p_organization_id": string,"p_view"?: string }; Returns: Json
+                           },
+"generate_campaign_tickets":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_quantity": number }; Returns: number
                            },
 "has_org_permission":
 { Args: { "p_organization_id": string,"p_permission": string }; Returns: boolean
                            },
 "has_platform_permission":
 { Args: { "p_permission": string }; Returns: boolean
+                           },
+"invalidate_campaign_compliance":
+{ Args: { "p_campaign_id": string,"p_reason": string }; Returns: undefined
                            },
 "is_org_member":
 { Args: { "p_organization_id": string }; Returns: boolean
@@ -890,6 +1590,12 @@ isOneToOne: false
                            },
 "list_possible_duplicates":
 { Args: { "p_limit"?: number,"p_offset"?: number,"p_organization_id": string }; Returns: Json
+                           },
+"lock_fundraising_membership":
+{ Args: { "p_organization_id": string }; Returns: string
+                           },
+"manage_seller_link":
+{ Args: { "p_organization_id": string,"p_participant_id": string,"p_revoke"?: boolean }; Returns: Json
                            },
 "my_assigned_team_ids":
 { Args: Record<PropertyKey, never>; Returns: string[]
@@ -937,17 +1643,50 @@ isOneToOne: false
               "player_a_id": string,"player_b_id": string,"reason": string
             }[]
                            },
+"prepare_campaign_inventory":
+{ Args: { "p_campaign_id": string,"p_organization_id": string }; Returns: number
+                           },
+"public_seller_page":
+{ Args: { "p_token": string }; Returns: Json
+                           },
+"record_campaign_sale":
+{ Args: { "p_amount_cents": number,"p_buyer_email"?: string,"p_buyer_name": string,"p_buyer_phone"?: string,"p_campaign_id": string,"p_corrects_sale_id"?: string,"p_idempotency_key": string,"p_notes"?: string,"p_organization_id": string,"p_participant_id": string,"p_payment_method": string,"p_quantity": number,"p_sold_at"?: string }; Returns: Json
+                           },
+"record_external_drawing_result":
+{ Args: { "p_drawn_at": string,"p_evidence_ref"?: string,"p_idempotency_key": string,"p_location": string,"p_method": string,"p_operator": string,"p_organization_id": string,"p_reason"?: string,"p_result": string,"p_snapshot_id": string,"p_winning_ticket_number": string,"p_witnesses": Json }; Returns: Json
+                           },
+"record_money_custody":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_request": Json }; Returns: Json
+                           },
+"reopen_drawing":
+{ Args: { "p_idempotency_key": string,"p_organization_id": string,"p_reason": string,"p_snapshot_id": string }; Returns: Json
+                           },
+"reverse_campaign_sale":
+{ Args: { "p_organization_id": string,"p_reason": string,"p_sale_id": string }; Returns: string
+                           },
 "revoke_invitation":
 { Args: { "p_invitation_id": string,"p_reason"?: string }; Returns: undefined
                            },
 "roster_overview":
 { Args: { "p_organization_id": string }; Returns: Json
                            },
+"sale_ticket_receipt":
+{ Args: { "p_organization_id": string,"p_sale_id": string }; Returns: Json
+                           },
 "save_import_validation":
 { Args: { "p_column_mapping"?: Json,"p_import_id": string,"p_mapping_id"?: string,"p_rows": Json,"p_summary": Json }; Returns: undefined
                            },
+"seller_request_inbox":
+{ Args: { "p_campaign_id": string,"p_organization_id": string,"p_view"?: string }; Returns: Json
+                           },
 "set_audit_reason":
 { Args: { "p_reason": string }; Returns: undefined
+                           },
+"set_campaign_participant_goal":
+{ Args: { "p_goal_amount_cents"?: number,"p_organization_id": string,"p_participant_id": string }; Returns: undefined
+                           },
+"set_campaign_team_goal":
+{ Args: { "p_campaign_id": string,"p_goal_amount_cents"?: number,"p_organization_id": string,"p_team_id": string }; Returns: undefined
                            },
 "set_current_season":
 { Args: { "p_organization_id": string,"p_season_id": string }; Returns: undefined
@@ -973,6 +1712,9 @@ isOneToOne: false
 "shares_org_with":
 { Args: { "p_user_id": string }; Returns: boolean
                            },
+"submit_seller_interest_request":
+{ Args: { "p_request": Json,"p_submission_key": string,"p_token": string }; Returns: Json
+                           },
 "team_player_counts":
 { Args: { "p_organization_id": string }; Returns: {
               "player_count": number,"team_id": string
@@ -984,6 +1726,12 @@ isOneToOne: false
 "unlink_family_guardian":
 { Args: { "p_link_id": string,"p_reason"?: string }; Returns: undefined
                            },
+"update_seller_request_status":
+{ Args: { "p_organization_id": string,"p_request_id": string,"p_sale_id"?: string,"p_status": string }; Returns: undefined
+                           },
+"upsert_campaign_prize":
+{ Args: { "p_campaign_id": string,"p_description": string,"p_evidence_ref": string,"p_fair_value_cents": number,"p_name": string,"p_organization_id": string,"p_possession_basis": string,"p_prize_id"?: string,"p_source": string }; Returns: string
+                           },
 "verify_audit_chain":
 { Args: { "p_organization_id": string }; Returns: {
               "first_bad_pos": number,"head_hash": string,"ok": boolean,"rows_checked": number
@@ -994,10 +1742,16 @@ isOneToOne: false
               "first_bad_pos": number,"head_hash": string,"ledger": string,"ok": boolean,"rows_checked": number
             }[]
                            },
+"verify_drawing_snapshot":
+{ Args: { "p_organization_id": string,"p_snapshot_id": string }; Returns: Json
+                           },
 "verify_hash_chain":
 { Args: { "p_partition": string,"p_partition_col": string,"p_table": string }; Returns: {
               "first_bad_pos": number,"head_hash": string,"ok": boolean,"rows_checked": number
             }[]
+                           },
+"withdraw_campaign_participant":
+{ Args: { "p_organization_id": string,"p_participant_id": string,"p_reason": string }; Returns: undefined
                            }
           }
           Enums: {

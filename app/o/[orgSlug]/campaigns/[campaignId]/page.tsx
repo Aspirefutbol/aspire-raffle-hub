@@ -1,0 +1,102 @@
+import { canReadMoney } from "@/lib/money/queries";
+import { CheckCircle2, CircleAlert, ListChecks, ShieldCheck } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { CampaignSheetButton } from "@/components/campaigns/campaign-sheet";
+import { ComplianceConfirmationButton } from "@/components/campaigns/compliance-confirmation";
+import { EnrollmentButton } from "@/components/campaigns/enrollment-sheet";
+import { LifecycleControls } from "@/components/campaigns/lifecycle-controls";
+import { GoalButton, InventoryButton, WithdrawButton } from "@/components/campaigns/participant-actions";
+import { PrizeRecordsCard } from "@/components/campaigns/prize-records";
+import { HelpLink } from "@/components/learning/help-link";
+import { CampaignStatusBadge, GoalProgress } from "@/components/campaigns/progress";
+import { RecordSaleButton, ReverseSaleButton } from "@/components/campaigns/sale-sheets";
+import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { WorkflowPanel } from "@/components/ui/workflow-panel";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { FilterSelect } from "@/components/ui/url-filters";
+import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
+import { isCampaignStatus } from "@/lib/campaigns/lifecycle";
+import { formatDateTime } from "@/lib/format";
+import { getDrawingOverview } from "@/lib/drawing/queries";
+import { formatMoney } from "@/lib/fundraising/money";
+import { canRecordSale } from "@/lib/fundraising/capabilities";
+import { getCampaignProgress, getCampaignSetup } from "@/lib/fundraising/queries";
+import { listSeasons, listTeams } from "@/lib/roster/queries";
+
+export const metadata: Metadata = { title: "Campaign fundraising" };
+
+export default async function CampaignPage({ params, searchParams }: { params: Promise<{ orgSlug: string; campaignId: string }>; searchParams: Promise<{ team?: string; player?: string }> }) {
+  const { orgSlug, campaignId } = await params;
+  const filters = await searchParams;
+  const ctx = await requireOrgContext(orgSlug);
+  requirePagePermission(ctx, "campaigns.read");
+  const canManage = can(ctx, "campaigns.manage");
+  const [setup, allProgress, progress, seasons, rosterTeams] = await Promise.all([
+    getCampaignSetup(ctx, campaignId), getCampaignProgress(ctx, campaignId, "admin"),
+    filters.team || filters.player ? getCampaignProgress(ctx, campaignId, "admin", { teamId: filters.team, playerId: filters.player }) : Promise.resolve(null),
+    canManage ? listSeasons(ctx.organization.id) : Promise.resolve([]), canManage ? listTeams(ctx.organization.id) : Promise.resolve([]),
+  ]);
+  if (!setup || !allProgress || !isCampaignStatus(setup.campaign.status)) notFound();
+  const { campaign, readiness, prizes } = setup;
+  const visible = filters.team || filters.player ? progress : allProgress;
+  if (!visible) notFound();
+  const status = setup.campaign.status;
+  const drawing = ["CLOSED", "DRAWN"].includes(status) ? await getDrawingOverview(ctx, campaignId) : null;
+  const drawingCertified = drawing?.events.some((event) => event.snapshot_id === drawing.current_snapshot_id && event.event_type === "CERTIFIED");
+  const editable = canManage && ["DRAFT", "READY", "ACTIVE"].includes(status);
+  const canEnroll = canManage && ["DRAFT", "READY", "ACTIVE"].includes(status);
+  const canManagePrizes = canManage && ["DRAFT", "READY"].includes(status);
+  const participants = visible.participants;
+  const activePlayers = participants.filter((player) => player.status === "active");
+  const topSellers = [...activePlayers].filter((player) => player.tickets_sold > 0).sort((a, b) => b.raised_cents - a.raised_cents).slice(0, 5);
+  const zeroSales = activePlayers.filter((player) => player.tickets_sold === 0);
+  const byParticipant = new Map(allProgress.participants.map((participant) => [participant.id, participant]));
+  const filtered = Boolean(filters.team || filters.player);
+  const complianceAttestationMissing = readiness.includes("current Texas compliance attestation");
+  const complianceRequired = complianceAttestationMissing || campaign.compliance_confirmed_at !== null;
+  const compliancePrerequisitesMissing = readiness.some((item) => [
+    "organization legal name", "organization legal address", "ticket price", "drawing date",
+    "charitable purpose", "raffle calendar-year number", "Texas CREA jurisdiction profile",
+    "at least one documented non-cash prize", "valid prize source/value/possession evidence",
+  ].includes(item));
+  const complianceCurrent = Boolean(campaign.compliance_confirmed_at && !complianceAttestationMissing);
+
+  return <>
+    <PageHeader breadcrumb={<Link href={`/o/${orgSlug}/campaigns`} className="hover:text-ink">Campaigns</Link>} title={<span className="flex items-center gap-3">{campaign.name}<CampaignStatusBadge status={status} /></span>} description={campaign.description || "Raffle progress and recorded offline collections."} actions={<>{can(ctx, "organization.manage") && <HelpLink orgSlug={orgSlug} article="prepare-campaign" label="Campaign guide" />}{visible.recent_sales.length > 0 && <ButtonLink href="#sales-actions" variant="secondary">Sales & corrections</ButtonLink>}{canReadMoney(ctx) && <ButtonLink href={`/o/${orgSlug}/campaigns/${campaignId}/money`} variant="secondary">Money & reconciliation</ButtonLink>}<ButtonLink href={`/o/${orgSlug}/campaigns/${campaignId}/drawing`} variant="secondary">Drawing</ButtonLink>{editable && <CampaignSheetButton orgSlug={orgSlug} campaign={campaign} seasons={seasons.filter((season) => !season.archived_at)} />}<LifecycleControls orgSlug={orgSlug} campaignId={campaign.id} status={status} canManage={canManage} canActivate={can(ctx, "campaigns.activate")} missingReadiness={readiness.length > 0} /></>} />
+    {drawing && <Card className="mb-5"><CardHeader title="Drawing" action={<Badge tone={drawingCertified ? "success" : drawing.current_snapshot_id ? "info" : "warning"}>{drawingCertified ? "Certified" : drawing.current_snapshot_id ? "Entries frozen" : "Not frozen"}</Badge>} /><CardBody><p className="text-sm text-ink-soft">{drawingCertified ? "External results and Director certification are retained. Financial reconciliation remains separate." : drawing.current_snapshot_id ? "The immutable population is frozen. Retain exports, conduct the approved physical or external drawing, and record its evidence." : "Review readiness and freeze eligible entries before the physical or external drawing."}</p><Link href={`/o/${orgSlug}/campaigns/${campaignId}/drawing`} className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-brand-700 hover:underline">Open drawing →</Link></CardBody></Card>}
+    {(status === "DRAFT" || status === "READY") && <WorkflowPanel className="mb-5" icon={<ListChecks aria-hidden className="size-4" />} title="Activation readiness" description="Action center · The director can activate after these requirements are complete."><div className="grid gap-4 md:grid-cols-2"><div>{readiness.length ? <><p className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-800"><CircleAlert aria-hidden className="size-4" />Complete before activation</p><ul className="space-y-1.5 text-sm text-ink-soft">{readiness.map((missing) => <li key={missing} className="flex gap-2"><span aria-hidden>•</span>{missing.charAt(0).toUpperCase() + missing.slice(1)}</li>)}</ul></> : <p className="flex items-center gap-2 text-sm font-medium text-emerald-700"><CheckCircle2 aria-hidden className="size-4" />All activation requirements are complete</p>}</div><div className="space-y-2 text-sm text-ink-soft"><p>Ticket price: {campaign.ticket_price_cents ? formatMoney(campaign.ticket_price_cents) : "Not set"} · Prefix: {campaign.ticket_prefix || "Not set"}</p><p>Sales: {formatDateTime(campaign.starts_at, ctx.organization.timezone)} → {formatDateTime(campaign.sales_close_at, ctx.organization.timezone)}</p><p>Drawing: {formatDateTime(campaign.draw_at, ctx.organization.timezone)}</p><p>Legal operator: {ctx.organization.legalName || ctx.organization.name}</p><p>Jurisdiction: {campaign.jurisdiction_mode?.replace(/_/g, " ") || "Applied from organization at activation"}</p><p className="text-xs text-muted">Legal/operator address and support contact are checked against organization settings. Ticket disclosures lock at activation.</p><Link href={`/o/${orgSlug}/settings`} className="inline-flex min-h-11 items-center font-medium text-brand-700 hover:underline">View organization settings →</Link></div></div></WorkflowPanel>}
+    {complianceRequired && <PrizeRecordsCard orgSlug={orgSlug} campaignId={campaign.id} prizes={prizes} canManage={canManage} editable={canManagePrizes} />}
+    {(status === "DRAFT" || status === "READY") && complianceRequired && <WorkflowPanel className="mb-5" icon={<ShieldCheck aria-hidden className="size-4" />} title="Texas compliance review" description="Action center · Required disclosures and the director/operator attestation are fingerprinted together before activation.">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-2 text-sm text-ink-soft">
+          <p><span className="font-medium text-ink">Legal operator:</span> {ctx.organization.legalName || ctx.organization.name}</p>
+          <p><span className="font-medium text-ink">Raffle number this year:</span> {campaign.raffle_year_sequence ?? "Not set"}</p>
+          <p><span className="font-medium text-ink">Documented prizes:</span> {prizes.length ? `${prizes.length} active` : "None recorded"}</p>
+          <p><span className="font-medium text-ink">Charitable purpose:</span> {campaign.charitable_purpose || "Not set"}</p>
+        </div>
+        <div className="space-y-3">
+          {complianceCurrent ? <p className="flex items-center gap-2 text-sm font-medium text-emerald-700"><CheckCircle2 aria-hidden className="size-4" />Current compliance attestation recorded {formatDateTime(campaign.compliance_confirmed_at, ctx.organization.timezone)}</p> : <p className="flex items-center gap-2 text-sm font-medium text-amber-800"><CircleAlert aria-hidden className="size-4" />Director/operator attestation is missing or stale.</p>}
+          <p className="text-xs text-muted">Changing ticket price, drawing date, rules, prize records, charitable purpose, raffle-year number, or the organization legal identity/address invalidates the current fingerprint before activation.</p>
+          {can(ctx, "campaigns.activate") && !complianceCurrent && <ComplianceConfirmationButton orgSlug={orgSlug} campaignId={campaign.id} disabled={compliancePrerequisitesMissing} />}
+        </div>
+      </div>
+    </WorkflowPanel>}
+    <div className="mb-4 flex flex-wrap items-center gap-2"><FilterSelect param="team" label="Team" options={allProgress.teams.map((team) => ({ value: team.id, label: team.name }))} /><FilterSelect param="player" label="Player" options={allProgress.participants.map((player) => ({ value: player.player_id, label: player.player_name }))} />{filtered && <Link href={`/o/${orgSlug}/campaigns/${campaignId}`} className="inline-flex min-h-11 items-center px-2 text-sm text-brand-700 hover:underline">Clear filters</Link>}<span className="ml-auto text-xs text-muted">{filtered ? "Totals reflect selected team/player" : "All campaign participants"}</span></div>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="Total raised" value={<span data-testid="campaign-raised">{formatMoney(visible.totals.raised_cents)}</span>} hint="Recorded offline collections" /><StatCard label="Tickets sold" value={<span data-testid="campaign-tickets">{visible.totals.tickets_sold}</span>} /><StatCard label="Participating players" value={visible.totals.player_count} /><StatCard label="Participating teams" value={visible.totals.team_count} /></div>
+    <p className="mt-2 mb-5 text-xs text-muted">Collections minus reversals. These totals do not confirm organization receipts or deposits.</p>
+    <Card className="mb-5"><CardHeader title="Campaign goal" description={filtered ? "Campaign-wide progress; filters apply to the details below." : undefined} /><CardBody><GoalProgress raisedCents={allProgress.totals.raised_cents} goalCents={campaign.goal_amount_cents} label="Campaign goal progress" /></CardBody></Card>
+    <Card className="mb-5"><CardHeader title="Participating players" description="Enrollment snapshots preserve attribution; current access and player status determine who can sell." action={canEnroll && <EnrollmentButton orgSlug={orgSlug} campaignId={campaign.id} teams={rosterTeams.filter((team) => !team.archived_at && team.status === "active")} />} />
+      {participants.length === 0 ? <EmptyState title={filtered ? "No participants match these filters" : "No players enrolled"} description={canEnroll ? "Enroll all active players, selected teams, or individual players." : "Your campaign manager can enroll players from the master roster."} /> : <Table><THead><TR><TH>Player / team</TH><TH>Raised / goal</TH><TH>Tickets sold</TH><TH>Available tickets</TH><TH>Actions</TH></TR></THead><TBody>{participants.map((participant) => <TR key={participant.id} data-testid={`campaign-participant-${participant.player_id}`}><TD><span className="block font-medium text-ink">{participant.player_name}</span><span className="block text-xs text-muted">{participant.team_name ?? "No team"}</span>{participant.status === "withdrawn" && <Badge tone="muted">Withdrawn</Badge>}</TD><TD className="min-w-44"><span className="tabular mb-1 block font-medium">{formatMoney(participant.raised_cents)}</span><GoalProgress raisedCents={participant.raised_cents} goalCents={participant.goal_amount_cents} label={`${participant.player_name} goal progress`} /></TD><TD className="tabular">{participant.tickets_sold}</TD><TD><span className="tabular block">{participant.available_tickets}</span>{participant.ticket_range.first && <span className="block text-xs text-muted">{participant.ticket_range.first}–{participant.ticket_range.last}</span>}</TD><TD><div className="flex flex-wrap items-center gap-1">{canRecordSale(ctx.permissions) && <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents} participant={participant} />}{canEnroll && participant.status === "active" && <><GoalButton orgSlug={orgSlug} campaignId={campaign.id} subjectId={participant.id} subjectName={participant.player_name} goalCents={participant.goal_amount_cents} />{status === "ACTIVE" && <InventoryButton orgSlug={orgSlug} campaignId={campaign.id} participantId={participant.id} playerName={participant.player_name} />}<WithdrawButton orgSlug={orgSlug} participantId={participant.id} playerName={participant.player_name} /></>}</div></TD></TR>)}</TBody></Table>}
+      {canManage && status === "ACTIVE" && <div className="border-t border-line p-4"><InventoryButton orgSlug={orgSlug} campaignId={campaign.id} /></div>}
+    </Card>
+    <div className="mb-5 grid gap-5 lg:grid-cols-2"><Card><CardHeader title="Team totals" />{visible.teams.length === 0 ? <EmptyState title="No participating teams" description="Players without a team still appear in player totals." /> : <ul className="divide-y divide-line">{visible.teams.map((team) => <li key={team.id} className="space-y-3 p-4" data-testid={`campaign-team-${team.id}`}><div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-semibold text-ink">{team.name}</h3><p className="text-xs text-muted">{team.player_count} players · {team.tickets_sold} tickets sold · {formatMoney(team.raised_cents)} raised</p></div>{canEnroll && <GoalButton team orgSlug={orgSlug} campaignId={campaign.id} subjectId={team.id} subjectName={team.name} goalCents={team.goal_amount_cents} />}</div><GoalProgress raisedCents={team.raised_cents} goalCents={team.goal_amount_cents} label={`${team.name} goal progress`} /></li>)}</ul>}</Card><Card><CardHeader title="Top sellers" description="Ranked by recorded collections after reversals." />{topSellers.length ? <ol className="divide-y divide-line">{topSellers.map((player, index) => <li key={player.id} className="flex items-center justify-between gap-3 p-4 text-sm"><span><span className="mr-2 text-muted">{index + 1}.</span>{player.player_name}</span><span className="tabular font-medium">{formatMoney(player.raised_cents)}<span className="ml-2 text-xs font-normal text-muted">{player.tickets_sold} tickets</span></span></li>)}</ol> : <EmptyState title="No ticket sales yet" description="Sales appear here when assigned tickets are issued." />}<div className="border-t border-line p-4"><h3 className="mb-2 text-sm font-semibold text-ink">Zero-sale players ({zeroSales.length})</h3><p className="text-sm text-muted">{zeroSales.length ? zeroSales.map((player) => player.player_name).join(", ") : "Every active participant has recorded a sale."}</p></div></Card></div>
+    <WorkflowPanel id="sales-actions" icon={<CircleAlert aria-hidden className="size-4" />} title="Sales & corrections" description="Action center · Review the latest 20 sales, reverse errors, and create linked corrections while preserving ticket and financial history." bodyClassName="p-0">{visible.recent_sales.length === 0 ? <EmptyState title="No sales recorded" description="An active campaign and assigned player inventory are required to record an offline sale." /> : <Table><THead><TR><TH>Seller / time</TH><TH>Tickets</TH><TH>Collection</TH><TH>Status / actions</TH></TR></THead><TBody>{visible.recent_sales.map((sale) => { const participant = byParticipant.get(sale.participant_id); return <TR key={sale.id} data-testid={`campaign-sale-${sale.id}`}><TD><span className="block font-medium">{sale.player_name}</span><span className="block text-xs text-muted">{formatDateTime(sale.sold_at, ctx.organization.timezone)}</span></TD><TD><span className="block">{sale.quantity} ticket{sale.quantity === 1 ? "" : "s"}</span><span className="block max-w-64 text-xs break-words text-muted">{sale.ticket_numbers.join(", ")}</span></TD><TD className="tabular"><span className="block">{formatMoney(sale.amount_cents)}</span><span className="text-xs text-muted">{sale.payment_method === "cash" ? "Cash" : "Check"}</span></TD><TD><div className="flex flex-wrap items-center gap-2"><Badge tone={sale.reversed ? "muted" : "success"}>{sale.reversed ? "Reversed" : sale.corrects_sale_id ? "Correction" : "Recorded"}</Badge>{sale.replacement_sale_id && <Badge tone="info">Corrected</Badge>}<ButtonLink href={`/o/${orgSlug}/tickets/${sale.id}`} size="sm" variant="secondary">View / print ticket</ButtonLink><ReverseSaleButton orgSlug={orgSlug} sale={sale} />{sale.reversed && participant && canRecordSale(ctx.permissions) && <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents} participant={participant} correctsSaleId={sale.id} alreadyCorrected={sale.replacement_sale_id !== null} label="Record correction" />}</div></TD></TR>; })}</TBody></Table>}</WorkflowPanel>
+  </>;
+}

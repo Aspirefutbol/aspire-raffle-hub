@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, LayoutDashboard, Megaphone, Settings, Shield, Users, UsersRound } from "lucide-react";
+import { BarChart3, BookOpenCheck, LayoutDashboard, Megaphone, Settings, Shield, Users, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -12,6 +12,7 @@ const ICONS: Record<NavIcon, ReactNode> = {
   people: <Users aria-hidden className="size-4" />,
   teams: <UsersRound aria-hidden className="size-4" />,
   campaigns: <Megaphone aria-hidden className="size-4" />,
+  learn: <BookOpenCheck aria-hidden className="size-4" />,
   reports: <BarChart3 aria-hidden className="size-4" />,
   settings: <Settings aria-hidden className="size-4" />,
 };

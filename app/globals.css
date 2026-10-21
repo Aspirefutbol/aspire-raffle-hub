@@ -60,6 +60,14 @@
     background: rgb(16 24 40 / 0.4);
     animation: fade-in 150ms ease-out;
   }
+
+  /* Toasts must never block primary workflow controls underneath them. */
+  [data-sonner-toast] {
+    pointer-events: none;
+  }
+  [data-sonner-toast] [data-close-button] {
+    pointer-events: auto;
+  }
 }
 
 @layer components {

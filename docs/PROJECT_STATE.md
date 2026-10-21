@@ -1,0 +1,310 @@
+# Raffle Hub Project State
+
+_Last updated: 2026-10-16_
+
+This file is the changing execution state for the Aspire Raffle Hub pilot. Read it together with `AGENTS.md`, `docs/architecture.md`, `docs/raffle-pilot-backlog.md`, `docs/money-custody.md`, `docs/drawing-operations.md`, `docs/MONEY_HOSTED_QA.md`, `docs/MONEY_HOSTED_QA_RESULTS.md`, `docs/MONEY_OPERATOR_UI_REVIEW.md`, `docs/SELLER_SHARING.md`, and `docs/ADMIN_LEARNING_HUB.md`.
+
+## Source of truth
+
+- Repository: `Aspirefutbol/aspire-raffle-hub`
+- Active implementation branch: `feat/phase-1-fundraising-slice`
+- Verified implementation baseline: `bfb681f73bd5cf6b270bbbb69accda0a0e7bdb78`
+- Seller Sharing implementation commit: see feature branch history and task delivery report; never infer hosted state from local files.
+- Draft PR: #2 — keep DRAFT and UNMERGED until the remaining implementation slices and full Aspire operator rehearsal are complete.
+- Default branch: `main`
+- Hosted QA site: `https://aspire-raffle-hub-staging.netlify.app`
+- Staging Supabase project: `Aspire Raffle Hub Staging` (`ixhpidqhqzbpfbklofrs`)
+
+Do not rely on unpushed state from older Codex environments. Verify remote HEAD before implementation.
+
+## Completed and verified slices
+
+### Phase 0 foundation
+
+- Multi-tenant organizations.
+- Members/roles and scoped permissions.
+- Teams, players, households, guardians.
+- RLS and server-side authorization.
+- Audit hash chains and external checkpoint continuity.
+- Admin/family/captain scoped access.
+
+### Core raffle transactions
+
+- Campaign setup/readiness and lifecycle.
+- Participant enrollment.
+- Ticket generation and allocation.
+- Offline cash/check sale recording.
+- Family seller view and assigned-team captain view.
+- Player → team → campaign totals.
+- Caller-bound idempotent/safe retry.
+- Sale reversal without deleting history.
+- Linked correction sale using fresh ticket numbers.
+- Voided ticket numbers are never reused.
+- Hosted QA verified admin sale, family scope, captain scope, multi-ticket sale, retry, reversal, and correction history.
+
+### Drawing integrity
+
+- Immutable drawing snapshots and entries.
+- Freeze/reopen workflow.
+- Verified private drawing export.
+- External/physical drawing model for the Aspire pilot.
+- Result/certification structure.
+- Concurrency protections for freeze, reversal, reopening, result, and certification.
+- No in-platform random winner generator for the pilot.
+
+### Money Custody & Reconciliation — ACCEPTED
+
+Implementation and hosted QA are complete.
+
+Verified capabilities:
+
+- Recorded sales remain separate from money received by the organization.
+- Immutable physical receipts and deterministic receipt-to-sale allocations.
+- Partial and multi-sale turn-ins.
+- Explicit check pending/cleared/returned outcomes.
+- Returned-check exceptions do not silently void raffle tickets.
+- Refunds, credits, approved balance adjustments, and deposits are explicit events.
+- Reversal after receipt preserves physical receipt facts and creates credit/overpayment where appropriate.
+- Linked correction + credit transfer moves existing held funds without manufacturing another receipt.
+- Admin, family, and captain projections remain scoped and redacted.
+- Desktop and mobile money workflows are usable without horizontal overflow.
+- Money terminology was simplified after operator review.
+
+Hosted/operator QA completed:
+
+- real $2.50 partial cash turn-in through the hosted UI
+- expected / received / money-still-due / reconciled balances updated correctly
+- immutable money history displayed the receipt, actor, reason, timestamp, and event ID
+- player/team/campaign roll-ups reconciled
+- family view showed only the linked player and no private money details
+- captain view showed only the assigned team and no admin reconciliation controls
+- mobile admin dashboard and money form passed phone-width review
+- hosted rollback checks passed for idempotency, check clearance, returned checks, deposits, reversal after receipt, and correction credit transfer
+- automated hosted QA mutations were rolled back; only the intentional $2.50 operator receipt remains as QA evidence
+
+Validation at acceptance:
+
+- 809 pgTAP assertions
+- 157 unit tests
+- 13 real concurrency groups
+- 27 browser tests
+- lint, typecheck, generated-types parity, production build, audit continuity, database/E2E CI, and hosted deploy all green
+
+### Seller Sharing + Parent/Player Seller Toolkit — ACCEPTED
+
+Hosted/operator QA is complete for the Aspire staging fixture.
+
+Verified capabilities:
+
+- Family can create an opaque one-time seller link and share by copy, SMS, email, WhatsApp, and QR.
+- Public supporter page exposes campaign information only; no player, team, household, ticket-number, balance, buyer, money, or audit data was observed.
+- Public interest request remained nonbinding and created no sale or money-custody event.
+- Family private inbox showed the synthetic supporter request and allowed status progression to contacted.
+- One synthetic offline $5 cash sale issued ticket `QA2-000013` and the sale reference linked back to the request, which then reached completed status.
+- Replacing the seller link revoked the prior active link while preserving request history; staging showed one active and one revoked link after rotation.
+- QR generation rendered successfully and encoded the new replacement seller URL.
+- Hosted mobile review at 393×852 showed a usable responsive supporter page with no horizontal overflow or private player/team information visible.
+- Full CI and Hosted QA Deploy are green on commit `0c30a9c17f45e89755b449f9a39c529ca3fbc932`.
+
+Known follow-up UX refinement: after a browser reload, the seller control returns to `Share fundraiser` because tokens are intentionally shown once and not persisted. Consider clearer copy such as `Create / replace seller link` in a later polish pass so families understand that generating a new link revokes the prior one.
+
+### Admin Learning Hub — ACCEPTED
+
+Hosted/operator acceptance review is complete.
+
+Verified capabilities:
+
+- Admin-only Learning Hub navigation appears in the hosted operator workspace.
+- Search for natural operator language such as `check bounced` returns the relevant returned-check guide.
+- Launch-critical articles are readable, scannable, and linked to related guides.
+- Contextual help from Campaigns routes directly to the correct campaign-preparation article.
+- Family/seller navigation does not expose the Admin Learning Hub.
+- Automated validation is green: lint, typecheck, unit tests, production build, fresh migrations, pgTAP, generated types, fundraising/drawing/money/Seller Sharing concurrency suites, audit continuity, and 29/29 Playwright browser tests.
+- Hosted QA Deploy is green and staging is ready.
+
+## Current approved action
+
+**Aspire full operator rehearsal.**
+
+Run the complete hosted staging path:
+
+campaign setup → enrollment → ticket allocation → family sharing/selling → captain monitoring → sale → money turn-in/reconciliation → reversal/correction → close sales → freeze/export drawing population → external/physical draw → result/certification → final reconciliation → audit verification.
+
+Use synthetic data only. Preserve the current accepted Money Custody, Seller Sharing, Learning Hub, authorization, tenant isolation, immutable ledger, ticket inventory, drawing integrity, idempotency, and audit behavior.
+
+### Rehearsal progress
+
+Primary campaign: `OPERATOR REHEARSAL — Aspire Pilot`  
+Campaign ID: `5a892877-1b83-4a3b-94d3-7a6e3aa2fb12`
+
+Passed so far:
+
+- fresh campaign setup/readiness
+- U13 Boys enrollment: 3 players
+- ACTIVE lifecycle
+- 12-ticket inventory preparation
+- Seller Sharing public privacy and request-only behavior
+- supporter request → contacted → offline sale → completed request
+- family cash sale and normal check sale
+- captain/team monitoring and privacy
+- partial $2.50 cash turn-in
+- $5 check turn-in
+- returned-check handling without automatic ticket invalidation
+- replacement cash + exception resolution
+- full $10 expected / $10 received reconciliation with $0 outstanding
+- sale reversal + linked correction with fresh ticket number
+- two explicit $2.50 credit transfers of already-held funds; no duplicate receipt
+- original ticket `OR1-000010` voided and replacement `OR1-000011` issued
+- audit, campaign, ticket, and money hash chains verified clean
+- operator UX fixes for money-action discoverability
+- highlighted Action center treatment for Money, Campaign readiness, and Drawing
+
+Current database state before continuing:
+
+- campaign lifecycle: ACTIVE
+- locked sales close: 2026-10-17 11:24 AM America/Chicago
+- locked draw time: 2026-10-18 11:24 AM America/Chicago
+- tickets: 9 ALLOCATED / 2 ISSUED / 1 VOIDED
+- active recorded sales: 2 / $10 total
+- completed supporter request linked to sale `82bacaf2-df17-4cd5-a0f0-01a5d8bf5e9a`
+- original reversed sale: `2f65268d-9fdf-4349-bdf0-d18bd8cba424`
+- linked correction sale: `ef5ad4c8-ce5b-4f0b-a4e4-c6f0c02c5701`
+- money expected: $10.00
+- money received: $10.00
+- outstanding / uncleared / exception balances: $0.00
+- all four relevant hash chains verify with no bad position
+
+Current next step after latest validation/deploy:
+
+1. wait for the locked sales-close gate on 2026-10-17 at 11:24 AM America/Chicago
+2. close sales through the hosted operator UI
+3. verify a post-close sale is blocked
+4. freeze and export the drawing population
+5. at or after the locked draw time on 2026-10-18 at 11:24 AM America/Chicago, record the synthetic external result
+6. certify the drawing and move the campaign to DRAWN
+7. complete final reconciliation and audit verification
+
+Detailed live findings: `docs/OPERATOR_REHEARSAL_FINDINGS.md`.
+
+### Rehearsal UX changes already made
+
+- top-level **Record money** shortcut
+- **Record money received / adjustments** action-center heading
+- **Choose action** selector
+- **Record turn-in (full or partial)** wording
+- contextual action help
+- reusable highlighted workflow panel for Money, Campaign readiness, and Drawing
+- Learning Hub money articles aligned with the updated terminology
+
+Produce a final go-live blocker list categorized as Product, Operations, Compliance/legal, Training, and Infrastructure.
+
+Keep PR #2 draft/unmerged until explicit approval.
+
+## Foundation hardening checkpoint — 2026-10-19
+
+Before completing the final operator-rehearsal lifecycle, the staging database received an explicit function-privilege hardening pass.
+
+Verified:
+
+- public schema function execution is now deny-by-default for `PUBLIC` / `anon`
+- anonymous `SECURITY DEFINER` exposure dropped from 26 functions to exactly 2 intentional public endpoints:
+  - `public_seller_page(text)`
+  - `submit_seller_interest_request(text, uuid, jsonb)`
+- trigger-only functions are no longer directly executable by authenticated/API roles
+- future functions inherit the same deny-by-default public/anonymous posture
+- regression coverage was added in `supabase/tests/function_privileges.test.sql`
+- staging migrations: `20261019000100_security_acl_hardening.sql` and `20261019205330_function_privilege_hardening.sql`
+
+Supabase Advisor still reports authenticated `SECURITY DEFINER` functions because the application intentionally exposes permission-checked RPCs and uses SECURITY DEFINER helper functions for scoped/RLS behavior. These must be reviewed individually, not bulk-revoked, because blanket removal would break the app's authorization model.
+
+Remaining security gate before production sign-off:
+
+- Supabase Auth leaked-password protection is currently disabled. Hosted QA now treats this as a hard gate: it must either enable the setting with the staging management token or verify that it was enabled manually before deployment can pass.
+
+The prior RLS-without-policy advisor notices for the two internal tables were resolved by explicit deny-all client policies in `20261019000100_security_acl_hardening.sql`.
+
+## Production gate
+
+The Aspire raffle target is a planning target, not a production-readiness claim.
+
+Before live operation, confirm:
+
+- legal entity eligibility under applicable Texas raffle rules
+- approved rules, prizes, and disclosures
+- approved ticket pricing/numbering and payment/delivery methods
+- approved sales dates, cutoff, and drawing procedure
+- required recordkeeping and operator responsibilities
+
+Texas pilot mode remains offline cash/check; no online raffle-ticket checkout.
+
+## Deferred — do not implement yet
+
+- Shared Campaign Boost Engine
+- Marketplace / Experience Marketplace
+- Sponsor-a-Day migration
+- Puzzle
+- Fill the Field
+- 100 Board
+- Journey / Build It
+- Sponsorship CRM
+- Other fundraiser experiences
+- In-platform random winner generator
+
+The future Boost Engine must not alter raffle odds, ticket quantities, ticket price, or eligibility without separate approved jurisdiction/compliance work.
+
+## Project isolation
+
+This repository is Raffle Hub only.
+
+Do not implement Aspire One or Aspire Coaching Studio work here. Do not copy instructions from those projects unless the user explicitly approves a cross-project change.
+
+## Agent operating rule
+
+For future implementation tasks:
+
+1. Read `AGENTS.md`.
+2. Read this file.
+3. Verify remote HEAD and PR state.
+4. Execute only the Current approved action above.
+5. Preserve all authorization, RLS, immutable ledger, idempotency, ticket, drawing, money, and audit guarantees.
+6. Keep PR #2 draft/unmerged unless the user explicitly approves a merge.
+7. Stop at the next QA/approval gate and report the exact commit SHA, tests, hosted state, and known gaps.
+
+## Hardened staging baseline — 2026-10-20
+
+Validated on feature commit `658cc66a28f53e8e1c4351bcfdb1edde0545c0cb`:
+
+- full CI passed, including fresh migrations, pgTAP, generated types, DB catalog parity, raffle/drawing/money/sharing concurrency, audit continuity, production build, and browser E2E
+- Hosted QA deploy passed after the staging Supabase PAT was replaced with a scoped read-only token that can read Security Advisors
+- leaked-password protection is enabled; the prior `auth_leaked_password_protection` advisor warning is gone
+- Hosted QA deploy and smoke check are green
+- current Netlify staging deploy is ready
+- PR #2 remains draft and unmerged
+
+The remaining controlled-pilot acceptance work is the hosted operator lifecycle rehearsal: close sales, prove post-close sales are blocked, freeze/export the drawing population, record the synthetic external result, certify, mark DRAWN, and perform final reconciliation/audit verification.
+
+## Operator rehearsal accepted — 2026-10-20
+
+The hosted staging operator rehearsal for `OPERATOR REHEARSAL — Aspire Pilot` is complete and **PASSED**.
+
+Final state:
+
+- campaign lifecycle: `DRAWN`
+- active sales: 2 / $10.00
+- money expected / received / due: $10.00 / $10.00 / $0.00
+- uncleared checks / exceptions: $0.00 / $0.00
+- ticket inventory: 9 ALLOCATED / 2 ISSUED / 1 VOIDED
+- drawing Snapshot v1: `e98c4d68-28ad-403d-813a-104ed6e38d09`
+- eligible drawing tickets: `OR1-000009`, `OR1-000011`
+- manifest SHA-256: `d4cc47b6f7a501623461807c8a3172172f7ec5d25cfc24098461865dfd9ecaea`
+- CSV and JSON exports recorded with authenticated-exporter checksums
+- synthetic external result recorded for `OR1-000009`
+- Director certification recorded
+- final `CLOSED → DRAWN` transition recorded through hosted UI
+- snapshot integrity: PASS
+- audit/campaign/ticket/money hash chains: PASS
+- post-close sale enforcement: PASS with zero sale mutation
+
+Security baseline is also green: leaked-password protection is enabled and the Hosted QA security gate, Netlify deploy, and hosted smoke check passed on the hardened staging lane.
+
+PR #2 remains draft and unmerged until explicit approval. Legal/compliance and live-production operating gates remain separate from this staging product acceptance.
