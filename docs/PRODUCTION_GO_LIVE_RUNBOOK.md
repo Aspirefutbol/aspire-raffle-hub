@@ -8,6 +8,8 @@ This runbook is the final operational gate between a successful hosted staging r
 
 The staging product path is accepted. This document does **not** itself authorize a live raffle. Legal/compliance approval and explicit production approval remain required.
 
+Use [PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md) as the current evidence-based readiness status. Any item marked BLOCKER there overrides a generic checklist item here.
+
 ## Current baseline
 
 - PR #2 remains draft and unmerged.
