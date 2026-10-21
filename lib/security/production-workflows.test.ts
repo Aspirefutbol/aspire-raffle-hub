@@ -33,16 +33,19 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("Verify production security advisors");
   });
 
-  it("uses the exact staging database host without requiring a Supabase management PAT", () => {
+  it("requires a validated least-privilege staging session-pooler secret", () => {
     const text = workflow("hosted-qa.yml");
-    expect(text).toContain("SUPABASE_DB_PASSWORD");
-    expect(text).toContain("Build exact staging database connection");
-    expect(text).toContain('"db."+process.env.STAGING_PROJECT_REF+".supabase.co"');
+    expect(text).toContain("STAGING_DB_URL");
+    expect(text).toContain("Verify staging session-pooler connection");
+    expect(text).toContain("postgres.${ref}");
+    expect(text).toContain(".pooler.supabase.com");
+    expect(text).toContain('url.port !== "5432"');
     expect(text).toContain("sslmode=require");
     expect(text).toContain("npx supabase migration list --db-url");
     expect(text).toContain("npx supabase db push --db-url");
     expect(text).toContain("npx supabase gen types typescript --db-url");
     expect(text).not.toContain("secrets.SUPABASE_ACCESS_TOKEN");
+    expect(text).not.toContain("secrets.STAGING_DB_PASSWORD");
     expect(text).not.toContain("supabase link --project-ref");
     expect(text).not.toContain("Resolve staging session-pooler connection");
   });
