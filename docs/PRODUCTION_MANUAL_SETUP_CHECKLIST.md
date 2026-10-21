@@ -146,8 +146,9 @@ Once these manual settings are confirmed, the next technical sequence is:
 1. approve PR #2
 2. merge to `main`
 3. wait for exact-commit CI PASS
-4. run Production Bootstrap
-5. review migration dry-run and security checks
-6. run Production App Deploy
-7. perform synthetic production smoke/invitation test
-8. complete final leadership GO/NO-GO
+4. run read-only Production Preflight
+5. review the migration dry-run and preflight evidence
+6. run Production Bootstrap
+7. run Production App Deploy
+8. perform synthetic production smoke/invitation test
+9. complete final leadership GO/NO-GO
