@@ -13,6 +13,10 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("github.ref == 'refs/heads/main'");
     expect(text).toContain("environment: production");
     expect(text).toContain("pull-requests: read");
+    expect(text).toContain("Verify production Auth configuration");
+    expect(text).toContain("uri_allow_list");
+    expect(text).toContain("smtp_host");
+    expect(text).toContain("disable_signup");
     expect(text).toContain("Require this main commit to come from a merged pull request");
     expect(text).toContain("Wait for full CI on this main commit");
     expect(text).toContain("--dry-run");
