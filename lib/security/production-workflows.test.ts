@@ -22,6 +22,9 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("disable_signup");
     expect(text).toContain("Require this main commit to come from a merged pull request");
     expect(text).toContain("Wait for full CI on this main commit");
+    expect(text).toContain("Verify production database URL identity");
+    expect(text).toContain("Require successful read-only production preflight for this commit");
+    expect(text).toContain("production-preflight.yml");
     expect(text).toContain("--dry-run");
     expect(text).toContain("Verify production schema matches committed TypeScript contract");
     expect(text).toContain("Verify production public API exposure contract");
@@ -30,11 +33,35 @@ describe("production workflow safety contracts", () => {
     expect(text).toContain("Verify production security advisors");
   });
 
-  it("uses the explicit hosted staging database connection instead of inferring Supavisor response shape", () => {
+  it("uses the supported linked staging project flow without a hand-built Supavisor URL", () => {
     const text = workflow("hosted-qa.yml");
-    expect(text).toContain("STAGING_DB_URL");
-    expect(text).toContain("Missing STAGING_DB_URL staging binding");
+    expect(text).toContain("SUPABASE_DB_PASSWORD");
+    expect(text).toContain('npx supabase link --project-ref "$STAGING_PROJECT_REF"');
+    expect(text).toContain("npx supabase migration list --linked");
+    expect(text).toContain("npx supabase db push --linked --dry-run");
+    expect(text).toContain("npx supabase db push --linked --yes");
+    expect(text).toContain("npx supabase gen types typescript --linked");
+    expect(text).not.toContain("STAGING_DB_URL");
     expect(text).not.toContain("Resolve staging session-pooler connection");
+  });
+
+  it("keeps production preflight read-only and exact-commit gated", () => {
+    const text = workflow("production-preflight.yml");
+    expect(text).toContain("workflow_dispatch:");
+    expect(text).toContain("github.ref == 'refs/heads/main'");
+    expect(text).toContain("environment: production");
+    expect(text).toContain("Require this main commit to come from a merged pull request");
+    expect(text).toContain("Wait for full CI on this main commit");
+    expect(text).toContain("Verify production database URL identity");
+    expect(text).toContain("Verify production Auth configuration");
+    expect(text).toContain("Verify production database SSL enforcement");
+    expect(text).toContain("Verify required production Netlify environment");
+    expect(text).toContain("Preview production migration delta — no writes");
+    expect(text).toContain("--dry-run");
+    expect(text).toContain("Inspect current production public API exposure — no writes");
+    expect(text).toContain("Verify current production security advisors — no writes");
+    expect(text).not.toContain("db push --db-url \"$PRODUCTION_DB_URL\" --yes");
+    expect(text).not.toContain("netlify-cli@27.12.0 deploy");
   });
 
   it("blocks production app deploy until the same commit passed bootstrap and environment preflight", () => {
