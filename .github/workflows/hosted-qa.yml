@@ -123,10 +123,10 @@ jobs:
 
 
       - name: Show Netlify CLI version
-        run: npx netlify-cli@latest --version
+        run: npx netlify-cli@27.12.0 --version
 
       - name: Deploy current feature branch to existing staging site
-        run: npx netlify-cli@latest deploy --build --prod --site "$NETLIFY_SITE_ID" --message "hosted-qa $(git rev-parse --short HEAD)"
+        run: npx netlify-cli@27.12.0 deploy --build --prod --site "$NETLIFY_SITE_ID" --message "hosted-qa $(git rev-parse --short HEAD)"
 
       - name: Smoke-check hosted staging
         run: |
