@@ -37,6 +37,14 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
           action={!detail ? <ButtonLink href={`/o/${orgSlug}/fundraising/${campaign.id}`} variant="ghost" size="sm">View raffle</ButtonLink> : undefined}
         />
         <CardBody className="space-y-4">
+          {detail && <div className="rounded-card border border-line bg-surface p-4" aria-label="How to use your Aspire raffle">
+            <h2 className="text-base font-semibold text-ink">Your raffle in 3 easy steps</h2>
+            <ol className="mt-3 grid gap-3 text-sm text-ink-soft sm:grid-cols-3">
+              <li><strong className="block text-ink">1. Share your link</strong>Friends and family can request tickets. A request is not a sale.</li>
+              <li><strong className="block text-ink">2. Record the sale</strong>After an authorized adult receives cash or a check, record the completed sale below.</li>
+              <li><strong className="block text-ink">3. Check progress</strong>See tickets sold and money recorded for each player.</li>
+            </ol>
+          </div>}
           <p className="text-xs text-muted">
             Sales close {formatDate(campaign.sales_close_at, timeZone)}
             {campaign.ticket_price_cents != null && <> · {formatMoney(campaign.ticket_price_cents)} per ticket</>}
