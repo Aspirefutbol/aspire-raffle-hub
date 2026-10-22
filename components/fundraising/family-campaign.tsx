@@ -85,12 +85,16 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                       </p>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents}
-                      participant={participant} className="w-full" />
-                    {unavailable ? <p className="text-xs text-muted">{unavailable}</p> : <p className="text-xs text-muted">Record a sale after you receive cash or a check.</p>}
+                  <div className="space-y-3">
                     {detail && participant.status === "active" && <SellerTools orgSlug={orgSlug} participantId={participant.id} price={campaign.ticket_price_cents}/>}
-                    {detail && <ButtonLink variant="secondary" href={`/o/${orgSlug}/fundraising/${campaign.id}/requests`}>View private requests</ButtonLink>}
+                    {detail && <ButtonLink variant="secondary" href={`/o/${orgSlug}/fundraising/${campaign.id}/requests`}>Check supporter requests</ButtonLink>}
+                    <div className="space-y-2 rounded-control border border-line bg-surface p-3">
+                      <p className="text-sm font-semibold text-ink">Received payment? Record a sale</p>
+                      <p className="text-xs text-muted">Only an authorized seller should record tickets after receiving cash or a check.</p>
+                      <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents}
+                        participant={participant} className="w-full" label="Record completed sale" />
+                      {unavailable && <p className="text-xs text-muted">{unavailable}</p>}
+                    </div>
                   </div>
                 </article>
               );
