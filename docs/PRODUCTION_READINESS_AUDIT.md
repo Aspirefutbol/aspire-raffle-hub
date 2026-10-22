@@ -25,8 +25,8 @@ During the 2026-10-21 hardening pass, Hosted QA failed before touching the stagi
 
 Resolution:
 
-- Hosted QA now uses the already-configured `STAGING_DB_URL` Session-pooler secret.
-- Production Bootstrap now requires `PRODUCTION_DB_URL` as an explicit GitHub production-environment secret.
+- Hosted QA constructs `STAGING_DB_URL` at runtime from the staging environment's `STAGING_DB_PASSWORD` secret, `STAGING_POOLER_HOST` variable, and pinned staging project ref. The workflow validates the Session-pooler host and requires SSL; no Supavisor Management API hostname inference is used.
+- Production Bootstrap separately requires `PRODUCTION_DB_URL` as an explicit GitHub production-environment secret.
 - Workflow contract tests reject a return to the brittle hostname-inference step.
 
 This was an infrastructure-connection parser failure, not an application, migration, or database-integrity failure.
