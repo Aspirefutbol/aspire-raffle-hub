@@ -22,10 +22,15 @@ export function SellerTools({ orgSlug, participantId, price }: { orgSlug: string
     });
   }
   return <div className="space-y-3 rounded-control border border-line p-3" data-testid="seller-tools">
-    <Button variant="secondary" className="w-full" disabled={pending} onClick={() => manage(false)}>{url ? "Replace seller link" : "Create / replace seller link"}</Button>
-    {!url && <p className="text-xs text-muted">Creates a new private sharing token without publishing your player’s name. If a saved link already exists, creating a new one replaces it and the old link stops working. Tokens are shown once; generate a replacement if you lose yours.</p>}
+    <div>
+      <h4 className="text-sm font-semibold text-ink">Share your raffle</h4>
+      <p className="mt-1 text-xs text-muted">Create a private link for friends and family to request tickets. Requests do not collect payment or issue tickets.</p>
+    </div>
+    <Button variant="secondary" className="w-full" disabled={pending} onClick={() => manage(false)}>{url ? "Create a new sharing link" : "Get my sharing link"}</Button>
+    {!url && <p className="text-xs text-muted">For privacy, your player’s name is not shown on this page. A new link replaces any previous link, so share the newest one.</p>}
     {url && <>
-      <p className="break-all text-xs" data-testid="seller-url">{url}</p>
+      <p className="text-xs font-medium text-ink">Your link is ready. Pick how to share it:</p>
+      <p className="break-all text-xs text-muted" data-testid="seller-url">{url}</p>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm underline [&>*]:inline-flex [&>*]:min-h-11 [&>*]:items-center">
         <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(url); setMessage("Link copied"); } catch { setMessage("Copy the displayed link manually."); } }}>Copy link</button>
         <a href={links.sms}>Text / SMS</a><a href={links.email}>Email</a><a href={links.whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp</a>
