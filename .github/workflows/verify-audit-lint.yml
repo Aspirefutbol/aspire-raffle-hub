@@ -1,0 +1,100 @@
+name: Verify audit lint repair (isolated local database)
+
+on:
+  push:
+    branches: [fix/audit-lint-20261023]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-lint-isolated-verification
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/fix/audit-lint-20261023'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Discover pinned CLI flags
+        run: |
+          npx supabase --version
+          npx supabase db lint --help
+          npx supabase migration new --help
+      - name: Start original schema in disposable local containers
+        run: npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor
+      - name: Prove original lint error fails the strict gate
+        shell: bash
+        run: |
+          set +e
+          npx supabase db lint --local --level error --fail-on error > /tmp/baseline-lint.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/baseline-lint.log
+          test "$status" -ne 0
+          grep -q 'verify_hash_chain' /tmp/baseline-lint.log
+          grep -q 'not assigned yet' /tmp/baseline-lint.log
+      - name: Generate additive migration using the pinned CLI
+        id: migration
+        shell: bash
+        run: |
+          npx supabase migration new hash_chain_typed_verifier
+          mapfile -t paths < <(find supabase/migrations -maxdepth 1 -name '*_hash_chain_typed_verifier.sql' -type f)
+          test "${#paths[@]}" -eq 1
+          path="${paths[0]}"
+          cp scripts/sql/hash-chain-typed-verifier.sql "$path"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "Generated migration: $path"
+          sha256sum "$path"
+      - name: Apply full migration chain to local database only
+        run: npx supabase db reset --local
+      - name: Require clean error-level database lint
+        run: npx supabase db lint --local --level error --fail-on error
+      - name: All database permission and ledger tests
+        run: npx supabase test db
+      - name: Preserve generated public API types
+        run: |
+          npm run db:types
+          git diff --exit-code lib/database/types.gen.ts
+      - name: Seed disposable local fixtures
+        run: |
+          ./scripts/ci-env.sh
+          npm run seed:dev
+      - name: Unit tests including catalog parity
+        run: npm test
+      - name: Ledger and retry concurrency tests
+        run: |
+          npm run test:concurrency
+          npm run test:drawing-concurrency
+          npm run test:money-concurrency
+          npm run test:sharing-concurrency
+      - name: Audit continuity
+        run: |
+          AUDIT_ENVIRONMENT=ci npm run audit:checkpoint
+          AUDIT_ENVIRONMENT=ci npm run audit:checkpoint
+      - name: Record evidence metadata
+        env:
+          MIGRATION_PATH: ${{ steps.migration.outputs.path }}
+        run: |
+          mkdir -p audit-lint-evidence
+          cp "$MIGRATION_PATH" audit-lint-evidence/
+          printf 'Source commit: %s\nMigration: %s\n' "$GITHUB_SHA" "$MIGRATION_PATH" > audit-lint-evidence/verification.txt
+          sha256sum "$MIGRATION_PATH" >> audit-lint-evidence/verification.txt
+          printf 'Strict database lint: PASS\nAll database tests: PASS\nTypes parity: PASS\nUnit tests: PASS\nConcurrency suites: PASS\nAudit continuity: PASS\nHosted databases: NOT ACCESSED\n' >> audit-lint-evidence/verification.txt
+          cat audit-lint-evidence/verification.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: audit-lint-verified-migration
+          path: audit-lint-evidence/
+          if-no-files-found: error
+          retention-days: 14
