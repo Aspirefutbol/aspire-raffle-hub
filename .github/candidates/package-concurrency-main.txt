@@ -1,0 +1,52 @@
+async function main() {
+  const admins = await Promise.all(Array.from({ length: 4 }, () => account("admin@aspire.test")));
+  const families = await Promise.all(Array.from({ length: 6 }, () => account("coach@aspire.test")));
+  const admin = admins[0], family = families[0];
+  const same = await fixture("package_same", 10, admin, family);
+  const key = randomUUID();
+  const outcomes = await simultaneous(same, families.slice(0, 4).map((actor) => () => rpc(actor.client, "record_campaign_sale", saleArgs(same, key))));
+  const sales = outcomes.map((result) => requireData(result, "Concurrent package retry"));
+  assert.equal(new Set(sales.map((sale) => sale.sale_id)).size, 1);
+  assert.equal(sales.filter((sale) => !sale.replayed).length, 1);
+  for (const sale of sales) {
+    assert.equal(sale.amount_cents, 9000);
+    assert.deepEqual(sale.ticket_numbers, sales[0].ticket_numbers);
+    assert.deepEqual(sale.pricing_snapshot, sales[0].pricing_snapshot);
+  }
+  await verify(same, admin, family, { sales: 1, collections: 1, reversals: 0, negative_events: 0, issued_events: 5, void_events: 0, net_money: 9000, active_tickets: 5, own_available: 5 });
+  assert.equal((await rpc(family.client, "record_campaign_sale", saleArgs(same, randomUUID(), 5, { p_amount_cents: 8000 }))).error?.code, "23514");
+  assert.equal((await rpc(family.client, "record_campaign_sale", saleArgs(same, randomUUID(), 5, { p_participant_id: same.otherParticipantId }))).error?.code, "42501");
+  console.log("PASS package replay: four overlapping requests produce one $90 sale, one snapshot, and five tickets; underpayment and widened captain scope rejected.");
+
+  const stock = await fixture("package_stock", 10, admin, family);
+  const races = await simultaneous(stock, families.map((actor) => () => rpc(actor.client, "record_campaign_sale", saleArgs(stock, randomUUID()))));
+  assert.equal(races.filter((result) => !result.error).length, 2);
+  assert.equal(races.filter((result) => result.error?.code === "23514").length, 4);
+  await verify(stock, admin, family, { sales: 2, collections: 2, issued_events: 10, void_events: 0, net_money: 18000, active_tickets: 10, own_available: 0 });
+  console.log("PASS package stock race: six overlapping five-ticket purchases consume exactly ten assigned tickets, no partial bundle issuance.");
+
+  const reverse = await fixture("package_reverse", 10, admin, family);
+  const original = requireData(await rpc(family.client, "record_campaign_sale", saleArgs(reverse, randomUUID())), "Original package sale");
+  const originalFacts = requireData(await admin.client.from("campaign_sales").select("*").eq("id", original.sale_id).single(), "Original package evidence");
+  const reversal = await simultaneous(reverse, admins.map((actor) => () => rpc(actor.client, "reverse_campaign_sale", { p_organization_id: reverse.orgId, p_sale_id: original.sale_id, p_reason: "Concurrent package correction" })));
+  assert.equal(new Set(reversal.map((result) => requireData(result, "Concurrent package reversal"))).size, 1);
+  const replacement = requireData(await rpc(family.client, "record_campaign_sale", saleArgs(reverse, randomUUID(), 5, { p_corrects_sale_id: original.sale_id })), "Package replacement");
+  assert.ok(replacement.ticket_numbers.every((number) => !original.ticket_numbers.includes(number)));
+  assert.deepEqual(requireData(await admin.client.from("campaign_sales").select("*").eq("id", original.sale_id).single(), "Preserved package evidence"), originalFacts);
+  await verify(reverse, admin, family, { sales: 2, collections: 2, reversals: 1, negative_events: 1, issued_events: 10, void_events: 5, net_money: 9000, active_tickets: 5, own_available: 0 });
+  console.log("PASS package reversal race: immutable $90 history, one reversal, and five fresh correction tickets.");
+
+  const close = await fixture("package_close", 5, admin, family);
+  const closeKey = randomUUID();
+  const [sale, closed] = await simultaneous(close, [
+    () => rpc(family.client, "record_campaign_sale", saleArgs(close, closeKey)),
+    () => rpc(admin.client, "transition_campaign", { p_campaign_id: close.campaignId, p_to: "CLOSED", p_reason: "Synthetic concurrent package close" }),
+  ]);
+  assert.equal(requireData(closed, "Package close"), "CLOSED");
+  if (sale.error) assert.equal(sale.error.code, "23514");
+  else assert.equal(requireData(await rpc(family.client, "record_campaign_sale", saleArgs(close, closeKey)), "Package retry after close").sale_id, sale.data.sale_id);
+  assert.equal((await rpc(family.client, "record_campaign_sale", saleArgs(close, randomUUID()))).error?.code, "23514");
+  await verify(close, admin, family, { sales: sale.error ? 0 : 1, collections: sale.error ? 0 : 1, net_money: sale.error ? 0 : 9000, active_tickets: sale.error ? 0 : 5 });
+  console.log("PASS package close race: sale and cutoff remain atomic; no issuance after closure.");
+}
+main().catch((error) => { console.error(`Package concurrency failed: ${error.message}`); process.exitCode = 1; });

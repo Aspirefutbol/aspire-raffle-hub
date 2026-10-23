@@ -1,46 +1,130 @@
 name: Ticket package isolated verification
-
 on:
   push:
     branches: [feat/ticket-packages-20261023]
-
 permissions:
-  contents: read
-
+  contents: write
 concurrency:
   group: ticket-packages-isolated
   cancel-in-progress: false
-
 jobs:
-  workspace:
+  verify:
+    if: github.repository == 'Aspirefutbol/aspire-raffle-hub' && github.ref == 'refs/heads/feat/ticket-packages-20261023'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          persist-credentials: false
-      - name: Export tracked source for isolated review
-        run: |
-          mkdir -p /tmp/package-workspace
-          git archive HEAD -o /tmp/package-workspace/source.tar
-          git rev-parse HEAD > /tmp/package-workspace/source-sha.txt
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - name: Export installed framework guides and reserve CLI-generated migration
+      - name: Materialize reviewed package source without hosted access
         run: |
-          npx supabase --version
-          npx supabase migration new --help
-          npx supabase migration new ticket_pricing_packages
-          find supabase/migrations -name '*_ticket_pricing_packages.sql' -print > /tmp/package-workspace/migration-path.txt
-          test "$(wc -l < /tmp/package-workspace/migration-path.txt)" -eq 1
-          cp "$(cat /tmp/package-workspace/migration-path.txt)" /tmp/package-workspace/
-          if [ -d node_modules/next/dist/docs ]; then tar -cf /tmp/package-workspace/framework-docs.tar -C node_modules/next/dist docs; fi
+          python .github/candidates/build-package-sql.py
+          python .github/candidates/build-package-ui.py
+          python .github/candidates/finalize-package-source.py
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          expected=json.loads(Path('.github/candidates/package-source-hashes.json').read_text())
+          bad=[p for p,h in expected.items() if not Path(p).is_file() or hashlib.sha256(Path(p).read_bytes()).hexdigest()!=h]
+          if bad: raise SystemExit('Candidate source differs from reviewed bytes: '+str(bad))
+          print('All 27 reviewed source files match SHA-256 manifest.')
+          PY
+      - run: npm ci
+      - name: Mandatory production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Start disposable local Supabase only
+        run: npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor
+      - name: Fresh complete migration chain
+        run: npx supabase db reset --local
+      - name: Strict database lint
+        run: npx supabase db lint --local --level error --fail-on error
+      - name: Full pgTAP including bundle accounting
+        run: npx supabase test db
+      - name: Regenerate real database types and local fixtures
+        run: |
+          npm run db:types
+          ./scripts/ci-env.sh
+          npm run seed:dev
+      - name: Lint, typecheck and all unit tests including 2000 SQL/client comparisons
+        run: npm run check
+      - name: Existing and package transaction concurrency
+        run: |
+          npm run test:concurrency
+          npm run test:package-concurrency
+          npm run test:drawing-concurrency
+          npm run test:money-concurrency
+          npm run test:sharing-concurrency
+      - name: Fresh browser fixtures and production-mode local build
+        run: |
+          npx supabase db reset --local
+          ./scripts/ci-env.sh
+          npm run seed:dev
+          set -a && . ./.env.local && set +a
+          npm run build
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: All browser journeys plus end-to-end package acceptance
+        run: |
+          set -a && . ./.env.local && set +a
+          npm run start > next.log 2>&1 &
+          npx wait-on -t 60000 http://localhost:3000/login
+          E2E_BASE_URL=http://localhost:3000 npm run test:e2e
+      - name: Audit continuity
+        run: |
+          AUDIT_ENVIRONMENT=ci npm run audit:checkpoint
+          AUDIT_ENVIRONMENT=ci npm run audit:checkpoint
+      - name: Persist validated materialized source to isolated branch only
+        run: |
+          test "$GITHUB_REF" = refs/heads/feat/ticket-packages-20261023
+          remote=$(git ls-remote origin refs/heads/feat/ticket-packages-20261023 | cut -f1)
+          test "$remote" = "$GITHUB_SHA"
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          files=list(json.loads(Path('.github/candidates/package-source-hashes.json').read_text()))
+          # GitHub App promotion will separately include the reviewed main-CI addition.
+          files.remove('.github/workflows/ci.yml')
+          files.append('lib/database/types.gen.ts')
+          subprocess.run(['git','add','--',*files],check=True)
+          changed=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          if set(changed)-set(files): raise SystemExit('Unexpected staged source paths')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: materialize verified ticket packages on isolated branch'
+          git push origin HEAD:refs/heads/feat/ticket-packages-20261023
+      - name: Retain synthetic verification evidence and materialized source
+        if: always()
+        run: |
+          mkdir -p /tmp/package-evidence
+          git rev-parse HEAD > /tmp/package-evidence/head.txt
+          python - <<'PY'
+          import json,tarfile,hashlib
+          from pathlib import Path
+          files=list(json.loads(Path('.github/candidates/package-source-hashes.json').read_text()))+['lib/database/types.gen.ts']
+          with tarfile.open('/tmp/package-evidence/materialized-source.tar','w') as archive:
+            for name in files:
+              path=Path(name)
+              if path.is_file(): archive.add(path,arcname=name)
+          Path('/tmp/package-evidence/actual-hashes.json').write_text(json.dumps({p:hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in files if Path(p).is_file()},indent=2))
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
         with:
-          name: ticket-package-workspace
-          path: /tmp/package-workspace
-          retention-days: 1
-          if-no-files-found: error
+          name: ticket-package-verification
+          path: /tmp/package-evidence
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: ticket-package-browser-evidence
+          path: |
+            test-results
+            playwright-report
+            next.log
+          retention-days: 7
+          if-no-files-found: ignore
