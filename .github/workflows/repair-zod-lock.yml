@@ -1,0 +1,76 @@
+name: Isolated Zod patch preparation
+on:
+  push:
+    branches: [fix/zod-audit-20261023]
+permissions:
+  contents: write
+concurrency:
+  group: isolated-zod-patch
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.repository == 'Aspirefutbol/aspire-raffle-hub' && github.ref == 'refs/heads/fix/zod-audit-20261023'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+      - name: Generate exact patched dependency and authentic lockfile
+        run: |
+          cp package.json /tmp/before-package.json
+          cp package-lock.json /tmp/before-package-lock.json
+          npm install --package-lock-only --ignore-scripts --save-exact zod@4.6.7
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const read = p => JSON.parse(fs.readFileSync(p, 'utf8'));
+          const before = read('/tmp/before-package.json'), after = read('package.json');
+          assert.equal(before.dependencies.zod, '4.6.5');
+          assert.equal(after.dependencies.zod, '4.6.7');
+          before.dependencies.zod = '4.6.7';
+          assert.deepEqual(after, before, 'Unexpected package.json change');
+          const oldLock = read('/tmp/before-package-lock.json'), lock = read('package-lock.json');
+          const zod = lock.packages['node_modules/zod'];
+          assert.equal(zod.version, '4.6.7');
+          assert.equal(zod.resolved, 'https://registry.npmjs.org/zod/-/zod-4.6.7.tgz');
+          assert.match(zod.integrity, /^sha512-/);
+          oldLock.packages[''].dependencies.zod = '4.6.7';
+          oldLock.packages['node_modules/zod'] = zod;
+          assert.deepEqual(lock, oldLock, 'Unrelated lockfile dependency changed');
+          console.log('Only exact Zod pin and its lock entry changed.');
+          JS
+      - run: npm ci
+      - name: Mandatory production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - run: npm run check
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_placeholder
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      - name: Commit only the two reviewed dependency files to this isolated branch
+        run: |
+          test "$GITHUB_REF" = refs/heads/fix/zod-audit-20261023
+          remote=$(git ls-remote origin refs/heads/fix/zod-audit-20261023 | cut -f1)
+          test "$remote" = "$GITHUB_SHA"
+          git add -- package.json package-lock.json
+          test "$(git diff --cached --name-only | wc -l)" -eq 2
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix: pin Zod 4.6.7 and regenerate dependency lock for GHSA-mrhx-c7xc-m3w5'
+          git push origin HEAD:refs/heads/fix/zod-audit-20261023
+          git rev-parse HEAD > /tmp/zod-output-commit.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: zod-patch-evidence
+          retention-days: 7
+          path: |
+            package.json
+            package-lock.json
+            /tmp/zod-output-commit.txt
