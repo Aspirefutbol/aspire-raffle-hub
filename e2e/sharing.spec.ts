@@ -5,7 +5,9 @@ import { PNG } from "pngjs";
 import { apiAs, signIn } from "./helpers";
 import { campaignProgressSchema } from "@/lib/fundraising/types";
 
-test("seller sharing: private family link, signed-out request retry, QR, offline sale handoff and revocation", async ({ page, browser }) => {
+test.use({ actionTimeout: 15_000 });
+
+test("seller sharing: private family link, signed-out request retry, QR, offline sale handoff and revocation", async ({ page, browser }, testInfo) => {
   test.setTimeout(180_000);
   if (!["localhost","127.0.0.1"].includes(new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname)) throw new Error("Synthetic sharing test requires local Supabase.");
   const admin=await apiAs("admin@aspire.test"), family=await apiAs("coach@aspire.test");
@@ -24,7 +26,23 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await page.goto(`/o/aspire/fundraising/${id}`);
   await expect(page.getByRole("heading",{name:"Parent/Player Seller Toolkit"})).toBeVisible();
   const tools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
+  // Opening/cancelling a confirmation must not change any token.
+  let linkWrites = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.headers()["next-action"] && new URL(request.url()).pathname === `/o/aspire/fundraising/${id}`) linkWrites += 1;
+  });
   await tools.getByRole("button",{name:"Get my sharing link",exact:true}).click();
+  const createDialog = page.getByRole("dialog", { name: "Create sharing link?", exact: true });
+  await expect(createDialog).toContainText("Any previous link or printed QR code will stop working");
+  await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(createDialog).not.toBeVisible();
+  expect(linkWrites).toBe(0);
+  await expect(tools.getByTestId("seller-url")).toHaveCount(0);
+  await tools.getByRole("button",{name:"Get my sharing link",exact:true}).click();
+  // Two events in the same render must result in one mutation, not two rotations.
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await expect(createDialog).not.toBeVisible();
+  expect(linkWrites).toBe(1);
   const url=await tools.getByTestId("seller-url").innerText();
   expect(new URL(url).pathname).toMatch(/^\/s\/[a-f0-9]{64}$/);
   for(const name of ["Text / SMS","Email","WhatsApp"]) {
@@ -36,6 +54,35 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await page.context().grantPermissions(["clipboard-read","clipboard-write"]);
   await tools.getByRole("button",{name:"Copy link",exact:true}).click();
   expect(await page.evaluate(()=>navigator.clipboard.readText())).toBe(url);
+  await tools.getByRole("button", { name: "Copy message", exact: true }).click();
+  const copiedMessage = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copiedMessage).toContain(url);
+  expect(copiedMessage).toContain("offline payment");
+  expect(copiedMessage).not.toMatch(/checkout|reserve tickets|buy now/i);
+  expect(linkWrites).toBe(1);
+  // A blocked clipboard gets a selectable fallback, not a false success message.
+  await page.evaluate(() => Object.defineProperty(navigator.clipboard, "writeText", {
+    configurable: true, value: async () => { throw new DOMException("Blocked by test", "NotAllowedError"); },
+  }));
+  await tools.getByRole("button", { name: "Copy link", exact: true }).click();
+  await expect(tools.getByRole("textbox", { name: "Copy manually", exact: true })).toHaveValue(url);
+  await expect(tools.getByRole("status")).toContainText("could not copy automatically");
+  await page.evaluate(() => { delete (navigator.clipboard as Partial<Clipboard>).writeText; });
+  await tools.getByRole("button", { name: "Copy link", exact: true }).click();
+  await expect(tools.getByRole("textbox", { name: "Copy manually", exact: true })).toHaveCount(0);
+  // Settings are separate from routine sharing. Cancel preserves the current link.
+  await expect(tools.getByRole("button", { name: "Create a new sharing link", exact: true })).toHaveCount(0);
+  await tools.locator("summary").click();
+  await tools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
+  await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(linkWrites).toBe(1);
+  await tools.getByRole("button", { name: "Revoke seller link", exact: true }).click();
+  const disableDialog = page.getByRole("dialog", { name: "Disable sharing link?", exact: true });
+  await disableDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(linkWrites).toBe(1);
+  await tools.locator("summary").click();
   await tools.getByRole("button",{name:"Show QR code"}).click();
   const qr=tools.getByRole("img",{name:"QR code for your supporter request page"});
   const png=PNG.sync.read(Buffer.from((await qr.getAttribute("src"))!.split(",")[1]!,"base64"));
@@ -44,7 +91,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(tools.getByRole("img")).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   for (const name of ["Text / SMS","Email","WhatsApp"]) expect((await tools.getByRole("link",{name,exact:true}).boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  await page.screenshot({path:"/tmp/sharing-family-360.png",fullPage:true});
+  await page.screenshot({path:testInfo.outputPath("sharing-family-360.png"),fullPage:true});
   await page.setViewportSize({width:1280,height:900});
   const publicContext=await browser.newContext({viewport:{width:360,height:780}}), supporter=await publicContext.newPage();
   const response=await supporter.goto(url);
@@ -54,7 +101,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const body=await supporter.locator("body").innerText();
   for(const hidden of ["Liam Smith",participant.id,participant.player_id,orgId,"Assigned span","Money still due"]) expect(body).not.toContain(hidden);
   expect(await supporter.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await supporter.screenshot({path:"/tmp/sharing-public-360.png",fullPage:true});
+  await supporter.screenshot({path:testInfo.outputPath("sharing-public-360.png"),fullPage:true});
   const before=await admin.from("campaign_sales").select("id",{count:"exact",head:true}).eq("campaign_id",id);
   let dropped=false;
   await supporter.route("**/s/*/request",async route=>{if(!dropped){dropped=true;await route.fetch();await route.abort("failed");}else await route.continue();});
@@ -77,7 +124,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(request).toBeVisible();
   await expect(request.getByRole("link",{name:"sharing-supporter@example.test"})).toBeVisible();
   await page.evaluate(()=>window.scrollTo(0,0));
-  await page.screenshot({path:"/tmp/sharing-inbox-360.png",fullPage:true});
+  await page.screenshot({path:testInfo.outputPath("sharing-inbox-360.png"),fullPage:true});
   await page.setViewportSize({width:1280,height:900});
   await request.getByRole("button",{name:"Mark contacted"}).click();
   await expect(request).toContainText("contacted");
@@ -98,12 +145,41 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await page.goto(`/o/aspire/fundraising/${id}`);
   const currentTools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
   await currentTools.getByRole("button",{name:"Get my sharing link",exact:true}).click();
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
+  await expect(createDialog).not.toBeVisible();
   const newUrl=await currentTools.getByTestId("seller-url").innerText();
   expect(newUrl).not.toBe(url);
   await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Send nonbinding request"})).toHaveCount(0);
+  // Losing the server response after replacement must hide the obsolete link.
+  await currentTools.getByRole("button", { name: "Show QR code", exact: true }).click();
+  await expect(currentTools.getByRole("img")).toBeVisible();
+  let lostReplacement = false;
+  await page.route(`**/o/aspire/fundraising/${id}`, async (route) => {
+    if (!lostReplacement && route.request().method() === "POST" && route.request().headers()["next-action"]) {
+      lostReplacement = true; await route.fetch(); await route.abort("failed");
+    } else await route.continue();
+  });
+  await currentTools.locator("summary").click();
+  await currentTools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
+  await expect(currentTools.getByRole("status")).toContainText("could not confirm the link change");
+  await expect(currentTools.getByTestId("seller-url")).toHaveCount(0);
+  await expect(currentTools.getByRole("img")).toHaveCount(0);
+  await expect(currentTools.getByRole("button", { name: "Copy link", exact: true })).toHaveCount(0);
+  await currentTools.getByRole("button", { name: "Get my sharing link", exact: true }).click();
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
+  await expect(createDialog).not.toBeVisible();
+  const recoveredUrl = await currentTools.getByTestId("seller-url").innerText();
+  expect(recoveredUrl).not.toBe(newUrl);
+  await supporter.goto(recoveredUrl);
+  await expect(supporter.getByRole("button", { name: "Send nonbinding request", exact: true })).toBeVisible();
+  // Revoking requires its own confirmation; requests and recorded sales survive.
   await currentTools.getByRole("button",{name:"Revoke seller link",exact:true}).click();
+  await disableDialog.getByRole("button", { name: "Confirm disable link", exact: true }).click();
   await expect(currentTools.getByRole("status")).toContainText("Link revoked");
-  await supporter.goto(newUrl);await expect(supporter.getByRole("button",{name:"Send nonbinding request"})).toHaveCount(0);
+  await supporter.goto(recoveredUrl);await expect(supporter.getByRole("button",{name:"Send nonbinding request"})).toHaveCount(0);
+  expect((await family.rpc("seller_request_inbox", { p_organization_id: orgId, p_campaign_id: id })).data).toHaveLength(1);
+  expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(1);
   // Invalid and cross-origin requests never become sales.
   const invalid=await supporter.request.post(`${newUrl}/request`,{data:{key:randomUUID(),request:{name:"Bad"}}});expect(invalid.status()).toBe(200);
   const crossOrigin=await supporter.request.post(`${newUrl}/request`,{headers:{Origin:"https://other.example"},data:{}});expect(crossOrigin.status()).toBe(403);
