@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CAMPAIGN_STATUSES } from "@/lib/campaigns/lifecycle";
 import { id } from "@/lib/validation";
 import { OFFLINE_PAYMENT_METHODS } from "./schemas";
+import { salePricingSnapshotSchema, ticketBundlesSchema } from "./campaign-pricing";
 
 const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const optionalCents = count.nullable();
@@ -12,6 +13,7 @@ export const campaignSummarySchema = z.object({
   name: z.string(),
   status: z.enum(CAMPAIGN_STATUSES),
   ticket_price_cents: optionalCents,
+  ticket_packages: ticketBundlesSchema.default([]),
   goal_amount_cents: optionalCents,
   player_goal_default_cents: optionalCents,
   team_goal_default_cents: optionalCents,
@@ -63,7 +65,7 @@ export const campaignProgressSchema = fundraisingCampaignSchema.extend({
   teams: z.array(campaignTeamProgressSchema),
   recent_sales: z.array(recentCampaignSaleSchema),
 });
-export const recordedSaleSchema = z.object({ sale_id: id, ticket_numbers: z.array(z.string()), amount_cents: count, quantity: count, replayed: z.boolean() });
+export const recordedSaleSchema = z.object({ sale_id: id, ticket_numbers: z.array(z.string()), amount_cents: count, quantity: count, replayed: z.boolean(), pricing_snapshot: salePricingSnapshotSchema.nullish().transform((value) => value ?? null) });
 
 export type CampaignSummary = z.infer<typeof campaignSummarySchema>;
 export type FundraisingTotals = z.infer<typeof fundraisingTotalsSchema>;

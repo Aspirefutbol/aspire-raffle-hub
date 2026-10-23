@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { id, optionalEmail, optionalPhone, optionalText, requiredText } from "@/lib/validation";
 import { CAMPAIGN_STATUSES } from "./lifecycle";
+import { approvedTicketPackages, ticketBundlesSchema } from "@/lib/fundraising/campaign-pricing";
 
 const cents = z.number().int().min(0).max(100_000_000).nullish().transform((v) => v ?? null);
 const optionalTimestamp = z.iso.datetime({ offset: true }).nullish().transform((v) => v ?? null);
@@ -10,6 +11,7 @@ export const campaignFieldsSchema = z.object({
   description: optionalText(2000),
   season_id: id.nullish().transform((v) => v ?? null),
   ticket_price_cents: z.number().int().min(1).max(100_000).nullish().transform((v) => v ?? null),
+  ticket_packages: ticketBundlesSchema.optional(),
   goal_amount_cents: cents,
   player_goal_default_cents: cents,
   team_goal_default_cents: cents,
@@ -32,7 +34,11 @@ export const campaignFieldsSchema = z.object({
   rules_text: optionalText(20_000),
 });
 
-export const createCampaignSchema = campaignFieldsSchema;
+export const createCampaignSchema = campaignFieldsSchema.superRefine((data, ctx) => {
+  if ((data.ticket_packages?.length ?? 0) > 0 && !approvedTicketPackages(data.ticket_price_cents, data.ticket_packages)) {
+    ctx.addIssue({ code: "custom", path: ["ticket_packages"], message: "Set a single-ticket price, use distinct package quantities, and price each package at or below the equivalent singles." });
+  }
+});
 
 export const updateCampaignSchema = campaignFieldsSchema.partial().extend({ campaign_id: id });
 

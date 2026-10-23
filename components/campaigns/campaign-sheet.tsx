@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { Sheet } from "@/components/ui/sheet";
+import { TicketPricingFields } from "./ticket-pricing-fields";
 import { createCampaignDraft, updateCampaign } from "@/lib/campaigns/actions";
 import { editableFieldsFilter, isCampaignStatus } from "@/lib/campaigns/lifecycle";
 import { createCampaignSchema } from "@/lib/campaigns/schemas";
@@ -43,8 +44,14 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
     const moneyFields = ["ticket_price_cents", "goal_amount_cents", "player_goal_default_cents", "team_goal_default_cents"];
     const invalidMoney = moneyFields.filter((key) => text(key) && money(key) === null);
     if (invalidMoney.length) { setErrors(Object.fromEntries(invalidMoney.map((key) => [key, "Enter dollars with up to two decimal places."]))); return; }
+    let bundles: unknown = campaign?.ticket_packages ?? [];
+    if (!locked("ticket_packages")) {
+      try { bundles = JSON.parse(String(form.get("ticket_packages") ?? "[]")); }
+      catch { setErrors({ ticket_packages: "Check the ticket package details." }); return; }
+    }
     const parsed = createCampaignSchema.safeParse({
       name: text("name"), description: text("description"), season_id: text("season_id") || null,
+      ticket_packages: bundles,
       ticket_price_cents: money("ticket_price_cents"), goal_amount_cents: money("goal_amount_cents"),
       player_goal_default_cents: money("player_goal_default_cents"), team_goal_default_cents: money("team_goal_default_cents"),
       default_allocation: text("default_allocation") ? Number(text("default_allocation")) : null,
@@ -66,6 +73,7 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
         if (["starts_at", "sales_close_at", "draw_at"].includes(key)) {
           return text(key) !== localTimestamp(campaign[key as "starts_at"]);
         }
+        if (key === "ticket_packages") return JSON.stringify(value) !== JSON.stringify(campaign.ticket_packages);
         return value !== campaign[key as keyof Campaign];
       }));
       run(() => updateCampaign(orgSlug, { ...changes, campaign_id: campaign.id }), { onSuccess: onClose, onError });
@@ -76,14 +84,16 @@ function CampaignSheet({ orgSlug, campaign, seasons, onClose }: { orgSlug: strin
 
   return <Sheet open onClose={() => !pending && onClose()} title={campaign ? "Edit raffle campaign" : "New raffle campaign"} description="Configure the raffle before a director activates ticket sales." wide footer={<div className="flex justify-end gap-2"><Button variant="secondary" disabled={pending} onClick={onClose}>Cancel</Button><Button type="submit" form="campaign-form" loading={pending}>{campaign ? "Save changes" : "Create draft"}</Button></div>}>
     <form id="campaign-form" onSubmit={submit} className="space-y-6">
-      {campaign?.status === "ACTIVE" && <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft">Ticket price, prefix, name, season, sales start, drawing date, prize/purpose disclosures, raffle-year number, compliance attestation, and raffle rules are locked after activation. Goals, description, sales close, inventory defaults, and support contact remain editable.</p>}
+      {campaign?.status === "ACTIVE" && <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft">Ticket price and packages, prefix, name, season, sales start, drawing date, prize/purpose disclosures, raffle-year number, compliance attestation, and raffle rules are locked after activation. Goals, description, sales close, inventory defaults, and support contact remain editable.</p>}
       <fieldset disabled={pending} className="space-y-4">
         <Field label="Campaign name" htmlFor="campaign-name" required error={errors.name}><Input id="campaign-name" name="name" disabled={locked("name")} required maxLength={120} defaultValue={campaign?.name ?? ""} autoFocus /></Field>
         <Field label="Description" htmlFor="campaign-description" error={errors.description}><Textarea id="campaign-description" name="description" maxLength={2000} defaultValue={campaign?.description ?? ""} /></Field>
         <Field label="Season" htmlFor="campaign-season"><Select id="campaign-season" name="season_id" disabled={locked("season_id")} defaultValue={campaign?.season_id ?? ""}><option value="">No season</option>{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</Select></Field>
+        <TicketPricingFields single={campaign?.ticket_price_cents ?? null} bundles={campaign?.ticket_packages ?? []}
+          locked={locked("ticket_packages")} error={errors.ticket_packages} singleError={errors.ticket_price_cents} />
         <div className="grid gap-4 sm:grid-cols-2">
           {([
-            ["ticket_price_cents", "Ticket price ($)"], ["goal_amount_cents", "Campaign goal ($)"],
+            ["goal_amount_cents", "Campaign goal ($)"],
             ["player_goal_default_cents", "Default player goal ($)"], ["team_goal_default_cents", "Default team goal ($)"],
           ] as const).map(([key, label]) => <Field key={key} label={label} htmlFor={`campaign-${key}`} error={errors[key]}><Input id={`campaign-${key}`} name={key} disabled={locked(key)} inputMode="decimal" placeholder="0.00" defaultValue={centsToDollars(campaign?.[key])} /></Field>)}
           <Field label="Tickets per player" htmlFor="campaign-allocation" hint="Default assigned inventory; prepared after activation." error={errors.default_allocation}><Input id="campaign-allocation" name="default_allocation" type="number" min={0} max={10000} defaultValue={campaign?.default_allocation ?? 20} /></Field>

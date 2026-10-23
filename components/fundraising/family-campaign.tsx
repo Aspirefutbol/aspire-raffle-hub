@@ -7,6 +7,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/fundraising/money";
+import { ticketOfferText } from "@/lib/fundraising/campaign-pricing";
 import type { CampaignParticipantProgress, CampaignProgress } from "@/lib/fundraising/types";
 
 function saleUnavailable(progress: CampaignProgress, participant: CampaignParticipantProgress): string | null {
@@ -47,7 +48,7 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
           </div>}
           <p className="text-xs text-muted">
             Sales close {formatDate(campaign.sales_close_at, timeZone)}
-            {campaign.ticket_price_cents != null && <> · {formatMoney(campaign.ticket_price_cents)} per ticket</>}
+            {campaign.ticket_price_cents != null && <> · {ticketOfferText(campaign.ticket_price_cents, campaign.ticket_packages)}</>}
           </p>
           <div className="grid gap-4 md:grid-cols-2">
             {progress.participants.map((participant) => {
@@ -86,12 +87,12 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                     )}
                   </div>
                   <div className="space-y-3">
-                    {detail && participant.status === "active" && <SellerTools orgSlug={orgSlug} participantId={participant.id} price={campaign.ticket_price_cents}/>}
+                    {detail && participant.status === "active" && <SellerTools orgSlug={orgSlug} participantId={participant.id} price={campaign.ticket_price_cents} ticketPackages={campaign.ticket_packages}/>}
                     {detail && <ButtonLink variant="secondary" href={`/o/${orgSlug}/fundraising/${campaign.id}/requests`}>Check supporter requests</ButtonLink>}
                     <div className="space-y-2 rounded-control border border-line bg-surface p-3">
                       <p className="text-sm font-semibold text-ink">Received payment? Record a sale</p>
                       <p className="text-xs text-muted">Only an authorized seller should record tickets after receiving cash or a check.</p>
-                      <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents}
+                      <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents} ticketPackages={campaign.ticket_packages}
                         participant={participant} className="w-full" label="Record completed sale" />
                       {unavailable && <p className="text-xs text-muted">{unavailable}</p>}
                     </div>

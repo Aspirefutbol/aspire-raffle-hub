@@ -137,13 +137,13 @@ isOneToOne: false
                   ]
                 },"campaign_sales": {
                   Row: {
-                    "amount_cents": number,"buyer_email": string | null,"buyer_name": string,"buyer_phone": string | null,"campaign_id": string,"collection_event_id": string,"corrects_sale_id": string | null,"created_at": string,"created_by": string,"id": string,"idempotency_key": string,"notes": string | null,"organization_id": string,"participant_id": string,"payment_method": string,"quantity": number,"request_fingerprint": string,"sold_at": string
+                    "amount_cents": number,"buyer_email": string | null,"buyer_name": string,"buyer_phone": string | null,"campaign_id": string,"collection_event_id": string,"corrects_sale_id": string | null,"created_at": string,"created_by": string,"id": string,"idempotency_key": string,"notes": string | null,"organization_id": string,"participant_id": string,"payment_method": string,"pricing_snapshot": Json | null,"quantity": number,"request_fingerprint": string,"sold_at": string
                   }
                   Insert: {
-                    "amount_cents": number,"buyer_email"?: string | null,"buyer_name": string,"buyer_phone"?: string | null,"campaign_id": string,"collection_event_id": string,"corrects_sale_id"?: string | null,"created_at"?: string,"created_by"?: string,"id"?: string,"idempotency_key": string,"notes"?: string | null,"organization_id": string,"participant_id": string,"payment_method": string,"quantity": number,"request_fingerprint": string,"sold_at"?: string
+                    "amount_cents": number,"buyer_email"?: string | null,"buyer_name": string,"buyer_phone"?: string | null,"campaign_id": string,"collection_event_id": string,"corrects_sale_id"?: string | null,"created_at"?: string,"created_by"?: string,"id"?: string,"idempotency_key": string,"notes"?: string | null,"organization_id": string,"participant_id": string,"payment_method": string,"pricing_snapshot"?: Json | null,"quantity": number,"request_fingerprint": string,"sold_at"?: string
                   }
                   Update: {
-                    "amount_cents"?: number,"buyer_email"?: string | null,"buyer_name"?: string,"buyer_phone"?: string | null,"campaign_id"?: string,"collection_event_id"?: string,"corrects_sale_id"?: string | null,"created_at"?: string,"created_by"?: string,"id"?: string,"idempotency_key"?: string,"notes"?: string | null,"organization_id"?: string,"participant_id"?: string,"payment_method"?: string,"quantity"?: number,"request_fingerprint"?: string,"sold_at"?: string
+                    "amount_cents"?: number,"buyer_email"?: string | null,"buyer_name"?: string,"buyer_phone"?: string | null,"campaign_id"?: string,"collection_event_id"?: string,"corrects_sale_id"?: string | null,"created_at"?: string,"created_by"?: string,"id"?: string,"idempotency_key"?: string,"notes"?: string | null,"organization_id"?: string,"participant_id"?: string,"payment_method"?: string,"pricing_snapshot"?: Json | null,"quantity"?: number,"request_fingerprint"?: string,"sold_at"?: string
                   }
                   Relationships: [
                     {
@@ -237,13 +237,13 @@ isOneToOne: false
                   ]
                 },"campaigns": {
                   Row: {
-                    "activated_at": string | null,"activated_by": string | null,"archived_at": string | null,"archived_by": string | null,"campaign_type": string,"charitable_purpose": string | null,"closed_at": string | null,"closed_by": string | null,"compliance_attestation": Json | null,"compliance_confirmation_hash": string | null,"compliance_confirmed_at": string | null,"compliance_confirmed_by": string | null,"created_at": string,"created_by": string | null,"default_allocation": number | null,"description": string | null,"draw_at": string | null,"drawn_at": string | null,"drawn_by": string | null,"family_target_tickets": number | null,"goal_amount_cents": number | null,"id": string,"jurisdiction_mode": string | null,"name": string,"operator_address": Json | null,"operator_legal_name": string | null,"organization_id": string,"player_goal_default_cents": number | null,"prize_description": string | null,"raffle_year_sequence": number | null,"rules_text": string | null,"rules_version": number,"sales_close_at": string | null,"season_id": string | null,"settings": NonNullable<Json>,"starts_at": string | null,"status": string,"support_email": string | null,"support_phone": string | null,"team_goal_default_cents": number | null,"ticket_prefix": string | null,"ticket_price_cents": number | null,"timezone": string | null,"updated_at": string,"updated_by": string | null,"campaign_compliance_fields": Json | null,"campaign_locked_fields": Json | null
+                    "activated_at": string | null,"activated_by": string | null,"archived_at": string | null,"archived_by": string | null,"campaign_type": string,"charitable_purpose": string | null,"closed_at": string | null,"closed_by": string | null,"compliance_attestation": Json | null,"compliance_confirmation_hash": string | null,"compliance_confirmed_at": string | null,"compliance_confirmed_by": string | null,"created_at": string,"created_by": string | null,"default_allocation": number | null,"description": string | null,"draw_at": string | null,"drawn_at": string | null,"drawn_by": string | null,"family_target_tickets": number | null,"goal_amount_cents": number | null,"id": string,"jurisdiction_mode": string | null,"name": string,"operator_address": Json | null,"operator_legal_name": string | null,"organization_id": string,"player_goal_default_cents": number | null,"prize_description": string | null,"raffle_year_sequence": number | null,"rules_text": string | null,"rules_version": number,"sales_close_at": string | null,"season_id": string | null,"settings": NonNullable<Json>,"starts_at": string | null,"status": string,"support_email": string | null,"support_phone": string | null,"team_goal_default_cents": number | null,"ticket_packages": NonNullable<Json>,"ticket_prefix": string | null,"ticket_price_cents": number | null,"timezone": string | null,"updated_at": string,"updated_by": string | null,"campaign_compliance_fields": Json | null,"campaign_locked_fields": Json | null
                   }
                   Insert: {
-                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"charitable_purpose"?: string | null,"closed_at"?: string | null,"closed_by"?: string | null,"compliance_attestation"?: Json | null,"compliance_confirmation_hash"?: string | null,"compliance_confirmed_at"?: string | null,"compliance_confirmed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name": string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id": string,"player_goal_default_cents"?: number | null,"prize_description"?: string | null,"raffle_year_sequence"?: number | null,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"team_goal_default_cents"?: number | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"charitable_purpose"?: string | null,"closed_at"?: string | null,"closed_by"?: string | null,"compliance_attestation"?: Json | null,"compliance_confirmation_hash"?: string | null,"compliance_confirmed_at"?: string | null,"compliance_confirmed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name": string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id": string,"player_goal_default_cents"?: number | null,"prize_description"?: string | null,"raffle_year_sequence"?: number | null,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"team_goal_default_cents"?: number | null,"ticket_packages"?: NonNullable<Json>,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"charitable_purpose"?: string | null,"closed_at"?: string | null,"closed_by"?: string | null,"compliance_attestation"?: Json | null,"compliance_confirmation_hash"?: string | null,"compliance_confirmed_at"?: string | null,"compliance_confirmed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name"?: string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id"?: string,"player_goal_default_cents"?: number | null,"prize_description"?: string | null,"raffle_year_sequence"?: number | null,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"team_goal_default_cents"?: number | null,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "activated_at"?: string | null,"activated_by"?: string | null,"archived_at"?: string | null,"archived_by"?: string | null,"campaign_type"?: string,"charitable_purpose"?: string | null,"closed_at"?: string | null,"closed_by"?: string | null,"compliance_attestation"?: Json | null,"compliance_confirmation_hash"?: string | null,"compliance_confirmed_at"?: string | null,"compliance_confirmed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"default_allocation"?: number | null,"description"?: string | null,"draw_at"?: string | null,"drawn_at"?: string | null,"drawn_by"?: string | null,"family_target_tickets"?: number | null,"goal_amount_cents"?: number | null,"id"?: string,"jurisdiction_mode"?: string | null,"name"?: string,"operator_address"?: Json | null,"operator_legal_name"?: string | null,"organization_id"?: string,"player_goal_default_cents"?: number | null,"prize_description"?: string | null,"raffle_year_sequence"?: number | null,"rules_text"?: string | null,"rules_version"?: number,"sales_close_at"?: string | null,"season_id"?: string | null,"settings"?: NonNullable<Json>,"starts_at"?: string | null,"status"?: string,"support_email"?: string | null,"support_phone"?: string | null,"team_goal_default_cents"?: number | null,"ticket_packages"?: NonNullable<Json>,"ticket_prefix"?: string | null,"ticket_price_cents"?: number | null,"timezone"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -1392,6 +1392,9 @@ isOneToOne: false
 "campaign_readiness":
 { Args: { "p_campaign_id": string }; Returns: (string)[]
                            },
+"campaign_sale_pricing":
+{ Args: { "p_packages": Json,"p_quantity": number,"p_single": number }; Returns: Json
+                           },
 "campaign_transition_allowed":
 { Args: { "p_from": string,"p_to": string }; Returns: boolean
                            },
@@ -1516,6 +1519,7 @@ isOneToOne: false
 "support_email": string | null,
 "support_phone": string | null,
 "team_goal_default_cents": number | null,
+"ticket_packages": NonNullable<Json>,
 "ticket_prefix": string | null,
 "ticket_price_cents": number | null,
 "timezone": string | null,
@@ -1649,6 +1653,9 @@ isOneToOne: false
 "public_seller_page":
 { Args: { "p_token": string }; Returns: Json
                            },
+"quote_campaign_ticket_packages":
+{ Args: { "p_packages": Json,"p_quantity": number,"p_single": number }; Returns: Json
+                           },
 "record_campaign_sale":
 { Args: { "p_amount_cents": number,"p_buyer_email"?: string,"p_buyer_name": string,"p_buyer_phone"?: string,"p_campaign_id": string,"p_corrects_sale_id"?: string,"p_idempotency_key": string,"p_notes"?: string,"p_organization_id": string,"p_participant_id": string,"p_payment_method": string,"p_quantity": number,"p_sold_at"?: string }; Returns: Json
                            },
@@ -1669,6 +1676,9 @@ isOneToOne: false
                            },
 "roster_overview":
 { Args: { "p_organization_id": string }; Returns: Json
+                           },
+"sale_pricing_consistent":
+{ Args: { "c": Database["public"]['Tables']["campaigns"]['Row'],"s": Database["public"]['Tables']["campaign_sales"]['Row'] }; Returns: boolean
                            },
 "sale_ticket_receipt":
 { Args: { "p_organization_id": string,"p_sale_id": string }; Returns: Json
@@ -1731,6 +1741,9 @@ isOneToOne: false
                            },
 "upsert_campaign_prize":
 { Args: { "p_campaign_id": string,"p_description": string,"p_evidence_ref": string,"p_fair_value_cents": number,"p_name": string,"p_organization_id": string,"p_possession_basis": string,"p_prize_id"?: string,"p_source": string }; Returns: string
+                           },
+"valid_campaign_ticket_packages":
+{ Args: { "p_packages": Json,"p_single": number }; Returns: boolean
                            },
 "verify_audit_chain":
 { Args: { "p_organization_id": string }; Returns: {

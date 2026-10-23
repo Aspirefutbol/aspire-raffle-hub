@@ -64,6 +64,7 @@ jobs:
         run: |
           set -a && . ./.env.local && set +a
           npm run test:concurrency
+          npm run test:package-concurrency
       - name: Concurrent drawing freeze, reversal, reopening, and certification
         run: |
           set -a && . ./.env.local && set +a
