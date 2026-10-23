@@ -99,7 +99,7 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
       <p className="text-xs text-muted">Already saved a link? Keep using it. Creating another replaces the previous link and QR code. Your player’s name is not shown on the supporter page.</p>
     </> : <>
       <p className="text-xs font-medium text-ink">Your link is ready. Pick how to share it:</p>
-      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2">
         <Button size="lg" disabled={pending} onClick={() => copy("link")}>Copy link</Button>
         <Button size="lg" variant="secondary" disabled={pending} onClick={() => copy("message")}>Copy message</Button>
       </div>
@@ -112,7 +112,7 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
         <button type="button" disabled={pending || qrPending} onClick={showQr}>{qrPending ? "Creating QR code…" : "Show QR code"}</button>
       </div>
       {qr && <div>
-        <Image unoptimized src={qr} alt="QR code for your supporter request page" width={240} height={240} className="max-w-full" />
+        <Image unoptimized src={qr} alt="QR code for your supporter request page" width={240} height={240} className="h-auto max-w-full" />
         <a href={qr} download="fundraiser-qr.png" className="inline-flex min-h-11 items-center text-sm underline">Download QR code</a>
       </div>}
       <p className="break-words text-xs">{links.text}</p>
@@ -127,8 +127,8 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
       <summary className="min-h-11 cursor-pointer py-3 text-xs font-medium text-muted">Link settings</summary>
       <div className="space-y-2 pb-1">
         <p className="text-xs text-muted">Only change these settings when you need to replace or disable a link. Links and printed QR codes already shared will stop working.</p>
-        {url && <Button variant="secondary" className="min-h-11 w-full" disabled={pending} onClick={() => setConfirmation("create")}>Create a new sharing link</Button>}
-        <Button variant="danger" className="min-h-11 w-full" disabled={pending} onClick={() => setConfirmation("revoke")}>{url ? "Revoke seller link" : "Revoke any saved seller link"}</Button>
+        {url && <Button variant="secondary" className="min-h-11 h-auto w-full whitespace-normal py-2" disabled={pending} onClick={() => setConfirmation("create")}>Create a new sharing link</Button>}
+        <Button variant="danger" className="min-h-11 h-auto w-full whitespace-normal py-2" disabled={pending} onClick={() => setConfirmation("revoke")}>{url ? "Revoke seller link" : "Revoke any saved seller link"}</Button>
       </div>
     </details>
     <Sheet open={confirmation !== null} onClose={() => { if (!mutationInFlight.current) setConfirmation(null); }}
