@@ -14,7 +14,8 @@
   "components/sharing/toolkit.tsx": "425f87004fcd18ed3046bb4145856b37de657dfad7057d0f1606d545568b1cba",
   "docs/PROJECT_STATE.md": "d04ec7c0b07248377166240c8c8435aaafb048d0ecd6feadc61098c087a7d0d3",
   "e2e/ticket-packages.spec.ts": "63ac3200896412a53c6c5dc86dd5b0566518016bcd2df84ea7ecdf6b018aaa22",
-  "lib/campaigns/lifecycle.ts": "101b44b8710733575f262365379656d90f90be24305ce2dbc04471eb8657e5c9",
+  "lib/campaigns/lifecycle.ts": "bae9162b5d955f7f88b9700c0a9bb3594f5032b6f9dea8795ca8ff88c148b85a",
+  "lib/campaigns/lifecycle.test.ts": "c631dca2cbff8381d60c439d3d2329885b51f549a8274330513361c25649558b",
   "lib/campaigns/schemas.ts": "1d6b8c475e0bdc38a4ce67595d7be133f6fe1f005f20256e3c6ecb140efd9dd3",
   "lib/fundraising/campaign-pricing.test.ts": "e6e3a2ea1deeb0bcfdca83047caee29845519095917e4ad0939bc2df086d9326",
   "lib/fundraising/campaign-pricing.ts": "75609526a69a48892965c2e1cb6b6672467d375f4e9a20155d8a4d861a8ca856",
@@ -25,5 +26,5 @@
   "package.json": "6895fb937eb63d4f18a58bb44768d5032a54ed13215894ff234653e3c77990c8",
   "scripts/test-package-concurrency.mjs": "94639e240d667d422eac22b015f9b31ebe60d84ce5ef62d5f0cf8f922f980b18",
   "supabase/migrations/20261023181600_ticket_pricing_packages.sql": "7e1f6cfb398d6367943ed3aa6c98b4175fef118633ee709ad4342b8d034c49d5",
-  "supabase/tests/ticket_packages.test.sql": "b0b8e9f8d37108b9576a72085ca89deb3cd8238b201b973e7ed7de523ec2696b"
+  "supabase/tests/ticket_packages.test.sql": "fb47e13182020417e00d89dcf4e6a1df43b9268d0217a23f2b2a876f27f61055"
 }

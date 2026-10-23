@@ -20,4 +20,10 @@ p=Path('docs/PROJECT_STATE.md');s=p.read_text();s=replace(s,'_Last updated: 2026
 p=Path('supabase/tests/ticket_packages.test.sql');s=p.read_text()
 for key in ['expected_cents','received_cents']:
  s=replace(s,f"(select sum({key}) from public.money_sale_balances where campaign_id=pg_temp.id('campaign')),20000::numeric",f"(public.campaign_money(pg_temp.id('org'),pg_temp.id('campaign'),'admin')->'totals'->>'{key}')::bigint,20000::bigint")
+# now() is transaction-stable; distinct sale times make the existing FIFO allocation deterministic.
+old="'five','Synthetic Buyer',5,9000,'cash')"
+if s.count(old)!=2: raise ValueError('Expected original sale and exact replay')
+s=s.replace(old,"'five','Synthetic Buyer',5,9000,'cash',p_sold_at=>now()-interval '1 hour')")
 p.write_text(s)
+# Mirror the existing database attestation lock as well as the new package lock.
+p=Path('lib/campaigns/lifecycle.ts');p.write_text(replace(p.read_text(),'"compliance_confirmed_at", "compliance_confirmed_by", "compliance_confirmation_hash",','"compliance_confirmed_at", "compliance_confirmed_by", "compliance_confirmation_hash", "compliance_attestation",'))
