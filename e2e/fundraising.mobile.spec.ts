@@ -90,14 +90,14 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${campaignId}`);
   await expect(page.getByRole("heading", { name: "My fundraising", exact: true })).toBeVisible();
-  await expect(page.getByTestId("family-campaign").getByRole("heading", { level: 2 })).toContainText(campaignName);
+  await expect(page.getByTestId("family-campaign").getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
   const card = page.getByTestId("family-player-card");
   await expect(card).toHaveCount(1);
   await expect(card.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("Mateo Garcia");
   await expect(page.locator("main")).not.toContainText("Isaac Martinez");
   await expectPhoneLayout(page);
-  await card.getByRole("button", { name: "Record sale", exact: true }).click();
+  await card.getByRole("button", { name: "Record completed sale", exact: true }).click();
   const sale = page.getByRole("dialog", { name: "Record sale", exact: true });
   await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Phone cash buyer");
   await sale.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("2");
@@ -148,7 +148,7 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(page.getByRole("heading", { name: "Team fundraising", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Mateo Garcia", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Record sale", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^(Record sale|Record completed sale|Resume sale)$/ })).toHaveCount(0);
   await expectPhoneLayout(page);
   await page.screenshot({ path: testInfo.outputPath("phone-team-progress.png"), fullPage: false });
 });
