@@ -13,7 +13,7 @@
   "components/sharing/seller-tools.tsx": "51f58542fb0cffc248a46638e2b950e09369f994f022c5ed2f2fa1a603e8551f",
   "components/sharing/toolkit.tsx": "425f87004fcd18ed3046bb4145856b37de657dfad7057d0f1606d545568b1cba",
   "docs/PROJECT_STATE.md": "d04ec7c0b07248377166240c8c8435aaafb048d0ecd6feadc61098c087a7d0d3",
-  "e2e/ticket-packages.spec.ts": "63ac3200896412a53c6c5dc86dd5b0566518016bcd2df84ea7ecdf6b018aaa22",
+  "e2e/ticket-packages.spec.ts": "54e279aa117d48e93e0bb9c8dc0066f7627a77bb42c6b706f577ba522fa91f2b",
   "lib/campaigns/lifecycle.ts": "bae9162b5d955f7f88b9700c0a9bb3594f5032b6f9dea8795ca8ff88c148b85a",
   "lib/campaigns/lifecycle.test.ts": "c631dca2cbff8381d60c439d3d2329885b51f549a8274330513361c25649558b",
   "lib/campaigns/schemas.ts": "1d6b8c475e0bdc38a4ce67595d7be133f6fe1f005f20256e3c6ecb140efd9dd3",

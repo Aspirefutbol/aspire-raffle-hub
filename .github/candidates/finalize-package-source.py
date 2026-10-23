@@ -27,3 +27,13 @@ s=s.replace(old,"'five','Synthetic Buyer',5,9000,'cash',p_sold_at=>now()-interva
 p.write_text(s)
 # Mirror the existing database attestation lock as well as the new package lock.
 p=Path('lib/campaigns/lifecycle.ts');p.write_text(replace(p.read_text(),'"compliance_confirmed_at", "compliance_confirmed_by", "compliance_confirmation_hash",','"compliance_confirmed_at", "compliance_confirmed_by", "compliance_confirmation_hash", "compliance_attestation",'))
+
+# Required-field labels contain an aria-hidden asterisk. Match the accessible
+# control name and role, as existing accepted browser journeys already do.
+p=Path('e2e/ticket-packages.spec.ts');s=p.read_text()
+for label, role, count in [('Campaign name','textbox',1),('Buyer name','textbox',3),('Quantity','spinbutton',3),('Amount collected ($)','textbox',5),('Reason for reversal','textbox',1)]:
+ old=f'getByLabel("{label}", {{ exact: true }})'
+ if s.count(old)!=count: raise ValueError('Unexpected required-field selector count: '+label)
+ s=s.replace(old,f'getByRole("{role}", {{ name: "{label}", exact: true }})')
+s=replace(s,'async function timestamp(page: Page, value: number) {','// Bound a missing control to a focused failure instead of the full journey timeout.\ntest.use({ actionTimeout: 15_000 });\n\nasync function timestamp(page: Page, value: number) {')
+p.write_text(s)
