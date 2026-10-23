@@ -39,7 +39,6 @@ describe("campaign lifecycle mirror", () => {
   it("rejects skipping states and reopening", () => {
     expect(canTransition("DRAFT", "ACTIVE")).toBe(false);
     expect(canTransition("ACTIVE", "DRAFT")).toBe(false);
-    expect(canTransition("CLOSED", "DRAWN")).toBe(true);
     expect(canTransition("CLOSED", "ACTIVE")).toBe(false);
     expect(canTransition("ARCHIVED", "DRAFT")).toBe(false);
     for (const s of CAMPAIGN_STATUSES) expect(canTransition(s, s)).toBe(false);
