@@ -25,7 +25,8 @@
     "test:drawing-concurrency": "node --env-file=.env.local scripts/test-drawing-concurrency.mjs",
     "audit:checkpoint": "node --env-file-if-exists=.env.local scripts/audit-checkpoint.mjs",
     "test:money-concurrency": "node --env-file=.env.local scripts/test-money-concurrency.mjs",
-    "test:sharing-concurrency": "node --env-file=.env.local scripts/test-sharing-concurrency.mjs"
+    "test:sharing-concurrency": "node --env-file=.env.local scripts/test-sharing-concurrency.mjs",
+    "test:package-concurrency": "node --env-file=.env.local scripts/test-package-concurrency.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",

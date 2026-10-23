@@ -6,10 +6,11 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { Sheet } from "@/components/ui/sheet";
 import { recordCampaignSale, reverseCampaignSale } from "@/lib/fundraising/actions";
-import { dollarsToCents, formatMoney, saleAmountCents } from "@/lib/fundraising/money";
+import { dollarsToCents, formatMoney } from "@/lib/fundraising/money";
 import { recordCampaignSaleSchema, type OfflinePaymentMethod } from "@/lib/fundraising/schemas";
 import type { CampaignParticipantProgress, RecentCampaignSale, RecordedSale } from "@/lib/fundraising/types";
 import { useActionRunner } from "@/lib/hooks/use-action-runner";
+import { campaignTicketQuote, quoteBreakdownText, ticketOfferText } from "@/lib/fundraising/campaign-pricing";
 
 type SalePayload = Parameters<typeof recordCampaignSaleSchema.parse>[0] & Record<string, unknown>;
 
@@ -21,10 +22,11 @@ function localSaleTimestamp(value: unknown): string {
 }
 
 /** Keeps an uncertain submission intact across retries and closing the sheet. */
-export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, participant, label = "Record sale", className, correctsSaleId, alreadyCorrected = false, prefill, onRecorded }: {
+export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticketPackages = [], participant, label = "Record sale", className, correctsSaleId, alreadyCorrected = false, prefill, onRecorded }: {
   orgSlug: string;
   campaignId: string;
   ticketPriceCents: number | null;
+  ticketPackages?: unknown;
   participant: CampaignParticipantProgress;
   label?: string;
   className?: string;
@@ -40,8 +42,9 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
   const [error, setError] = useState<string | null>(null);
   const [canEdit, setCanEdit] = useState(false);
   const [pending, startTransition] = useTransition();
-  const amount = ticketPriceCents ? saleAmountCents(Number(quantity), ticketPriceCents) : null;
-  const canStart = !alreadyCorrected && participant.can_record_sale && participant.available_tickets > 0 && ticketPriceCents !== null;
+  const quote = campaignTicketQuote(Number(quantity), ticketPriceCents, ticketPackages);
+  const amount = quote?.totalCents ?? null;
+  const canStart = !alreadyCorrected && participant.can_record_sale && participant.available_tickets > 0 && campaignTicketQuote(1, ticketPriceCents, ticketPackages) !== null;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,7 +66,7 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
       corrects_sale_id: correctsSaleId ?? null,
     });
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check the sale details."); return; }
-    if (amount !== parsed.data.amount_cents) { setError("Amount collected must equal the quantity × ticket price."); return; }
+    if (amount !== parsed.data.amount_cents) { setError("Amount collected must equal the approved ticket package total."); return; }
     setPayload(parsed.data);
     setError(null);
     setCanEdit(false);
@@ -89,12 +92,13 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
   return (
     <>
       {(!alreadyCorrected || payload || receipt) && <Button size="lg" className={className} disabled={!canStart && !payload} onClick={() => setOpen(true)}>{payload && !receipt ? "Resume sale" : label}</Button>}
-      <Sheet open={open} onClose={close} title={receipt ? "Tickets issued" : "Record sale"} description={`${participant.player_name} · ${ticketPriceCents ? formatMoney(ticketPriceCents) : "—"} per ticket`}
+      <Sheet open={open} onClose={close} title={receipt ? "Tickets issued" : "Record sale"} description={`${participant.player_name} · ${ticketOfferText(ticketPriceCents, ticketPackages)}`}
         footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={pending} onClick={close}>{receipt ? "Done" : "Close"}</Button>{canEdit && !receipt && <Button variant="secondary" disabled={pending} onClick={() => { setPayload(null); setCanEdit(false); setError(null); }}>Edit details</Button>}{!receipt && <Button type="submit" form={`sale-${participant.id}`} size="lg" loading={pending}>{payload ? "Retry same sale" : "Record sale"}</Button>}</div>}>
         {receipt ? (
           <div className="space-y-4" role="status">
             <p className="text-sm text-ink-soft">{receipt.quantity} ticket{receipt.quantity === 1 ? "" : "s"} issued for {formatMoney(receipt.amount_cents)}. Payment was recorded offline.</p>
             <div className="rounded-card border border-emerald-200 bg-emerald-50 p-4"><h3 className="mb-2 text-sm font-semibold text-emerald-900">Ticket numbers</h3><ul className="flex flex-wrap gap-2">{receipt.ticket_numbers.map((number) => <li key={number} className="rounded-control bg-white px-2 py-1 font-mono text-sm text-emerald-900">{number}</li>)}</ul></div>
+            {receipt.pricing_snapshot && <p className="text-sm text-ink-soft">{quoteBreakdownText(receipt.pricing_snapshot.quote)}</p>}
             <p className="text-xs text-muted">The sale, ticket, money, and activity history were recorded together.</p>
             <ButtonLink href={`/o/${orgSlug}/tickets/${receipt.sale_id}`} variant="secondary">View / print tickets</ButtonLink>
           </div>
@@ -107,7 +111,8 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, partic
               <Field label="Buyer name" htmlFor={`buyer-name-${participant.id}`} required><Input id={`buyer-name-${participant.id}`} name="buyer_name" required maxLength={200} autoFocus defaultValue={payload ? String(payload.buyer_name) : prefill?.buyer_name ?? ""} /></Field>
               <div className="grid gap-3 sm:grid-cols-2"><Field label="Buyer email" htmlFor={`buyer-email-${participant.id}`} hint="Optional"><Input id={`buyer-email-${participant.id}`} name="buyer_email" type="email" maxLength={254} defaultValue={payload ? String(payload.buyer_email ?? "") : prefill?.buyer_email ?? ""} /></Field><Field label="Buyer phone" htmlFor={`buyer-phone-${participant.id}`} hint="Optional"><Input id={`buyer-phone-${participant.id}`} name="buyer_phone" type="tel" maxLength={50} defaultValue={payload ? String(payload.buyer_phone ?? "") : prefill?.buyer_phone ?? ""} /></Field></div>
               <Field label="Quantity" htmlFor={`quantity-${participant.id}`} hint={`${participant.available_tickets} assigned tickets available`} required><Input id={`quantity-${participant.id}`} name="quantity" type="number" min={1} max={Math.min(500, participant.available_tickets)} value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></Field>
-              <Field label="Amount collected ($)" htmlFor={`amount-${participant.id}`} hint="Must match the ticket face value. No online payment is taken." required><Input key={quantity} id={`amount-${participant.id}`} name="amount" inputMode="decimal" required defaultValue={payload ? String(Number(payload.amount_cents) / 100) : amount === null ? "" : (amount / 100).toFixed(2)} /></Field>
+              {quote && <div className="rounded-control border border-line bg-canvas p-3" role="status" aria-label="Sale pricing summary"><p className="text-lg font-semibold">Total: {formatMoney(quote.totalCents)}</p><p className="mt-1 text-sm text-muted">{quoteBreakdownText(quote)}</p></div>}
+              <Field label="Amount collected ($)" htmlFor={`amount-${participant.id}`} hint="Must match the total shown above. Only record cash or a check already received." required><Input key={quantity} id={`amount-${participant.id}`} name="amount" inputMode="decimal" required defaultValue={payload ? String(Number(payload.amount_cents) / 100) : amount === null ? "" : (amount / 100).toFixed(2)} /></Field>
               <Field label="Payment method" htmlFor={`payment-${participant.id}`}><Select id={`payment-${participant.id}`} name="payment_method" defaultValue={payload ? String(payload.payment_method) : "cash"}><option value="cash">Cash</option><option value="check">Check</option></Select></Field>
               <Field label="Sale timestamp" htmlFor={`sold-at-${participant.id}`} hint="Optional. Leave blank to use the time this sale is recorded. Dates use your device’s time zone."><Input id={`sold-at-${participant.id}`} name="sold_at" type="datetime-local" defaultValue={localSaleTimestamp(payload?.sold_at)} /></Field>
               <Field label="Notes" htmlFor={`notes-${participant.id}`} hint="Optional"><Textarea id={`notes-${participant.id}`} name="notes" maxLength={2000} defaultValue={payload ? String(payload.notes ?? "") : prefill?.notes ?? ""} /></Field>

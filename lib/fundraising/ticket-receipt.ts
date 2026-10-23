@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { OrgContext } from "@/lib/auth/org-context";
 import { createClient } from "@/lib/supabase/server";
 import { id } from "@/lib/validation";
+import { salePricingSnapshotSchema, ticketBundlesSchema } from "./campaign-pricing";
 
 const addressSchema = z.object({
   line1: z.string().min(1),
@@ -26,10 +27,13 @@ export const ticketReceiptSchema = z.object({
   tickets: z.array(z.object({
     ticket_number: z.string(),
     status: z.enum(["AVAILABLE", "ALLOCATED", "ISSUED", "VOIDED"]),
+    price_cents: z.number().int().positive().nullish(),
   })),
   operator_legal_name: z.string().nullish().transform((v) => v ?? null),
   operator_address: addressSchema.nullish().transform((v) => v ?? null),
   ticket_price_cents: z.number().int().positive().nullish().transform((v) => v ?? null),
+  ticket_packages: ticketBundlesSchema.default([]),
+  pricing_snapshot: salePricingSnapshotSchema.nullish().transform((value) => value ?? null),
   prize_description: z.string().nullish().transform((v) => v ?? null),
   charitable_purpose: z.string().nullish().transform((v) => v ?? null),
   draw_at: z.string().nullish().transform((v) => v ?? null),

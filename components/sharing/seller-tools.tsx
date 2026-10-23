@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { manageSellerLink } from "@/lib/sharing/actions";
 import { shareLinks } from "@/lib/sharing/schemas";
 import { formatMoney } from "@/lib/fundraising/money";
-export function SellerTools({ orgSlug, participantId, price }: { orgSlug: string; participantId: string; price: number | null }) {
+import { bundleOfferText } from "@/lib/fundraising/campaign-pricing";
+export function SellerTools({ orgSlug, participantId, price, ticketPackages = [] }: { orgSlug: string; participantId: string; price: number | null; ticketPackages?: unknown }) {
   const [url, setUrl] = useState(""), [qr, setQr] = useState(""), [message, setMessage] = useState("");
   const [pending, start] = useTransition();
-  const links = shareLinks(url, price === null ? "the published price" : formatMoney(price));
+  const links = shareLinks(url, price === null ? "the published price" : formatMoney(price), bundleOfferText(ticketPackages));
   function manage(revoke: boolean) {
     start(async () => {
       try {

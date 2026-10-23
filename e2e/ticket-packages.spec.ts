@@ -4,6 +4,9 @@ import { apiAs, signIn } from "./helpers";
 import { campaignProgressSchema } from "@/lib/fundraising/types";
 import { moneyProjectionSchema } from "@/lib/money/schemas";
 
+// Bound a missing control to a focused failure instead of the full journey timeout.
+test.use({ actionTimeout: 15_000 });
+
 async function timestamp(page: Page, value: number) {
   return page.evaluate((v) => {
     const d = new Date(v), pad = (n: number) => String(n).padStart(2, "0");
@@ -22,7 +25,7 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
   await page.goto("/o/aspire/campaigns");
   await page.getByRole("button", { name: "New campaign", exact: true }).click();
   const draft = page.getByRole("dialog", { name: "New raffle campaign", exact: true });
-  await draft.getByLabel("Campaign name", { exact: true }).fill(name);
+  await draft.getByRole("textbox", { name: "Campaign name", exact: true }).fill(name);
   await draft.getByLabel("Ticket price ($)", { exact: true }).fill("20.00");
   await draft.getByRole("button", { name: "Add ticket package", exact: true }).click();
   await draft.getByLabel("Package 1 tickets", { exact: true }).fill("5");
@@ -64,14 +67,14 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     await expect(family.getByTestId("family-campaign")).toContainText("5 for $90.00");
     await card.getByRole("button", { name: "Record completed sale", exact: true }).click();
     let form = family.getByRole("dialog", { name: "Record sale", exact: true });
-    await form.getByLabel("Buyer name", { exact: true }).fill("Package Cash Buyer");
-    await form.getByLabel("Quantity", { exact: true }).fill("5");
-    await expect(form.getByLabel("Amount collected ($)", { exact: true })).toHaveValue("90.00");
-    await form.getByLabel("Amount collected ($)", { exact: true }).fill("100.00");
+    await form.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Package Cash Buyer");
+    await form.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("5");
+    await expect(form.getByRole("textbox", { name: "Amount collected ($)", exact: true })).toHaveValue("90.00");
+    await form.getByRole("textbox", { name: "Amount collected ($)", exact: true }).fill("100.00");
     await form.getByRole("button", { name: "Record sale", exact: true }).click();
     await expect(form.getByRole("alert")).toContainText("approved ticket package total");
     expect((await progress()).recent_sales).toHaveLength(0);
-    await form.getByLabel("Amount collected ($)", { exact: true }).fill("90.00");
+    await form.getByRole("textbox", { name: "Amount collected ($)", exact: true }).fill("90.00");
     await form.getByRole("button", { name: "Record sale", exact: true }).click();
     await family.getByRole("dialog").getByRole("link", { name: "View / print tickets", exact: true }).click();
     await expect(family.getByTestId("issued-ticket")).toHaveCount(5);
@@ -84,10 +87,10 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
     await card.getByRole("button", { name: "Record completed sale", exact: true }).click();
     form = family.getByRole("dialog", { name: "Record sale", exact: true });
-    await form.getByLabel("Buyer name", { exact: true }).fill("Package Check Buyer");
-    await form.getByLabel("Quantity", { exact: true }).fill("6");
+    await form.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Package Check Buyer");
+    await form.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("6");
     await form.getByLabel("Payment method", { exact: true }).selectOption("check");
-    await expect(form.getByLabel("Amount collected ($)", { exact: true })).toHaveValue("110.00");
+    await expect(form.getByRole("textbox", { name: "Amount collected ($)", exact: true })).toHaveValue("110.00");
     let dropped = false;
     await family.route(`**/o/aspire/fundraising/${campaignId}`, async (route) => {
       if (!dropped && route.request().method() === "POST" && route.request().headers()["next-action"]) {
@@ -108,14 +111,14 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     const row = page.getByTestId(`campaign-sale-${first.id}`);
     await row.getByRole("button", { name: "Reverse sale", exact: true }).click();
     const reversal = page.getByRole("dialog", { name: "Reverse sale", exact: true });
-    await reversal.getByLabel("Reason for reversal", { exact: true }).fill("Synthetic bundle buyer correction");
+    await reversal.getByRole("textbox", { name: "Reason for reversal", exact: true }).fill("Synthetic bundle buyer correction");
     await reversal.getByRole("button", { name: "Confirm reversal", exact: true }).click();
     await expect(reversal).not.toBeVisible();
     await row.getByRole("button", { name: "Record correction", exact: true }).click();
     const correction = page.getByRole("dialog", { name: "Record sale", exact: true });
-    await correction.getByLabel("Buyer name", { exact: true }).fill("Corrected Package Buyer");
-    await correction.getByLabel("Quantity", { exact: true }).fill("5");
-    await expect(correction.getByLabel("Amount collected ($)", { exact: true })).toHaveValue("90.00");
+    await correction.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Corrected Package Buyer");
+    await correction.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("5");
+    await expect(correction.getByRole("textbox", { name: "Amount collected ($)", exact: true })).toHaveValue("90.00");
     await correction.getByRole("button", { name: "Record sale", exact: true }).click();
     await page.getByRole("dialog", { name: "Tickets issued", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
     const replacement = (await progress()).recent_sales.find((sale) => sale.corrects_sale_id === first.id)!;
