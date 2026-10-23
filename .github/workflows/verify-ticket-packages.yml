@@ -1,0 +1,46 @@
+name: Ticket package isolated verification
+
+on:
+  push:
+    branches: [feat/ticket-packages-20261023]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ticket-packages-isolated
+  cancel-in-progress: false
+
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Export tracked source for isolated review
+        run: |
+          mkdir -p /tmp/package-workspace
+          git archive HEAD -o /tmp/package-workspace/source.tar
+          git rev-parse HEAD > /tmp/package-workspace/source-sha.txt
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Export installed framework guides and reserve CLI-generated migration
+        run: |
+          npx supabase --version
+          npx supabase migration new --help
+          npx supabase migration new ticket_pricing_packages
+          find supabase/migrations -name '*_ticket_pricing_packages.sql' -print > /tmp/package-workspace/migration-path.txt
+          test "$(wc -l < /tmp/package-workspace/migration-path.txt)" -eq 1
+          cp "$(cat /tmp/package-workspace/migration-path.txt)" /tmp/package-workspace/
+          if [ -d node_modules/next/dist/docs ]; then tar -cf /tmp/package-workspace/framework-docs.tar -C node_modules/next/dist docs; fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ticket-package-workspace
+          path: /tmp/package-workspace
+          retention-days: 1
+          if-no-files-found: error
