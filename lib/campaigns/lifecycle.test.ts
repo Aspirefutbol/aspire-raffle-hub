@@ -39,6 +39,7 @@ describe("campaign lifecycle mirror", () => {
   it("rejects skipping states and reopening", () => {
     expect(canTransition("DRAFT", "ACTIVE")).toBe(false);
     expect(canTransition("ACTIVE", "DRAFT")).toBe(false);
+    expect(canTransition("CLOSED", "DRAWN")).toBe(true);
     expect(canTransition("CLOSED", "ACTIVE")).toBe(false);
     expect(canTransition("ARCHIVED", "DRAFT")).toBe(false);
     for (const s of CAMPAIGN_STATUSES) expect(canTransition(s, s)).toBe(false);
@@ -50,6 +51,7 @@ describe("campaign lifecycle mirror", () => {
     expect(transitionPermission("DRAWN", "ARCHIVED")).toBe("campaigns.activate");
     expect(transitionPermission("DRAFT", "READY")).toBe("campaigns.manage");
     expect(transitionPermission("ACTIVE", "CLOSED")).toBe("campaigns.manage");
+    expect(transitionPermission("DRAFT", "ARCHIVED")).toBe("campaigns.manage");
   });
 
   it("only DRAFT → READY may skip the reason", () => {
