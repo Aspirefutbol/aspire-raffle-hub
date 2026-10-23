@@ -16,3 +16,8 @@ p=Path('package.json'); value=json.loads(p.read_text()); value['scripts']['test:
 p=Path('.github/workflows/ci.yml');p.write_text(replace(p.read_text(),'          npm run test:concurrency\n','          npm run test:concurrency\n          npm run test:package-concurrency\n'))
 p=Path('AGENTS.md');p.write_text(replace(p.read_text(),'full-face-value integer cents, atomic ledger writes','approved locked-price integer cents (including package snapshots and exact per-ticket allocations), atomic ledger writes'))
 p=Path('docs/PROJECT_STATE.md');s=p.read_text();s=replace(s,'_Last updated: 2026-10-16_','_Historical record below; current implementation checkpoint updated 2026-10-23._');p.write_text(s.replace('# Raffle Hub Project State\n','# Raffle Hub Project State\n'+Path('.github/candidates/package-current-state.txt').read_text(),1))
+# Exercise the permission-checked projection, never widen access to the private view.
+p=Path('supabase/tests/ticket_packages.test.sql');s=p.read_text()
+for key in ['expected_cents','received_cents']:
+ s=replace(s,f"(select sum({key}) from public.money_sale_balances where campaign_id=pg_temp.id('campaign')),20000::numeric",f"(public.campaign_money(pg_temp.id('org'),pg_temp.id('campaign'),'admin')->'totals'->>'{key}')::bigint,20000::bigint")
+p.write_text(s)

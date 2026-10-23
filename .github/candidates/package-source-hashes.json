@@ -25,5 +25,5 @@
   "package.json": "6895fb937eb63d4f18a58bb44768d5032a54ed13215894ff234653e3c77990c8",
   "scripts/test-package-concurrency.mjs": "94639e240d667d422eac22b015f9b31ebe60d84ce5ef62d5f0cf8f922f980b18",
   "supabase/migrations/20261023181600_ticket_pricing_packages.sql": "7e1f6cfb398d6367943ed3aa6c98b4175fef118633ee709ad4342b8d034c49d5",
-  "supabase/tests/ticket_packages.test.sql": "4958ac52652877693f30bbbf46cba2b4ee17d4c2c71f5b64a7461f5ec16d9f3e"
+  "supabase/tests/ticket_packages.test.sql": "b0b8e9f8d37108b9576a72085ca89deb3cd8238b201b973e7ed7de523ec2696b"
 }
