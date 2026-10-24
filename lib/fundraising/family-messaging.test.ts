@@ -16,6 +16,8 @@ describe("family campaign messaging", () => {
     expect(fundraisingEncouragement(5000, 20000, 5)).toContain("Great start");
     expect(fundraisingEncouragement(10000, 20000, 10)).toContain("Halfway");
     expect(fundraisingEncouragement(15000, 20000, 15)).toContain("Almost there");
-    expect(fundraisingEncouragement(20000, 20000, 20)).toContain("Goal reached");
+    expect(fundraisingEncouragement(20000, 20000, 20)).toContain("keep pushing");
+    expect(fundraisingEncouragement(25000, 20000, 25)).toContain("every extra sale");
+    expect(fundraisingEncouragement(30000, 20000, 30)).toContain("150%");
   });
 });
