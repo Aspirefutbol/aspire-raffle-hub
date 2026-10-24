@@ -30,6 +30,7 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
   await draft.getByRole("button", { name: "Add ticket package", exact: true }).click();
   await draft.getByLabel("Package 1 tickets", { exact: true }).fill("5");
   await draft.getByLabel("Package 1 price ($)", { exact: true }).fill("90.00");
+  await expect(draft.getByTestId("ticket-package-row")).toContainText("Package 1 — 5 tickets for $90.00");
   await draft.getByLabel("Preview ticket quantity", { exact: true }).fill("11");
   await expect(draft.getByRole("status")).toContainText("11 tickets · $200.00");
   await draft.getByLabel("Ticket number prefix", { exact: true }).fill(`PK${now.toString(36).slice(-6).toUpperCase()}`);
