@@ -40,14 +40,14 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
           action={!detail ? <ButtonLink href={`/o/${orgSlug}/fundraising/${campaign.id}`} variant="ghost" size="sm">View raffle</ButtonLink> : undefined}
         />
         <CardBody className="space-y-4">
-          {detail && <div className="rounded-card border border-line bg-surface p-4" aria-label="How to use your Aspire raffle">
-            <h2 className="text-base font-semibold text-ink">Your raffle in 3 easy steps</h2>
-            <ol className="mt-3 grid gap-3 text-sm text-ink-soft sm:grid-cols-3">
-              <li><strong className="block text-ink">1. Share your link</strong>Friends and family can request tickets. A request is not a sale.</li>
-              <li><strong className="block text-ink">2. Record the sale</strong>After an authorized adult receives cash or a check, record the completed sale below.</li>
-              <li><strong className="block text-ink">3. Check progress</strong>See tickets sold and money recorded for each player.</li>
+          {detail && <details className="rounded-control border border-line bg-surface px-4 py-2">
+            <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink">How does this work?</summary>
+            <ol className="space-y-2 pb-3 text-sm text-ink-soft">
+              <li><strong className="text-ink">1. Share:</strong> Send your raffle link to friends and family.</li>
+              <li><strong className="text-ink">2. Follow up:</strong> Check requests and receive approved cash or check payment.</li>
+              <li><strong className="text-ink">3. Record:</strong> Record the completed sale so tickets are issued and progress updates.</li>
             </ol>
-          </div>}
+          </details>}
           <p className="text-xs text-muted">
             Sales close {formatDate(campaign.sales_close_at, timeZone)}
             {campaign.ticket_price_cents != null && <> · {ticketOfferText(campaign.ticket_price_cents, campaign.ticket_packages)}</>}
@@ -92,10 +92,16 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                   </div>
                   <div className="space-y-3">
                     {detail && participant.status === "active" && <SellerTools orgSlug={orgSlug} participantId={participant.id} price={campaign.ticket_price_cents} ticketPackages={campaign.ticket_packages}/>}
-                    {detail && <ButtonLink variant="secondary" href={`/o/${orgSlug}/fundraising/${campaign.id}/requests`}>Check supporter requests</ButtonLink>}
+                    {detail && <div className="space-y-2 rounded-control border border-line bg-surface p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Step 2</p>
+                      <p className="text-base font-semibold text-ink">Check requests and receive payment</p>
+                      <p className="text-sm text-ink-soft">If someone requested tickets, contact them and receive the approved cash or check payment before recording the sale.</p>
+                      <ButtonLink className="w-full" variant="secondary" href={`/o/${orgSlug}/fundraising/${campaign.id}/requests`}>Check supporter requests</ButtonLink>
+                    </div>}
                     <div className="space-y-2 rounded-control border border-line bg-surface p-3">
-                      <p className="text-sm font-semibold text-ink">Received payment? Record a sale</p>
-                      <p className="text-xs text-muted">Only an authorized seller should record tickets after receiving cash or a check.</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Step 3</p>
+                      <p className="text-base font-semibold text-ink">Received payment? Record the sale</p>
+                      <p className="text-sm text-ink-soft">Only do this after you have the approved cash or check payment. Recording the sale issues the tickets and updates your progress.</p>
                       <RecordSaleButton orgSlug={orgSlug} campaignId={campaign.id} ticketPriceCents={campaign.ticket_price_cents} ticketPackages={campaign.ticket_packages}
                         participant={participant} className="w-full" label="Record completed sale" />
                       {unavailable && <p className="text-xs text-muted">{unavailable}</p>}
