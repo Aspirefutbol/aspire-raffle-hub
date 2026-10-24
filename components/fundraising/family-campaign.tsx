@@ -8,6 +8,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/fundraising/money";
 import { ticketOfferText } from "@/lib/fundraising/campaign-pricing";
+import { familyCampaignDisplayState, fundraisingEncouragement } from "@/lib/fundraising/family-messaging";
 import type { CampaignParticipantProgress, CampaignProgress } from "@/lib/fundraising/types";
 
 function saleUnavailable(progress: CampaignProgress, participant: CampaignParticipantProgress): string | null {
@@ -29,11 +30,12 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
   timeZone: string;
 }) {
   const campaign = progress.campaign;
+  const displayState = familyCampaignDisplayState(campaign.status, campaign.starts_at, campaign.sales_close_at);
   return (
     <section data-testid="family-campaign" data-campaign-id={campaign.id}>
       <Card>
         <CardHeader
-          title={<span className="flex flex-wrap items-center gap-2"><span className="min-w-0 break-words">{campaign.name}</span> <CampaignStatusBadge status={campaign.status} /></span>}
+          title={<span className="flex flex-wrap items-center gap-2"><span className="min-w-0 break-words">{campaign.name}</span> {displayState ? <Badge tone={displayState.tone}>{displayState.label}</Badge> : <CampaignStatusBadge status={campaign.status} />}</span>}
           description={`${progress.totals.player_count} participating linked player${progress.totals.player_count === 1 ? "" : "s"} · Based on recorded cash and check sales.`}
           action={!detail ? <ButtonLink href={`/o/${orgSlug}/fundraising/${campaign.id}`} variant="ghost" size="sm">View raffle</ButtonLink> : undefined}
         />
@@ -53,6 +55,7 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
           <div className="grid gap-4 md:grid-cols-2">
             {progress.participants.map((participant) => {
               const unavailable = saleUnavailable(progress, participant);
+              const encouragement = fundraisingEncouragement(participant.raised_cents, participant.goal_amount_cents, participant.tickets_sold);
               return (
                 <article key={participant.id} data-testid="family-player-card" data-player-id={participant.player_id}
                   className="min-w-0 rounded-card border border-line bg-canvas/40 p-4">
@@ -75,6 +78,7 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                   </div>
                   <p className="mb-1.5 text-xs font-medium text-ink-soft">Personal fundraising goal</p>
                   <GoalProgress raisedCents={participant.raised_cents} goalCents={participant.goal_amount_cents} label="Personal fundraising goal" />
+                  <p data-testid="fundraising-encouragement" className="mt-2 rounded-control border border-brand-100 bg-brand-50/60 px-3 py-2 text-sm font-medium text-brand-800">{encouragement}</p>
                   <div className="my-4 rounded-control border border-line bg-surface p-3">
                     <p className="flex items-center gap-2 text-sm font-medium text-ink-soft">
                       <Ticket aria-hidden className="size-4 text-muted" /> {participant.available_tickets} tickets available
