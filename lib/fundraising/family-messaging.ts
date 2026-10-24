@@ -26,7 +26,9 @@ export function fundraisingEncouragement(
       : "Share your raffle link to get started.";
   }
   const percent = Math.floor((raisedCents / goalCents) * 100);
-  if (percent >= 100) return "Goal reached — great work supporting Aspire!";
+  if (percent >= 150) return "Amazing — 150% of goal and still helping Aspire. Keep pushing for the team.";
+  if (percent >= 125) return "Goal reached and growing — every extra sale helps Aspire.";
+  if (percent >= 100) return "Goal reached — celebrate it, then keep pushing for the team.";
   if (percent >= 75) return "Almost there — you’re in the final stretch.";
   if (percent >= 50) return "Halfway there — keep the momentum going.";
   if (percent >= 25) return "Great start — you’re building momentum.";
