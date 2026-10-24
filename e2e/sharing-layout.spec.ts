@@ -25,7 +25,8 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
   const tools = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByTestId("seller-tools");
-  await tools.getByRole("button", { name: "Get my sharing link", exact: true }).click();
+  await expect(tools).toContainText("Step 1");
+  await tools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
   await page.getByRole("dialog", { name: "Create sharing link?", exact: true }).getByRole("button", { name: "Confirm create link", exact: true }).click();
   const url = await tools.getByTestId("seller-url").innerText();
   expect(decodeURIComponent((await tools.getByRole("link", { name: "Text / SMS", exact: true }).getAttribute("href"))!)).toContain("5 for $90.00");
