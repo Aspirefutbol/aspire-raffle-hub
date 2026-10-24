@@ -91,14 +91,16 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
 
   return <div className="space-y-3 rounded-control border border-line p-3" data-testid="seller-tools">
     <div>
-      <h4 className="text-sm font-semibold text-ink">Share your raffle</h4>
-      <p className="mt-1 text-xs text-muted">Friends and family can request tickets. This link does not collect payment or issue tickets.</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Step 1</p>
+      <h4 className="mt-1 text-base font-semibold text-ink">Share the raffle</h4>
+      <p className="mt-1 text-sm text-ink-soft">Send your link to friends and family so they can tell you how many tickets they want.</p>
+      <p className="mt-1 text-xs text-muted">They are only requesting tickets here. No payment is collected and no ticket is issued yet.</p>
     </div>
     {!url ? <>
-      <Button className="w-full" size="lg" disabled={pending} onClick={() => setConfirmation("create")}>Get my sharing link</Button>
-      <p className="text-xs text-muted">Already saved a link? Keep using it. Creating another replaces the previous link and QR code. Your player’s name is not shown on the supporter page.</p>
+      <Button className="w-full" size="lg" disabled={pending} onClick={() => setConfirmation("create")}>Create my sharing link</Button>
+      <details className="text-xs text-muted"><summary className="min-h-11 cursor-pointer py-2 font-medium">Need help with sharing?</summary><p>Already saved a link? Keep using it. Creating another replaces the previous link and QR code. Your player’s name is not shown on the supporter page.</p></details>
     </> : <>
-      <p className="text-xs font-medium text-ink">Your link is ready. Pick how to share it:</p>
+      <p className="text-sm font-semibold text-ink">Your link is ready. Choose one:</p>
       <div className="grid grid-cols-1 gap-2">
         <Button size="lg" disabled={pending} onClick={() => copy("link")}>Copy link</Button>
         <Button size="lg" variant="secondary" disabled={pending} onClick={() => copy("message")}>Copy message</Button>
