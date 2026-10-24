@@ -31,14 +31,14 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   page.on("request", (request) => {
     if (request.method() === "POST" && request.headers()["next-action"] && new URL(request.url()).pathname === `/o/aspire/fundraising/${id}`) linkWrites += 1;
   });
-  await tools.getByRole("button",{name:"Get my sharing link",exact:true}).click();
+  await tools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
   const createDialog = page.getByRole("dialog", { name: "Create sharing link?", exact: true });
   await expect(createDialog).toContainText("Any previous link or printed QR code will stop working");
   await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(createDialog).not.toBeVisible();
   expect(linkWrites).toBe(0);
   await expect(tools.getByTestId("seller-url")).toHaveCount(0);
-  await tools.getByRole("button",{name:"Get my sharing link",exact:true}).click();
+  await tools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
   // Two events in the same render must result in one mutation, not two rotations.
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(createDialog).not.toBeVisible();
@@ -144,7 +144,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(captainPage.locator("body")).not.toContainText("sharing-supporter@example.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
   const currentTools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
-  await currentTools.getByRole("button",{name:"Get my sharing link",exact:true}).click();
+  await currentTools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
   await expect(createDialog).not.toBeVisible();
   const newUrl=await currentTools.getByTestId("seller-url").innerText();
@@ -166,7 +166,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(currentTools.getByTestId("seller-url")).toHaveCount(0);
   await expect(currentTools.getByRole("img")).toHaveCount(0);
   await expect(currentTools.getByRole("button", { name: "Copy link", exact: true })).toHaveCount(0);
-  await currentTools.getByRole("button", { name: "Get my sharing link", exact: true }).click();
+  await currentTools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
   await expect(createDialog).not.toBeVisible();
   const recoveredUrl = await currentTools.getByTestId("seller-url").innerText();
