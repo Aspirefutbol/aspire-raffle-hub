@@ -28,15 +28,16 @@ export function ComplianceConfirmationButton({ orgSlug, campaignId, disabled = f
   }
 
   return <>
-    <Button variant="secondary" disabled={disabled} onClick={() => setOpen(true)}>Confirm Texas compliance</Button>
+    <Button variant="secondary" disabled={disabled} onClick={() => setOpen(true)}>Review Texas requirements</Button>
     <Sheet
       open={open}
       onClose={() => !pending && setOpen(false)}
-      title="Confirm Texas compliance"
-      description="Director/operator attestation for the current campaign disclosures. The product records this review; it does not independently determine legal eligibility."
+      title="Review Texas raffle requirements"
+      description="Review each item before recording the director/operator attestation. The product records this review; it does not independently determine legal eligibility."
       footer={<div className="flex justify-end gap-2"><Button variant="secondary" disabled={pending} onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" form="campaign-compliance-confirmation" loading={pending}>Record attestation</Button></div>}
     >
       <form id="campaign-compliance-confirmation" onSubmit={submit} className="space-y-4">
+        <p className="rounded-control border border-line bg-surface p-3 text-sm text-ink-soft">Only check an item after you have actually reviewed and retained the supporting evidence. If you cannot confirm an item, cancel and resolve it before activation.</p>
         <div className="space-y-3 rounded-control border border-line bg-canvas p-3">
           <label className="flex items-start gap-2 text-sm text-ink-soft">
             <Checkbox name="entity_confirmed" required />
