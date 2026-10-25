@@ -98,6 +98,8 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   expect(response?.headers()["x-robots-tag"]).toContain("noindex");
   expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
   await expect(supporter.getByRole("heading",{name:campaign.data ? `Synthetic sharing ${now}` : ""})).toBeVisible();
+  await expect(supporter.getByRole("heading",{name:"Request raffle tickets"})).toBeVisible();
+  await expect(supporter.locator("form")).toContainText("Sending this form does not reserve tickets, collect payment, or enter you in the drawing.");
   const body=await supporter.locator("body").innerText();
   for(const hidden of ["Liam Smith",participant.id,participant.player_id,orgId,"Assigned span","Money still due"]) expect(body).not.toContain(hidden);
   expect(await supporter.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -107,11 +109,13 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await supporter.route("**/s/*/request",async route=>{if(!dropped){dropped=true;await route.fetch();await route.abort("failed");}else await route.continue();});
   await supporter.getByLabel("Your name",{exact:true}).fill("Synthetic Supporter");
   await supporter.getByLabel("Email",{exact:true}).fill("sharing-supporter@example.test");
-  await supporter.getByLabel("Requested quantity").fill("2");
-  await supporter.getByRole("button",{name:"Send nonbinding request"}).click();
+  await supporter.getByLabel("How many tickets?").fill("2");
+  await supporter.getByRole("button",{name:"Send request"}).click();
   await expect(supporter.locator("form").getByRole("alert")).toContainText("Retry the same request");
   await supporter.getByRole("button",{name:"Retry same request"}).click();
+  await expect(supporter.getByRole("heading",{name:"Your request was sent"})).toBeVisible();
   await expect(supporter.getByRole("status")).toContainText("does not reserve or issue tickets");
+  await expect(supporter.getByRole("status")).toContainText("No payment was collected.");
   expect((await admin.from("campaign_sales").select("id",{count:"exact",head:true}).eq("campaign_id",id)).count).toBe(before.count);
   const inbox=await family.rpc("seller_request_inbox",{p_organization_id:orgId,p_campaign_id:id});
   expect(inbox.error).toBeNull();expect(inbox.data).toHaveLength(1);
@@ -172,7 +176,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(createDialog).not.toBeVisible();
   const newUrl=await currentTools.getByTestId("seller-url").innerText();
   expect(newUrl).not.toBe(url);
-  await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Send nonbinding request"})).toHaveCount(0);
+  await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Send request"})).toHaveCount(0);
   // Losing the server response after replacement must hide the obsolete link.
   await currentTools.getByRole("button", { name: "Show QR code", exact: true }).click();
   await expect(currentTools.getByRole("img")).toBeVisible();
@@ -195,12 +199,12 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const recoveredUrl = await currentTools.getByTestId("seller-url").innerText();
   expect(recoveredUrl).not.toBe(newUrl);
   await supporter.goto(recoveredUrl);
-  await expect(supporter.getByRole("button", { name: "Send nonbinding request", exact: true })).toBeVisible();
+  await expect(supporter.getByRole("button", { name: "Send request", exact: true })).toBeVisible();
   // Revoking requires its own confirmation; requests and recorded sales survive.
   await currentTools.getByRole("button",{name:"Revoke seller link",exact:true}).click();
   await disableDialog.getByRole("button", { name: "Confirm disable link", exact: true }).click();
   await expect(currentTools.getByRole("status")).toContainText("Link revoked");
-  await supporter.goto(recoveredUrl);await expect(supporter.getByRole("button",{name:"Send nonbinding request"})).toHaveCount(0);
+  await supporter.goto(recoveredUrl);await expect(supporter.getByRole("button",{name:"Send request"})).toHaveCount(0);
   expect((await family.rpc("seller_request_inbox", { p_organization_id: orgId, p_campaign_id: id })).data).toHaveLength(1);
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(1);
   // Invalid and cross-origin requests never become sales.
