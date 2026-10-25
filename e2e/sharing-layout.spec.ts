@@ -28,6 +28,10 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await expect(tools).toContainText("Step 1");
   await tools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
   await page.getByRole("dialog", { name: "Create sharing link?", exact: true }).getByRole("button", { name: "Confirm create link", exact: true }).click();
+  // Alternatives are deliberately tucked away, but remain available and touch-friendly.
+  await expect(tools.getByRole("button", { name: "Copy invitation to share", exact: true })).toBeVisible();
+  await expect(tools.getByRole("button", { name: "Copy link", exact: true })).not.toBeVisible();
+  await tools.getByTestId("share-options").locator("summary").click();
   const url = await tools.getByTestId("seller-url").innerText();
   expect(decodeURIComponent((await tools.getByRole("link", { name: "Text / SMS", exact: true }).getAttribute("href"))!)).toContain("5 for $90.00");
   await tools.getByRole("button", { name: "Show QR code", exact: true }).click();
@@ -36,7 +40,10 @@ test("parent sharing controls fit phone and tablet widths without changing the l
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await tools.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-    for (const name of ["Copy link", "Copy message"]) {
+    const shareDisclosure = await tools.getByTestId("share-options").locator("summary").boundingBox();
+    expect(shareDisclosure).not.toBeNull();
+    expect(shareDisclosure!.height).toBeGreaterThanOrEqual(44);
+    for (const name of ["Copy invitation to share", "Copy link"]) {
       const box = await tools.getByRole("button", { name, exact: true }).boundingBox();
       expect(box).not.toBeNull();
       expect(box!.height).toBeGreaterThanOrEqual(44);
@@ -45,14 +52,14 @@ test("parent sharing controls fit phone and tablet widths without changing the l
     }
     const qrBox = await tools.getByRole("img").boundingBox();
     expect(Math.abs(qrBox!.width - qrBox!.height)).toBeLessThan(1);
-    await tools.locator("summary").click();
+    await tools.getByText("Link settings", { exact: true }).click();
     await tools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
     const confirmation = page.getByRole("dialog", { name: "Create sharing link?", exact: true });
     await expect(confirmation).toContainText("Choose Cancel");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(tools.getByTestId("seller-url")).toHaveText(url);
-    await tools.locator("summary").click();
+    await tools.getByText("Link settings", { exact: true }).click();
     await page.screenshot({ path: testInfo.outputPath(`parent-sharing-${width}.png`), fullPage: true });
   }
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
