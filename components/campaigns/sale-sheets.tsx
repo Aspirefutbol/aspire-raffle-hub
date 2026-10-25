@@ -105,7 +105,7 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticket
               <p className="mt-2 text-sm">Great work supporting {participant.player_name}! This offline payment is recorded and the tickets have been issued.</p>
             </div>
             <p className="text-sm text-ink-soft">
-              This sale counts toward {participant.player_name}’s fundraising progress. Choose Done to return, or view and print the tickets below.
+              This sale counts toward {participant.player_name}’s fundraising progress. Keep the momentum going by returning to the fundraiser and sharing again.
             </p>
             <details className="rounded-card border border-line bg-surface p-4">
               <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-ink">View ticket numbers ({receipt.quantity})</summary>
@@ -114,7 +114,7 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticket
               </ul>
             </details>
             {receipt.pricing_snapshot && <p className="text-xs text-muted">{quoteBreakdownText(receipt.pricing_snapshot.quote)}</p>}
-            <ButtonLink href={`/o/${orgSlug}/tickets/${receipt.sale_id}`} variant="secondary" className="w-full whitespace-normal">View / print tickets</ButtonLink>
+            <div className="grid gap-2"><ButtonLink href={`/o/${orgSlug}/fundraising/${campaignId}`} className="w-full whitespace-normal">Back to fundraiser — share again</ButtonLink><ButtonLink href={`/o/${orgSlug}/tickets/${receipt.sale_id}`} variant="secondary" className="w-full whitespace-normal">View / print tickets</ButtonLink></div>
           </div>
         ) : (
           <form id={`sale-${participant.id}`} onSubmit={submit} className="space-y-4">
