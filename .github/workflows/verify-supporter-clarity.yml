@@ -2,7 +2,7 @@ name: Supporter clarity isolated verification
 
 on:
   push:
-    branches: [feat/supporter-clarity-wow-20261025]
+    branches: [feat/supporter-request-clarity-20261025]
 
 permissions:
   contents: read
