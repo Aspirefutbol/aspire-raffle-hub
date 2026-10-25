@@ -100,24 +100,28 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
       <Button className="w-full" size="lg" disabled={pending} onClick={() => setConfirmation("create")}>Create my sharing link</Button>
       <details className="text-xs text-muted"><summary className="min-h-11 cursor-pointer py-2 font-medium">Need help with sharing?</summary><p>Already saved a link? Keep using it. Creating another replaces the previous link and QR code. Your player’s name is not shown on the supporter page.</p></details>
     </> : <>
-      <p className="text-sm font-semibold text-ink">Your link is ready. Choose one:</p>
-      <div className="grid grid-cols-1 gap-2">
-        <Button size="lg" disabled={pending} onClick={() => copy("link")}>Copy link</Button>
-        <Button size="lg" variant="secondary" disabled={pending} onClick={() => copy("message")}>Copy message</Button>
-      </div>
-      <p className="break-all text-xs text-muted" data-testid="seller-url">{url}</p>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm underline [&>*]:inline-flex [&>*]:min-h-11 [&>*]:items-center">
-        <a href={links.sms}>Text / SMS</a>
-        <a href={links.email}>Email</a>
-        <a href={links.whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp</a>
-        <a href={url} target="_blank" rel="noopener noreferrer">Preview supporter page</a>
-        <button type="button" disabled={pending || qrPending} onClick={showQr}>{qrPending ? "Creating QR code…" : "Show QR code"}</button>
-      </div>
-      {qr && <div>
-        <Image unoptimized src={qr} alt="QR code for your supporter request page" width={240} height={240} className="h-auto max-w-full" />
-        <a href={qr} download="fundraiser-qr.png" className="inline-flex min-h-11 items-center text-sm underline">Download QR code</a>
-      </div>}
-      <p className="break-words text-xs">{links.text}</p>
+      <p className="text-sm font-semibold text-ink">Your sharing link is ready</p>
+      <Button className="h-auto min-h-11 w-full whitespace-normal py-3" size="lg" disabled={pending} onClick={() => copy("message")}>Copy invitation to share</Button>
+      <p className="text-sm text-ink-soft">Paste the invitation into a text or group chat with your supporters.</p>
+      <details className="rounded-control border border-line" data-testid="share-options">
+        <summary className="min-h-11 cursor-pointer px-3 py-3 text-sm font-medium text-ink">More ways to share</summary>
+        <div className="space-y-3 border-t border-line p-3">
+          <Button className="h-auto min-h-11 w-full whitespace-normal py-3" variant="secondary" disabled={pending} onClick={() => copy("link")}>Copy link</Button>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm underline [&>*]:inline-flex [&>*]:min-h-11 [&>*]:items-center">
+            <a href={links.sms}>Text / SMS</a>
+            <a href={links.email}>Email</a>
+            <a href={links.whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            <a href={url} target="_blank" rel="noopener noreferrer">Preview supporter page</a>
+            <button type="button" disabled={pending || qrPending} onClick={showQr}>{qrPending ? "Creating QR code…" : "Show QR code"}</button>
+          </div>
+          {qr && <div>
+            <Image unoptimized src={qr} alt="QR code for your supporter request page" width={240} height={240} className="h-auto max-w-full" />
+            <a href={qr} download="fundraiser-qr.png" className="inline-flex min-h-11 items-center text-sm underline">Download QR code</a>
+          </div>}
+          <p className="break-all text-xs text-muted" data-testid="seller-url">{url}</p>
+          <p className="break-words text-xs">{links.text}</p>
+        </div>
+      </details>
     </>}
     {message && <p role="status" className="text-xs">{message}</p>}
     {manualCopy && <label className="block text-xs font-medium text-ink">
