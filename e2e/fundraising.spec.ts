@@ -229,6 +229,12 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await correction.getByLabel("Payment method", { exact: true }).selectOption("cash");
   await correction.getByRole("button", { name: "Record sale", exact: true }).click();
   const correctionReceipt = page.getByRole("dialog", { name: "Tickets issued", exact: true });
+  await expect(correctionReceipt.getByLabel("Sale complete")).toBeVisible();
+  await expect(correctionReceipt.getByText("2 tickets sold · $10.00 raised", { exact: true })).toBeVisible();
+  await expect(correctionReceipt.getByText(/This offline payment is recorded and the tickets have been issued/)).toBeVisible();
+  const correctedTicketDisclosure = correctionReceipt.getByText("View ticket numbers (2)", { exact: true });
+  await expect(correctedTicketDisclosure).toBeVisible();
+  await correctedTicketDisclosure.click();
   await expect(correctionReceipt.getByRole("listitem")).toHaveText(replacementNumbers);
   await correctionReceipt.getByRole("button", { name: "Done", exact: true }).click();
   await expectStat(page, "Total raised", "$10.00");
