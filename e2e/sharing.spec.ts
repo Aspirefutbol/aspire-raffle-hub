@@ -43,22 +43,27 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(createDialog).not.toBeVisible();
   expect(linkWrites).toBe(1);
+  // Only one prominent share action is visible until alternatives are expanded.
+  await expect(tools.getByRole("button",{name:"Copy invitation to share",exact:true})).toBeVisible();
+  await expect(tools.getByTestId("share-options")).not.toHaveAttribute("open", "");
+  await expect(tools.getByRole("button",{name:"Copy link",exact:true})).not.toBeVisible();
+  await page.context().grantPermissions(["clipboard-read","clipboard-write"]);
+  await tools.getByRole("button", { name: "Copy invitation to share", exact: true }).click();
+  const copiedMessage = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copiedMessage).toContain("offline payment");
+  expect(copiedMessage).not.toMatch(/checkout|reserve tickets|buy now/i);
+  await tools.getByTestId("share-options").locator("summary").click();
   const url=await tools.getByTestId("seller-url").innerText();
-  expect(new URL(url).pathname).toMatch(/^\/s\/[a-f0-9]{64}$/);
+  expect(new URL(url).pathname).toMatch(/^\\/s\\/[a-f0-9]{64}$/);
+  expect(copiedMessage).toContain(url);
   for(const name of ["Text / SMS","Email","WhatsApp"]) {
     const href=await tools.getByRole("link",{name,exact:true}).getAttribute("href");
     expect(decodeURIComponent(href!)).toContain(url);
     expect(decodeURIComponent(href!)).toContain("offline payment");
     expect(decodeURIComponent(href!)).not.toMatch(/checkout|reserve tickets|buy now/i);
   }
-  await page.context().grantPermissions(["clipboard-read","clipboard-write"]);
   await tools.getByRole("button",{name:"Copy link",exact:true}).click();
   expect(await page.evaluate(()=>navigator.clipboard.readText())).toBe(url);
-  await tools.getByRole("button", { name: "Copy message", exact: true }).click();
-  const copiedMessage = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copiedMessage).toContain(url);
-  expect(copiedMessage).toContain("offline payment");
-  expect(copiedMessage).not.toMatch(/checkout|reserve tickets|buy now/i);
   expect(linkWrites).toBe(1);
   // A blocked clipboard gets a selectable fallback, not a false success message.
   await page.evaluate(() => Object.defineProperty(navigator.clipboard, "writeText", {
@@ -72,7 +77,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(tools.getByRole("textbox", { name: "Copy manually", exact: true })).toHaveCount(0);
   // Settings are separate from routine sharing. Cancel preserves the current link.
   await expect(tools.getByRole("button", { name: "Create a new sharing link", exact: true })).toHaveCount(0);
-  await tools.locator("summary").click();
+  await tools.getByText("Link settings",{exact:true}).click();
   await tools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
   await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(tools.getByTestId("seller-url")).toHaveText(url);
@@ -82,7 +87,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await disableDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(tools.getByTestId("seller-url")).toHaveText(url);
   expect(linkWrites).toBe(1);
-  await tools.locator("summary").click();
+  await tools.getByText("Link settings",{exact:true}).click();
   await tools.getByRole("button",{name:"Show QR code"}).click();
   const qr=tools.getByRole("img",{name:"QR code for your supporter request page"});
   const png=PNG.sync.read(Buffer.from((await qr.getAttribute("src"))!.split(",")[1]!,"base64"));
@@ -174,10 +179,12 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await currentTools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
   await expect(createDialog).not.toBeVisible();
+  await currentTools.getByTestId("share-options").locator("summary").click();
   const newUrl=await currentTools.getByTestId("seller-url").innerText();
   expect(newUrl).not.toBe(url);
   await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Send request"})).toHaveCount(0);
   // Losing the server response after replacement must hide the obsolete link.
+  await currentTools.getByTestId("share-options").locator("summary").click();
   await currentTools.getByRole("button", { name: "Show QR code", exact: true }).click();
   await expect(currentTools.getByRole("img")).toBeVisible();
   let lostReplacement = false;
@@ -186,7 +193,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
       lostReplacement = true; await route.fetch(); await route.abort("failed");
     } else await route.continue();
   });
-  await currentTools.locator("summary").click();
+  await currentTools.getByText("Link settings",{exact:true}).click();
   await currentTools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
   await expect(currentTools.getByRole("status")).toContainText("could not confirm the link change");
@@ -196,6 +203,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await currentTools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
   await expect(createDialog).not.toBeVisible();
+  await currentTools.getByTestId("share-options").locator("summary").click();
   const recoveredUrl = await currentTools.getByTestId("seller-url").innerText();
   expect(recoveredUrl).not.toBe(newUrl);
   await supporter.goto(recoveredUrl);
