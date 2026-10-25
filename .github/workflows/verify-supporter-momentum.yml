@@ -1,0 +1,83 @@
+name: Supporter momentum isolated verification
+
+on:
+  push:
+    branches: [feat/supporter-momentum-20261025]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supporter-momentum-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_placeholder
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+  acceptance:
+    name: Database, concurrency, browser acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor
+      - run: npx supabase db reset
+      - run: npx supabase test db
+      - run: npx supabase db lint --local --level error --fail-on error
+      - run: |
+          npm run db:types
+          git diff --exit-code lib/database/types.gen.ts
+      - run: |
+          ./scripts/ci-env.sh
+          npm run seed:dev
+      - run: npm test
+      - run: |
+          set -a && . ./.env.local && set +a
+          npm run test:concurrency
+          npm run test:package-concurrency
+          npm run test:drawing-concurrency
+          npm run test:money-concurrency
+          npm run test:sharing-concurrency
+      - run: |
+          npx supabase db reset --local
+          ./scripts/ci-env.sh
+          npm run seed:dev
+      - run: |
+          AUDIT_ENVIRONMENT=ci npm run audit:checkpoint
+          AUDIT_ENVIRONMENT=ci npm run audit:checkpoint
+      - run: set -a && . ./.env.local && set +a && npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          set -a && . ./.env.local && set +a
+          npm run start > next.log 2>&1 &
+          npx wait-on -t 60000 http://localhost:3000/login
+          E2E_BASE_URL=http://localhost:3000 npm run test:e2e
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supporter-momentum-evidence
+          path: |
+            playwright-report
+            test-results
+            next.log
+          if-no-files-found: ignore
+          retention-days: 7
