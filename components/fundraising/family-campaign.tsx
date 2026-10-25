@@ -85,7 +85,7 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                     </p>
                     {participant.ticket_range.first && (
                       <details className="mt-2 border-t border-line pt-1" data-testid="inventory-details">
-                        <summary className="flex min-h-11 cursor-pointer items-center text-xs font-medium text-ink-soft">
+                        <summary className="min-h-11 cursor-pointer py-3 text-xs font-medium text-ink-soft">
                           View assigned ticket numbers
                         </summary>
                         <p className="pb-1 break-all text-xs text-muted">
