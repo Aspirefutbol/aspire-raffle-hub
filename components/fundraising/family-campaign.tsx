@@ -84,10 +84,16 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                       <Ticket aria-hidden className="size-4 text-muted" /> {participant.available_tickets} tickets available
                     </p>
                     {participant.ticket_range.first && (
-                      <p className="mt-1 break-all text-xs text-muted">
-                        Assigned span: <span className="font-mono">{participant.ticket_range.first}</span>
-                        {participant.ticket_range.last !== participant.ticket_range.first && <> – <span className="font-mono">{participant.ticket_range.last}</span></>}
-                      </p>
+                      <details className="mt-2 border-t border-line pt-1" data-testid="inventory-details">
+                        <summary className="flex min-h-11 cursor-pointer items-center text-xs font-medium text-ink-soft">
+                          View assigned ticket numbers
+                        </summary>
+                        <p className="pb-1 break-all text-xs text-muted">
+                          Assigned numbers: <span className="font-mono">{participant.ticket_range.first}</span>
+                          {participant.ticket_range.last !== participant.ticket_range.first && <> – <span className="font-mono">{participant.ticket_range.last}</span></>}
+                        </p>
+                        <p className="pb-2 text-xs text-muted">These are your assigned tickets, not supporter entries. Tickets are issued only after an approved offline payment and recorded sale.</p>
+                      </details>
                     )}
                   </div>
                   <div className="space-y-3">
