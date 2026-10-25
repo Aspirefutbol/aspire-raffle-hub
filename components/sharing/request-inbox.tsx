@@ -59,21 +59,20 @@ function RequestCard({ request: r, orgSlug, campaignId, progress }: { request: I
     {finished && <p className="rounded-control border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-900">Completed — this supporter’s sale has been recorded and tickets were issued.</p>}
     {completion === "linking" && <p role="status" className="text-sm text-ink-soft">Tickets issued. Completing this request…</p>}
     {completion === "retry" && <Button size="lg" className="w-full" onClick={() => completeFromSale(saleId)}>Retry finishing request</Button>}
-    {!closed && <>
-      <div className="rounded-control border border-brand-100 bg-brand-50/60 p-3">
-        <p className="text-sm font-semibold text-ink">Next step: collect payment</p>
-        <p className="mt-1 text-sm text-ink-soft">After you receive the approved cash or check payment, complete the sale below.</p>
-      </div>
-      {participant && <RecordSaleButton orgSlug={orgSlug} campaignId={campaignId} ticketPriceCents={progress.campaign.ticket_price_cents} ticketPackages={progress.campaign.ticket_packages} participant={participant} label="I received payment — complete sale" className="h-auto w-full whitespace-normal py-3" prefill={{ buyer_name: r.supporter_name, buyer_email: r.supporter_email ?? "", buyer_phone: r.supporter_phone ?? "", quantity: r.requested_quantity, notes: `Supporter request ${r.id}` }} onRecorded={completeFromSale}/>}
-      <details className="border-t border-line pt-1">
+    {!closed && <div className="rounded-control border border-brand-100 bg-brand-50/60 p-3">
+      <p className="text-sm font-semibold text-ink">Next step: collect payment</p>
+      <p className="mt-1 text-sm text-ink-soft">After you receive the approved cash or check payment, complete the sale below.</p>
+    </div>}
+    {/* Keep the sale sheet mounted after the server confirms completion so the parent can still view the issued receipt. */}
+    {participant && <RecordSaleButton orgSlug={orgSlug} campaignId={campaignId} ticketPriceCents={progress.campaign.ticket_price_cents} ticketPackages={progress.campaign.ticket_packages} participant={participant} label="I received payment — complete sale" className="h-auto w-full whitespace-normal py-3" hideTrigger={closed} prefill={{ buyer_name: r.supporter_name, buyer_email: r.supporter_email ?? "", buyer_phone: r.supporter_phone ?? "", quantity: r.requested_quantity, notes: `Supporter request ${r.id}` }} onRecorded={completeFromSale}/>}
+    {!closed && <details className="border-t border-line pt-1">
         <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-muted">More options</summary>
         <div className="flex flex-wrap gap-2 pb-1">
           <Button variant="secondary" disabled={pending} onClick={() => update("contacted")}>Mark contacted</Button>
           <Button variant="ghost" disabled={pending} onClick={() => update("declined")}>Decline request</Button>
           <Button variant="ghost" disabled={pending} onClick={() => update("expired")}>Mark expired</Button>
         </div>
-      </details>
-    </>}
+      </details>}
     {message && <p role="status" className="text-sm text-ink-soft">{message}</p>}
     {finished && <ButtonLink className="w-full" variant="secondary" href={`/o/${orgSlug}/fundraising/${campaignId}`}>Back to my fundraiser</ButtonLink>}
   </article>;
