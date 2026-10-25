@@ -158,7 +158,12 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await sale.getByLabel("Payment method", { exact: true }).selectOption("cash");
     await sale.getByRole("button", { name: "Record sale", exact: true }).click();
     const receipt = family.getByRole("dialog", { name: "Tickets issued", exact: true });
-    await expect(receipt.getByText("2 tickets issued for $10.00. Payment was recorded offline.", { exact: true })).toBeVisible();
+    await expect(receipt).toContainText("Sale complete!");
+    await expect(receipt).toContainText("2 tickets sold · $10.00 raised");
+    await expect(receipt).toContainText("offline payment is recorded and the tickets have been issued");
+    await expect(receipt.getByText("View ticket numbers (2)", { exact: true })).toBeVisible();
+    await expect(receipt.getByRole("listitem")).toHaveCount(0);
+    await receipt.locator("details summary").click();
     await expect(receipt.getByRole("listitem")).toHaveText(issuedNumbers);
     await family.screenshot({ path: testInfo.outputPath("desktop-family-ticket-receipt.png"), fullPage: true });
     await receipt.getByRole("link", { name: "View / print tickets", exact: true }).click();
@@ -224,6 +229,12 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await correction.getByLabel("Payment method", { exact: true }).selectOption("cash");
   await correction.getByRole("button", { name: "Record sale", exact: true }).click();
   const correctionReceipt = page.getByRole("dialog", { name: "Tickets issued", exact: true });
+  await expect(correctionReceipt.getByLabel("Sale complete")).toBeVisible();
+  await expect(correctionReceipt.getByText("2 tickets sold · $10.00 raised", { exact: true })).toBeVisible();
+  await expect(correctionReceipt.getByText(/This offline payment is recorded and the tickets have been issued/)).toBeVisible();
+  const correctedTicketDisclosure = correctionReceipt.getByText("View ticket numbers (2)", { exact: true });
+  await expect(correctedTicketDisclosure).toBeVisible();
+  await correctedTicketDisclosure.click();
   await expect(correctionReceipt.getByRole("listitem")).toHaveText(replacementNumbers);
   await correctionReceipt.getByRole("button", { name: "Done", exact: true }).click();
   await expectStat(page, "Total raised", "$10.00");

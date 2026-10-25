@@ -135,6 +135,11 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(page.getByRole("textbox",{name:"Amount collected ($)",exact:true})).toHaveValue("10.00");
   await page.getByRole("dialog").getByRole("button",{name:"Record sale",exact:true}).click();
   await expect(page.getByRole("dialog")).toContainText("Tickets issued");
+  await expect(page.getByRole("dialog")).toContainText("Sale complete!");
+  await expect(page.getByRole("dialog")).toContainText("2 tickets sold · $10.00 raised");
+  await expect(page.getByRole("dialog").getByText("View ticket numbers (2)")).toBeVisible();
+  await page.getByRole("dialog").getByText("View ticket numbers (2)").click();
+  await expect(page.getByRole("dialog").locator("details li")).toHaveCount(2);
   // A server refresh that closes the request must NOT unmount the issued-tickets receipt.
   await expect(request).toContainText("Completed — this supporter’s sale has been recorded and tickets were issued.");
   await expect(page.getByRole("dialog")).toContainText("Tickets issued");

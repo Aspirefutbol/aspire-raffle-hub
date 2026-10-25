@@ -97,11 +97,24 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticket
         footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={pending} onClick={close}>{receipt ? "Done" : "Close"}</Button>{canEdit && !receipt && <Button variant="secondary" disabled={pending} onClick={() => { setPayload(null); setCanEdit(false); setError(null); }}>Edit details</Button>}{!receipt && <Button type="submit" form={`sale-${participant.id}`} size="lg" loading={pending}>{payload ? "Retry same sale" : "Record sale"}</Button>}</div>}>
         {receipt ? (
           <div className="space-y-4" role="status">
-            <p className="text-sm text-ink-soft">{receipt.quantity} ticket{receipt.quantity === 1 ? "" : "s"} issued for {formatMoney(receipt.amount_cents)}. Payment was recorded offline.</p>
-            <div className="rounded-card border border-emerald-200 bg-emerald-50 p-4"><h3 className="mb-2 text-sm font-semibold text-emerald-900">Ticket numbers</h3><ul className="flex flex-wrap gap-2">{receipt.ticket_numbers.map((number) => <li key={number} className="rounded-control bg-white px-2 py-1 font-mono text-sm text-emerald-900">{number}</li>)}</ul></div>
-            {receipt.pricing_snapshot && <p className="text-sm text-ink-soft">{quoteBreakdownText(receipt.pricing_snapshot.quote)}</p>}
-            <p className="text-xs text-muted">The sale, ticket, money, and activity history were recorded together.</p>
-            <ButtonLink href={`/o/${orgSlug}/tickets/${receipt.sale_id}`} variant="secondary">View / print tickets</ButtonLink>
+            <div className="rounded-card border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+              <p className="text-sm font-semibold" aria-label="Sale complete">🎉 Sale complete!</p>
+              <p className="mt-3 break-words text-2xl font-bold">
+                {receipt.quantity} ticket{receipt.quantity === 1 ? "" : "s"} sold · {formatMoney(receipt.amount_cents)} raised
+              </p>
+              <p className="mt-2 text-sm">Great work supporting {participant.player_name}! This offline payment is recorded and the tickets have been issued.</p>
+            </div>
+            <p className="text-sm text-ink-soft">
+              This sale counts toward {participant.player_name}’s fundraising progress. Choose Done to return, or view and print the tickets below.
+            </p>
+            <details className="rounded-card border border-line bg-surface p-4">
+              <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold text-ink">View ticket numbers ({receipt.quantity})</summary>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {receipt.ticket_numbers.map((number) => <li key={number} className="rounded-control bg-canvas px-2 py-1 font-mono text-sm text-ink-soft">{number}</li>)}
+              </ul>
+            </details>
+            {receipt.pricing_snapshot && <p className="text-xs text-muted">{quoteBreakdownText(receipt.pricing_snapshot.quote)}</p>}
+            <ButtonLink href={`/o/${orgSlug}/tickets/${receipt.sale_id}`} variant="secondary" className="w-full whitespace-normal">View / print tickets</ButtonLink>
           </div>
         ) : (
           <form id={`sale-${participant.id}`} onSubmit={submit} className="space-y-4">

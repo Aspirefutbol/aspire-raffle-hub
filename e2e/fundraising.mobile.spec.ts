@@ -129,8 +129,13 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await sale.getByLabel("Sale timestamp", { exact: true }).fill(await localTimestamp(page, Date.now()));
   await sale.getByRole("button", { name: "Record sale", exact: true }).click();
   const receipt = page.getByRole("dialog", { name: "Tickets issued", exact: true });
+  await expect(receipt).toContainText("Sale complete!");
+  await expect(receipt).toContainText("2 tickets sold · $10.00 raised");
+  await expect(receipt).toContainText("offline payment is recorded and the tickets have been issued");
+  await expect(receipt.getByText("View ticket numbers (2)", { exact: true })).toBeVisible();
+  await expect(receipt.getByRole("listitem")).toHaveCount(0);
+  await receipt.locator("details summary").click();
   await expect(receipt.getByRole("listitem")).toHaveText(expectedNumbers);
-  await expect(receipt.getByText("2 tickets issued for $10.00. Payment was recorded offline.", { exact: true })).toBeVisible();
   await expectPhoneLayout(page);
   await page.screenshot({ path: testInfo.outputPath("phone-ticket-receipt.png"), fullPage: false });
   await receipt.getByRole("button", { name: "Done", exact: true }).click();
