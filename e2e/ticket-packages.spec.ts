@@ -101,7 +101,13 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     await form.getByRole("button", { name: "Record sale", exact: true }).click();
     await expect(form.getByRole("button", { name: "Retry same sale", exact: true })).toBeVisible();
     await form.getByRole("button", { name: "Retry same sale", exact: true }).click();
-    await expect(family.getByRole("dialog", { name: "Tickets issued", exact: true })).toContainText("6 tickets issued for $110.00");
+    const packageReceipt = family.getByRole("dialog", { name: "Tickets issued", exact: true });
+    await expect(packageReceipt).toContainText("Sale complete!");
+    await expect(packageReceipt).toContainText("6 tickets sold · $110.00 raised");
+    await expect(packageReceipt).toContainText("offline payment is recorded and the tickets have been issued");
+    await expect(packageReceipt.getByText("View ticket numbers (6)", { exact: true })).toBeVisible();
+    await packageReceipt.locator("details summary").click();
+    await expect(packageReceipt.getByRole("listitem")).toHaveCount(6);
     await family.getByRole("dialog").getByRole("button", { name: "Done", exact: true }).click();
     expect((await progress()).recent_sales).toHaveLength(2);
     expect((await progress()).totals.raised_cents).toBe(20000);
