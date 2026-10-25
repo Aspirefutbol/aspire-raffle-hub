@@ -193,7 +193,6 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   expect(newUrl).not.toBe(url);
   await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Send request"})).toHaveCount(0);
   // Losing the server response after replacement must hide the obsolete link.
-  await currentTools.getByTestId("share-options").locator("summary").click();
   await currentTools.getByRole("button", { name: "Show QR code", exact: true }).click();
   await expect(currentTools.getByRole("img")).toBeVisible();
   let lostReplacement = false;
