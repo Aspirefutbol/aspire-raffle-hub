@@ -54,7 +54,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   expect(copiedMessage).not.toMatch(/checkout|reserve tickets|buy now/i);
   await tools.getByTestId("share-options").locator("summary").click();
   const url=await tools.getByTestId("seller-url").innerText();
-  expect(new URL(url).pathname).toMatch(/^\\/s\\/[a-f0-9]{64}$/);
+  expect(new URL(url).pathname).toMatch(/^\/s\/[a-f0-9]{64}$/);
   expect(copiedMessage).toContain(url);
   for(const name of ["Text / SMS","Email","WhatsApp"]) {
     const href=await tools.getByRole("link",{name,exact:true}).getAttribute("href");
