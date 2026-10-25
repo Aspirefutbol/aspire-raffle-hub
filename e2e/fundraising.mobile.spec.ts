@@ -103,8 +103,8 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(ticketSummary).toBeVisible();
   expect((await ticketSummary.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await ticketSummary.click();
-  await expect(ticketDetails).toContainText(stock[0].ticket_number);
-  await expect(ticketDetails).toContainText(stock[3].ticket_number);
+  await expect(ticketDetails).toContainText(stock[0]!.ticket_number);
+  await expect(ticketDetails).toContainText(stock[3]!.ticket_number);
   await expect(ticketDetails).toContainText("not supporter entries");
   await expectPhoneLayout(page);
   await ticketSummary.click();
