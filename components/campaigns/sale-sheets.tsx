@@ -22,7 +22,7 @@ function localSaleTimestamp(value: unknown): string {
 }
 
 /** Keeps an uncertain submission intact across retries and closing the sheet. */
-export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticketPackages = [], participant, label = "Record sale", className, correctsSaleId, alreadyCorrected = false, prefill, onRecorded }: {
+export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticketPackages = [], participant, label = "Record sale", className, correctsSaleId, alreadyCorrected = false, prefill, onRecorded, hideTrigger = false }: {
   orgSlug: string;
   campaignId: string;
   ticketPriceCents: number | null;
@@ -34,6 +34,7 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticket
   alreadyCorrected?: boolean;
   prefill?: { buyer_name: string; buyer_email: string; buyer_phone: string; quantity: number; notes: string };
   onRecorded?: (saleId: string) => void;
+  hideTrigger?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [quantity, setQuantity] = useState(String(prefill?.quantity ?? 1));
@@ -91,7 +92,7 @@ export function RecordSaleButton({ orgSlug, campaignId, ticketPriceCents, ticket
 
   return (
     <>
-      {(!alreadyCorrected || payload || receipt) && <Button size="lg" className={className} disabled={!canStart && !payload} onClick={() => setOpen(true)}>{payload && !receipt ? "Resume sale" : label}</Button>}
+      {!hideTrigger && (!alreadyCorrected || payload || receipt) && <Button size="lg" className={className} disabled={!canStart && !payload} onClick={() => setOpen(true)}>{payload && !receipt ? "Resume sale" : label}</Button>}
       <Sheet open={open} onClose={close} title={receipt ? "Tickets issued" : "Record sale"} description={`${participant.player_name} · ${ticketOfferText(ticketPriceCents, ticketPackages)}`}
         footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={pending} onClick={close}>{receipt ? "Done" : "Close"}</Button>{canEdit && !receipt && <Button variant="secondary" disabled={pending} onClick={() => { setPayload(null); setCanEdit(false); setError(null); }}>Edit details</Button>}{!receipt && <Button type="submit" form={`sale-${participant.id}`} size="lg" loading={pending}>{payload ? "Retry same sale" : "Record sale"}</Button>}</div>}>
         {receipt ? (
