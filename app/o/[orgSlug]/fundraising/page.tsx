@@ -19,7 +19,7 @@ export default async function FamilyFundraisingPage({ params }: { params: Promis
 
   return (
     <>
-      <PageHeader title="My fundraising" description="Your linked players, raffle goals and ticket sales." />
+      <PageHeader title="My fundraising" description="Choose a fundraiser to start selling." />
       {visible.length ? (
         <div className="space-y-5">
           {visible.map((campaign) => <FamilyCampaignView key={campaign.campaign.id} orgSlug={orgSlug} progress={campaign} timeZone={ctx.organization.timezone} />)}
