@@ -217,7 +217,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const recoveredUrl = await currentTools.getByTestId("seller-url").innerText();
   expect(recoveredUrl).not.toBe(newUrl);
   await supporter.goto(recoveredUrl);
-  await expect(supporter.getByRole("button", { name: "Send request", exact: true })).toBeVisible();
+  await expect(supporter.getByRole("button", { name: "Request tickets", exact: true })).toBeVisible();
   // Revoking requires its own confirmation; requests and recorded sales survive.
   await currentTools.getByRole("button",{name:"Revoke seller link",exact:true}).click();
   await disableDialog.getByRole("button", { name: "Confirm disable link", exact: true }).click();
