@@ -117,13 +117,13 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const body=await supporter.locator("body").innerText();
   for(const hidden of ["Liam Smith",participant.id,participant.player_id,orgId,"Assigned span","Money still due"]) expect(body).not.toContain(hidden);
   // Keep the request short: only the chosen contact field and no optional note by default.
-  await expect(supporter.getByLabel("Email",{exact:true})).toBeVisible();
-  await expect(supporter.getByLabel("Email",{exact:true})).toHaveAttribute("required","");
-  await expect(supporter.getByLabel("Phone",{exact:true})).toHaveCount(0);
+  await expect(supporter.getByLabel(/^Email\s*\*?$/)).toBeVisible();
+  await expect(supporter.getByLabel(/^Email\s*\*?$/)).toHaveAttribute("required","");
+  await expect(supporter.getByLabel(/^Phone\s*\*?$/)).toHaveCount(0);
   await supporter.getByRole("combobox",{name:"Preferred contact"}).selectOption("phone");
-  await expect(supporter.getByLabel("Phone",{exact:true})).toBeVisible();
-  await expect(supporter.getByLabel("Phone",{exact:true})).toHaveAttribute("required","");
-  await expect(supporter.getByLabel("Email",{exact:true})).toHaveCount(0);
+  await expect(supporter.getByLabel(/^Phone\s*\*?$/)).toBeVisible();
+  await expect(supporter.getByLabel(/^Phone\s*\*?$/)).toHaveAttribute("required","");
+  await expect(supporter.getByLabel(/^Email\s*\*?$/)).toHaveCount(0);
   await expect(supporter.locator('input[name="email"][type="hidden"]')).toHaveValue("");
   await supporter.getByRole("combobox",{name:"Preferred contact"}).selectOption("email");
   await expect(supporter.locator('input[name="phone"][type="hidden"]')).toHaveValue("");
@@ -141,7 +141,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   let dropped=false;
   await supporter.route("**/s/*/request",async route=>{if(!dropped){dropped=true;await route.fetch();await route.abort("failed");}else await route.continue();});
   await supporter.getByLabel("Your name",{exact:true}).fill("Synthetic Supporter");
-  await supporter.getByLabel("Email",{exact:true}).fill("sharing-supporter@example.test");
+  await supporter.getByLabel(/^Email\s*\*?$/).fill("sharing-supporter@example.test");
   await supporter.getByLabel("How many tickets?").fill("5");
   await expect(supporter.getByRole("status",{name:"Requested ticket total"})).toContainText("5 tickets · $25.00");
   await supporter.getByRole("button",{name:"Request tickets"}).click();
