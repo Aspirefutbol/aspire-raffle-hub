@@ -27,8 +27,8 @@ export function SupporterForm({ token, ticketPriceCents, ticketPackages = [] }: 
   if (done) return <div role="status" className="space-y-3 rounded-card border border-emerald-200 bg-emerald-50 p-5">
     <p className="text-sm font-semibold text-emerald-900">✓ Request sent!</p>
     <h2 className="text-2xl font-bold text-emerald-950">{quote ? `${quote.quantity} ticket${quote.quantity === 1 ? "" : "s"} · ${formatMoney(quote.totalCents)}` : "Your ticket request"}</h2>
-    <p className="text-sm text-emerald-950">The Aspire family will contact you to collect approved cash or check payment and provide your ticket numbers.</p>
-    <p className="rounded-control bg-white p-3 text-sm text-ink"><strong>No payment was collected on this page.</strong></p>
+    <p className="text-sm text-emerald-950">The Aspire family will confirm availability and contact you about approved cash or check payment. Your tickets will be issued after payment is received and the sale is recorded.</p>
+    <p className="rounded-control bg-white p-3 text-sm text-ink"><strong>No payment was collected on this page.</strong> This request is not a raffle entry; tickets have not been issued yet.</p>
     <p className="text-sm text-emerald-950">You’re all set — you can close this page.</p>
   </div>;
   return <form onSubmit={submit} className="space-y-4">
@@ -43,7 +43,7 @@ export function SupporterForm({ token, ticketPriceCents, ticketPackages = [] }: 
       <Field label="Note (optional)" htmlFor="note"><Textarea id="note" name="note" maxLength={1000}/></Field>
       <div hidden aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" defaultValue="" /></label></div>
     </fieldset>
-    <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft"><strong className="text-ink">No payment is collected here.</strong> The Aspire family will contact you to confirm the request and arrange approved cash or check payment.</p>
+    <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft"><strong className="text-ink">No payment is collected here.</strong> This request does not reserve or issue tickets or enter you in the drawing. The Aspire family will confirm availability and arrange approved cash or check payment offline.</p>
     <p className="text-xs text-muted">Your contact details are shared privately with the authorized family seller and organization support administrators for follow-up.</p>
     {error && <p role="alert">{error}</p>}
     <Button type="submit" size="lg" className="w-full sm:w-auto" loading={pending}>{locked ? "Retry same request" : "Request tickets"}</Button>
