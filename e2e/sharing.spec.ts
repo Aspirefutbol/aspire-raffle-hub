@@ -116,7 +116,26 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(supporter.locator("form")).toContainText("No payment is collected here.");
   const body=await supporter.locator("body").innerText();
   for(const hidden of ["Liam Smith",participant.id,participant.player_id,orgId,"Assigned span","Money still due"]) expect(body).not.toContain(hidden);
-  expect(await supporter.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  // Keep the request short: only the chosen contact field and no optional note by default.
+  await expect(supporter.getByLabel("Email",{exact:true})).toBeVisible();
+  await expect(supporter.getByLabel("Email",{exact:true})).toHaveAttribute("required","");
+  await expect(supporter.getByLabel("Phone",{exact:true})).toHaveCount(0);
+  await supporter.getByRole("combobox",{name:"Preferred contact"}).selectOption("phone");
+  await expect(supporter.getByLabel("Phone",{exact:true})).toBeVisible();
+  await expect(supporter.getByLabel("Phone",{exact:true})).toHaveAttribute("required","");
+  await expect(supporter.getByLabel("Email",{exact:true})).toHaveCount(0);
+  await expect(supporter.locator('input[name="email"][type="hidden"]')).toHaveValue("");
+  await supporter.getByRole("combobox",{name:"Preferred contact"}).selectOption("email");
+  await expect(supporter.locator('input[name="phone"][type="hidden"]')).toHaveValue("");
+  await expect(supporter.getByLabel("Note",{exact:true})).not.toBeVisible();
+  await supporter.getByText("Add a note (optional)",{exact:true}).click();
+  await expect(supporter.getByLabel("Note",{exact:true})).toBeVisible();
+  for (const width of [320,360,390]) {
+    await supporter.setViewportSize({width,height:780});
+    expect(await supporter.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  await supporter.getByText("Add a note (optional)",{exact:true}).click();
+  await supporter.setViewportSize({width:360,height:780});
   await supporter.screenshot({path:testInfo.outputPath("sharing-public-360.png"),fullPage:true});
   const before=await admin.from("campaign_sales").select("id",{count:"exact",head:true}).eq("campaign_id",id);
   let dropped=false;
