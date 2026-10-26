@@ -133,11 +133,11 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await signIn(family, "coach@aspire.test");
     await family.goto("/o/aspire/fundraising");
     await expect(family.getByRole("heading", { name: "My fundraising", exact: true })).toBeVisible();
-    await expect(family.getByTestId("touch-dashboard")).toBeVisible();
-    for (const name of ["Share raffle","Requests","Record sale","My progress"]) await expect(family.getByRole("link",{name,exact:true})).toBeVisible();
     const raffle = family.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
     await expect(raffle.getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
     await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
+    await expect(family.getByTestId("touch-dashboard")).toBeVisible();
+    for (const name of ["Share raffle","Requests","Record sale","My progress"]) await expect(family.getByRole("link",{name,exact:true})).toBeVisible();
     await expect(family).toHaveURL(new RegExp(`/fundraising/${campaignId}$`));
     const playerCard = family.getByTestId("family-player-card");
     await expect(playerCard).toHaveCount(1);
