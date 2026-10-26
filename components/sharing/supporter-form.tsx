@@ -1,16 +1,20 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
 import { submissionSchema } from "@/lib/sharing/schemas";
+import { campaignTicketQuote, quoteBreakdownText } from "@/lib/fundraising/campaign-pricing";
+import { formatMoney } from "@/lib/fundraising/money";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select, Field } from "@/components/ui/form-controls";
-export function SupporterForm({ token }: { token: string }) {
+export function SupporterForm({ token, ticketPriceCents, ticketPackages = [] }: { token: string; ticketPriceCents: number; ticketPackages?: unknown }) {
   const saved = useRef<ReturnType<typeof submissionSchema.parse> | null>(null);
   const [locked, setLocked] = useState(false);
+  const [quantity, setQuantity] = useState("1");
   const [pending, setPending] = useState(false), [done, setDone] = useState(false), [error, setError] = useState("");
+  const quote = campaignTicketQuote(Number(quantity), ticketPriceCents, ticketPackages);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const parsed = submissionSchema.safeParse(saved.current ?? { key: crypto.randomUUID(), request: { name: form.get("name"), email: form.get("email"), phone: form.get("phone"), contact: form.get("contact"), quantity: Number(form.get("quantity")), note: form.get("note"), website: form.get("website") } });
+    const parsed = submissionSchema.safeParse(saved.current ?? { key: crypto.randomUUID(), request: { name: form.get("name"), email: form.get("email"), phone: form.get("phone"), contact: form.get("contact"), quantity: Number(quantity), note: form.get("note"), website: form.get("website") } });
     if (!parsed.success) { setError(parsed.error.issues[0]?.message || "Check your details."); return; }
     saved.current = parsed.data; setLocked(true); setPending(true); setError("");
     try {
@@ -21,25 +25,27 @@ export function SupporterForm({ token }: { token: string }) {
     finally { setPending(false); }
   }
   if (done) return <div role="status" className="space-y-3 rounded-card border border-emerald-200 bg-emerald-50 p-5">
-    <h2 className="text-xl font-semibold text-emerald-900">Your request was sent</h2>
-    <p className="text-sm text-emerald-950">Your request is in the family seller’s private inbox. The seller will contact you about availability, approved cash or check payment, and ticket details.</p>
-    <p className="rounded-control bg-white p-3 text-sm text-ink"><strong>No tickets or payment yet.</strong> This request does not reserve or issue tickets. No payment was collected.</p>
-    <p className="text-sm text-emerald-950">You can close this page. Please do not send payment through this website.</p>
+    <p className="text-sm font-semibold text-emerald-900">✓ Request sent!</p>
+    <h2 className="text-2xl font-bold text-emerald-950">{quote ? `${quote.quantity} ticket${quote.quantity === 1 ? "" : "s"} · ${formatMoney(quote.totalCents)}` : "Your ticket request"}</h2>
+    <p className="text-sm text-emerald-950">The Aspire family will confirm availability and contact you about approved cash or check payment. Your tickets will be issued after payment is received and the sale is recorded.</p>
+    <p className="rounded-control bg-white p-3 text-sm text-ink"><strong>No payment was collected on this page.</strong> This request is not a raffle entry; tickets have not been issued yet.</p>
+    <p className="text-sm text-emerald-950">You’re all set — you can close this page.</p>
   </div>;
   return <form onSubmit={submit} className="space-y-4">
-    <div className="space-y-1"><h2 className="text-xl font-semibold">Request raffle tickets</h2><p className="text-sm text-ink-soft">Tell the family seller how many tickets you’re interested in. They’ll follow up with you before any payment.</p></div>
+    <div className="space-y-1"><h2 className="text-xl font-semibold">Request raffle tickets</h2><p className="text-sm text-ink-soft">Choose how many tickets you’d like. The Aspire family will contact you to complete payment and provide your ticket numbers.</p></div>
     <fieldset disabled={pending || locked} className="space-y-4">
       <Field label="Your name" htmlFor="name"><Input id="name" name="name" required maxLength={200} /></Field>
       <Field label="Preferred contact" htmlFor="contact"><Select id="contact" name="contact"><option value="email">Email</option><option value="phone">Phone</option></Select></Field>
       <Field label="Email" htmlFor="email"><Input id="email" name="email" type="email" maxLength={254}/></Field>
       <Field label="Phone" htmlFor="phone"><Input id="phone" name="phone" type="tel" maxLength={50}/></Field>
-      <Field label="How many tickets?" htmlFor="quantity"><Input id="quantity" name="quantity" type="number" min={1} max={100} defaultValue={1} required /></Field>
+      <Field label="How many tickets?" htmlFor="quantity"><Input id="quantity" name="quantity" type="number" min={1} max={100} value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></Field>
+      {quote && <div className="rounded-control border border-brand-100 bg-brand-50/60 p-3" role="status" aria-label="Requested ticket total"><p className="text-lg font-semibold text-ink">{quote.quantity} ticket{quote.quantity === 1 ? "" : "s"} · {formatMoney(quote.totalCents)}</p><p className="mt-1 text-sm text-ink-soft">{quoteBreakdownText(quote)}</p></div>}
       <Field label="Note (optional)" htmlFor="note"><Textarea id="note" name="note" maxLength={1000}/></Field>
       <div hidden aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" defaultValue="" /></label></div>
     </fieldset>
-    <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft"><strong className="text-ink">This is a request, not a purchase.</strong> Sending this form does not reserve tickets, collect payment, or enter you in the drawing. The seller will confirm availability and arrange approved cash or check payment offline.</p>
+    <p className="rounded-control border border-line bg-canvas p-3 text-sm text-ink-soft"><strong className="text-ink">No payment is collected here.</strong> This request does not reserve or issue tickets or enter you in the drawing. The Aspire family will confirm availability and arrange approved cash or check payment offline.</p>
     <p className="text-xs text-muted">Your contact details are shared privately with the authorized family seller and organization support administrators for follow-up.</p>
     {error && <p role="alert">{error}</p>}
-    <Button type="submit" size="lg" className="w-full sm:w-auto" loading={pending}>{locked ? "Retry same request" : "Send request"}</Button>
+    <Button type="submit" size="lg" className="w-full sm:w-auto" loading={pending}>{locked ? "Retry same request" : "Request tickets"}</Button>
   </form>;
 }

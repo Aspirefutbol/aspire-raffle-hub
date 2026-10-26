@@ -113,7 +113,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
   await expect(supporter.getByRole("heading",{name:campaign.data ? `Synthetic sharing ${now}` : ""})).toBeVisible();
   await expect(supporter.getByRole("heading",{name:"Request raffle tickets"})).toBeVisible();
-  await expect(supporter.locator("form")).toContainText("Sending this form does not reserve tickets, collect payment, or enter you in the drawing.");
+  await expect(supporter.locator("form")).toContainText("No payment is collected here.");
   const body=await supporter.locator("body").innerText();
   for(const hidden of ["Liam Smith",participant.id,participant.player_id,orgId,"Assigned span","Money still due"]) expect(body).not.toContain(hidden);
   expect(await supporter.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -123,13 +123,14 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await supporter.route("**/s/*/request",async route=>{if(!dropped){dropped=true;await route.fetch();await route.abort("failed");}else await route.continue();});
   await supporter.getByLabel("Your name",{exact:true}).fill("Synthetic Supporter");
   await supporter.getByLabel("Email",{exact:true}).fill("sharing-supporter@example.test");
-  await supporter.getByLabel("How many tickets?").fill("2");
-  await supporter.getByRole("button",{name:"Send request"}).click();
+  await supporter.getByLabel("How many tickets?").fill("5");
+  await expect(supporter.getByRole("status",{name:"Requested ticket total"})).toContainText("5 tickets · $25.00");
+  await supporter.getByRole("button",{name:"Request tickets"}).click();
   await expect(supporter.locator("form").getByRole("alert")).toContainText("Retry the same request");
   await supporter.getByRole("button",{name:"Retry same request"}).click();
-  await expect(supporter.getByRole("heading",{name:"Your request was sent"})).toBeVisible();
-  await expect(supporter.getByRole("status")).toContainText("does not reserve or issue tickets");
-  await expect(supporter.getByRole("status")).toContainText("No payment was collected.");
+  await expect(supporter.getByRole("status")).toContainText("Request sent!");
+  await expect(supporter.getByRole("status")).toContainText("5 tickets · $25.00");
+  await expect(supporter.getByRole("status")).toContainText("No payment was collected on this page.");
   expect((await admin.from("campaign_sales").select("id",{count:"exact",head:true}).eq("campaign_id",id)).count).toBe(before.count);
   const inbox=await family.rpc("seller_request_inbox",{p_organization_id:orgId,p_campaign_id:id});
   expect(inbox.error).toBeNull();expect(inbox.data).toHaveLength(1);
@@ -149,15 +150,16 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await expect(request).toContainText("contacted");
   await request.getByRole("button",{name:"I received payment — complete sale",exact:true}).click();
   await expect(page.getByRole("textbox",{name:"Buyer name",exact:true})).toHaveValue("Synthetic Supporter");
-  await expect(page.getByRole("spinbutton",{name:"Quantity",exact:true})).toHaveValue("2");
-  await expect(page.getByRole("textbox",{name:"Amount collected ($)",exact:true})).toHaveValue("10.00");
+  await expect(page.getByRole("spinbutton",{name:"Quantity",exact:true})).toHaveValue("5");
+  await expect(page.getByRole("textbox",{name:"Amount collected ($)",exact:true})).toHaveValue("25.00");
   await page.getByRole("dialog").getByRole("button",{name:"Record sale",exact:true}).click();
   await expect(page.getByRole("dialog")).toContainText("Tickets issued");
   await expect(page.getByRole("dialog")).toContainText("Sale complete!");
-  await expect(page.getByRole("dialog")).toContainText("2 tickets sold · $10.00 raised");
-  await expect(page.getByRole("dialog").getByText("View ticket numbers (2)")).toBeVisible();
-  await page.getByRole("dialog").getByText("View ticket numbers (2)").click();
-  await expect(page.getByRole("dialog").locator("details li")).toHaveCount(2);
+  await expect(page.getByRole("dialog")).toContainText("5 tickets sold · $25.00 raised");
+  await expect(page.getByRole("dialog").getByRole("link",{name:"Back to fundraiser — share again",exact:true})).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("View ticket numbers (5)")).toBeVisible();
+  await page.getByRole("dialog").getByText("View ticket numbers (5)").click();
+  await expect(page.getByRole("dialog").locator("details li")).toHaveCount(5);
   // A server refresh that closes the request must NOT unmount the issued-tickets receipt.
   await expect(request).toContainText("Completed — this supporter’s sale has been recorded and tickets were issued.");
   await expect(page.getByRole("dialog")).toContainText("Tickets issued");
@@ -174,8 +176,8 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const linkedSale=await family.from("campaign_sales").select("id,participant_id,quantity,amount_cents").eq("id",recordedSaleId).single();
   expect(linkedSale.error).toBeNull();
   expect(linkedSale.data?.participant_id).toBe(participant.id);
-  expect(linkedSale.data?.quantity).toBe(2);
-  expect(linkedSale.data?.amount_cents).toBe(1000);
+  expect(linkedSale.data?.quantity).toBe(5);
+  expect(linkedSale.data?.amount_cents).toBe(2500);
   await page.reload();
   await expect(request).toContainText("Completed — this supporter’s sale has been recorded and tickets were issued.");
   await expect(request.getByRole("button",{name:"I received payment — complete sale",exact:true})).toHaveCount(0);
@@ -191,7 +193,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await currentTools.getByTestId("share-options").locator("summary").click();
   const newUrl=await currentTools.getByTestId("seller-url").innerText();
   expect(newUrl).not.toBe(url);
-  await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Send request"})).toHaveCount(0);
+  await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Request tickets"})).toHaveCount(0);
   // Losing the server response after replacement must hide the obsolete link.
   await currentTools.getByRole("button", { name: "Show QR code", exact: true }).click();
   await expect(currentTools.getByRole("img")).toBeVisible();
@@ -215,12 +217,12 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const recoveredUrl = await currentTools.getByTestId("seller-url").innerText();
   expect(recoveredUrl).not.toBe(newUrl);
   await supporter.goto(recoveredUrl);
-  await expect(supporter.getByRole("button", { name: "Send request", exact: true })).toBeVisible();
+  await expect(supporter.getByRole("button", { name: "Request tickets", exact: true })).toBeVisible();
   // Revoking requires its own confirmation; requests and recorded sales survive.
   await currentTools.getByRole("button",{name:"Revoke seller link",exact:true}).click();
   await disableDialog.getByRole("button", { name: "Confirm disable link", exact: true }).click();
   await expect(currentTools.getByRole("status")).toContainText("Link revoked");
-  await supporter.goto(recoveredUrl);await expect(supporter.getByRole("button",{name:"Send request"})).toHaveCount(0);
+  await supporter.goto(recoveredUrl);await expect(supporter.getByRole("button",{name:"Request tickets"})).toHaveCount(0);
   expect((await family.rpc("seller_request_inbox", { p_organization_id: orgId, p_campaign_id: id })).data).toHaveLength(1);
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(1);
   // Invalid and cross-origin requests never become sales.
