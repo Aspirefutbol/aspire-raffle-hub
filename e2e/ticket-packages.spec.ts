@@ -66,10 +66,12 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
     const playerChooser = family.getByRole("navigation", { name: "Choose player" });
     const chooseLiam = async () => {
-      if (await playerChooser.count()) {
-        await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
-        await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
-      }
+      // This enrolled-all-players fixture includes multiple linked players.
+      // Wait for the streamed dashboard, then require an explicit player selection.
+      await expect(family.getByTestId("parent-touch-tasks")).toBeVisible();
+      await expect(playerChooser).toBeVisible();
+      await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+      await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
       await expect(family.getByTestId("family-player-card").filter({ hasText: "Liam Smith" })).toBeVisible();
     };
     await chooseLiam();
