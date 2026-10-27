@@ -25,10 +25,12 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
   const playerChooser = page.getByRole("navigation", { name: "Choose player" });
-  if (await playerChooser.count()) {
-    await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
-    await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
-  }
+  // This synthetic enrolled-all fixture has multiple linked players.
+  // Require the streamed chooser to exist before clicking; count() can
+  // incorrectly return zero during a fresh page load and skip selection.
+  await expect(playerChooser).toBeVisible();
+  await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+  await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" })).toBeVisible();
   // Parents must be able to hit each top-level action at narrow phone widths.
   for (const width of [320, 360, 390]) {

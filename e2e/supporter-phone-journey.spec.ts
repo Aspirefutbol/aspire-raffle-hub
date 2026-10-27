@@ -45,10 +45,12 @@ test("phone-only supporter request: discounted quote, private contact and no iss
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${campaignId}`);
   const playerChooser = page.getByRole("navigation", { name: "Choose player" });
-  if (await playerChooser.count()) {
-    await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
-    await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
-  }
+  // This synthetic enrolled-all fixture has multiple linked players.
+  // Require the streamed chooser to exist before clicking; count() can
+  // incorrectly return zero during a fresh page load and skip selection.
+  await expect(playerChooser).toBeVisible();
+  await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+  await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   await expect(page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByTestId("seller-tools")).toBeVisible();
   const tools = page.getByTestId("family-player-card")
