@@ -58,6 +58,14 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const url=await tools.getByTestId("seller-url").innerText();
   expect(new URL(url).pathname).toMatch(/^\/s\/[a-f0-9]{64}$/);
   expect(copiedMessage).toContain(url);
+  // Task switching must not silently lose/rotate a confirmed seller link.
+  await tools.getByRole("button", { name: "Back to actions", exact: true }).click();
+  await page.getByRole("button", { name: "My progress", exact: true }).click();
+  await page.getByRole("button", { name: "Back to actions", exact: true }).click();
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(linkWrites).toBe(1);
+
   for(const name of ["Text / SMS","Email","WhatsApp"]) {
     const href=await tools.getByRole("link",{name,exact:true}).getAttribute("href");
     expect(decodeURIComponent(href!)).toContain(url);
