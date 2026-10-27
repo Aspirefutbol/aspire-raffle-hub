@@ -22,7 +22,7 @@ type Task = "home" | "share" | "progress";
 /**
  * Presentation-only focus layer. RLS-filtered player data and the existing
  * audited share/sale components are provided by the server. Switching tasks
- * hides rather than unmounts SellerTools, so an already-created share link is
+ * hides rather than unmounts SellerTools or RecordSaleButton, so an already-created share link is
  * not silently discarded or re-created.
  */
 export function ParentTouchTasks({ players, requestsHref }: {
@@ -59,9 +59,8 @@ export function ParentTouchTasks({ players, requestsHref }: {
               <span className="tabular">{player.ticketsSold}</span> tickets sold
             </p>
           </header>
-          {task === "home" && (
-            <nav data-testid="touch-dashboard" aria-label={`Raffle actions for ${player.name}`}
-              className="grid grid-cols-2 gap-3">
+          <nav data-testid="touch-dashboard" aria-label={`Raffle actions for ${player.name}`}
+            className={task === "home" ? "grid grid-cols-2 gap-3" : "hidden"}>
               <button type="button" disabled={!player.share} onClick={() => setTask("share")}
                 className="flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 rounded-card border border-brand-200 bg-brand-50 px-3 py-4 text-center text-base font-semibold text-brand-800 shadow-card disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2">
                 <Share2 aria-hidden className="size-6" /> Share raffle
@@ -75,8 +74,7 @@ export function ParentTouchTasks({ players, requestsHref }: {
                 className="flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 rounded-card border border-line-strong bg-surface px-3 py-4 text-center text-base font-semibold text-ink shadow-card focus-visible:outline-2 focus-visible:outline-offset-2">
                 <BarChart3 aria-hidden className="size-6" /> My progress
               </button>
-            </nav>
-          )}
+          </nav>
           {task === "home" && player.saleUnavailable && <p className="mt-3 text-sm text-muted">{player.saleUnavailable}</p>}
           <section hidden={task !== "share"} data-testid="parent-share-task" className="space-y-3">
             <button type="button" onClick={() => setTask("home")}
