@@ -48,7 +48,22 @@ test("parent sharing controls fit phone and tablet widths without changing the l
     expect(requests).not.toBeNull();
     expect(requests!.height).toBeGreaterThanOrEqual(88);
   }
+  const playerCard = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
+  const playerHeading = playerCard.getByRole("heading", { name: "Liam Smith", exact: true });
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
+  const shareBack = playerCard.getByTestId("parent-share-task").getByRole("button", { name: "Back to actions", exact: true });
+  // The tile becomes hidden on navigation: keyboard/screen-reader focus must
+  // move to a visible way back, not remain trapped in that hidden tile.
+  await expect(shareBack).toBeFocused();
+  await shareBack.click();
+  await expect(playerHeading).toBeFocused();
+  await playerCard.getByRole("button", { name: "My progress", exact: true }).click();
+  const progressBack = playerCard.getByTestId("parent-progress-task").getByRole("button", { name: "Back to actions", exact: true });
+  await expect(progressBack).toBeFocused();
+  await progressBack.click();
+  await expect(playerHeading).toBeFocused();
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(shareBack).toBeFocused();
   const tools = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByTestId("seller-tools");
   await expect(tools).toContainText("Step 1");
   await tools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
