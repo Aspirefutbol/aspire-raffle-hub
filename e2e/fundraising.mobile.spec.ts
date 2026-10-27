@@ -96,6 +96,7 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(card.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("Mateo Garcia");
   await expect(page.locator("main")).not.toContainText("Isaac Martinez");
+  await card.getByRole("button", { name: "My progress", exact: true }).click();
   const ticketDetails = card.getByTestId("inventory-details");
   await expect(ticketDetails).toHaveJSProperty("open", false);
   await expect(ticketDetails.getByText("Assigned numbers:", { exact: false })).not.toBeVisible();
@@ -110,6 +111,7 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await ticketSummary.click();
   await expect(ticketDetails).toHaveJSProperty("open", false);
   await expectPhoneLayout(page);
+  await card.getByRole("button", { name: "Back to actions", exact: true }).click();
   await card.getByRole("button", { name: "Record sale", exact: true }).click();
   const sale = page.getByRole("dialog", { name: "Record sale", exact: true });
   await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Phone cash buyer");
@@ -152,6 +154,7 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expectPhoneLayout(page);
   await page.screenshot({ path: testInfo.outputPath("phone-ticket-receipt.png"), fullPage: false });
   await receipt.getByRole("button", { name: "Done", exact: true }).click();
+  await card.getByRole("button", { name: "My progress", exact: true }).click();
   await expect(card.getByText("Amount raised", { exact: true }).locator("..").getByText("$10.00", { exact: true })).toBeVisible();
   await expect(card.getByText("Tickets sold", { exact: true }).locator("..").getByText("2", { exact: true })).toBeVisible();
   await expect(card.getByText("2 tickets available", { exact: true })).toBeVisible();

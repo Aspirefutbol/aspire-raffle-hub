@@ -119,6 +119,7 @@ test("money custody: partial receipts, uncertain retry, returned checks and corr
     await expect(familyPage.getByTestId("money-balances")).toHaveCount(0);
     await expect(familyPage.getByText("Synthetic partial cash turn-in", { exact: false })).toHaveCount(0);
     await familyPage.goto(`/o/aspire/fundraising/${campaignId}`);
+    await familyPage.getByText("Money & reconciliation", { exact: true }).click();
     await expect(familyPage.getByTestId(`money-player-${liam.player_id}`)).toBeVisible();
     await expect(familyPage.getByTestId("money-received_cents")).toHaveText("$18.00");
     await expect(familyPage.getByText("Synthetic partial cash turn-in", { exact: false })).toHaveCount(0);

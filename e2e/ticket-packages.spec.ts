@@ -64,7 +64,19 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     const family = await context.newPage();
     await signIn(family, "coach@aspire.test");
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
+    const playerChooser = family.getByRole("navigation", { name: "Choose player" });
+    const chooseLiam = async () => {
+      // This enrolled-all-players fixture includes multiple linked players.
+      // Wait for the streamed dashboard, then require an explicit player selection.
+      await expect(family.getByTestId("parent-touch-tasks")).toBeVisible();
+      await expect(playerChooser).toBeVisible();
+      await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+      await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(family.getByTestId("family-player-card").filter({ hasText: "Liam Smith" })).toBeVisible();
+    };
+    await chooseLiam();
     const card = family.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
+    await family.getByText("Raffle info", { exact: true }).click();
     await expect(family.getByTestId("family-campaign")).toContainText("5 for $90.00");
     await card.getByRole("button", { name: "Record sale", exact: true }).click();
     let form = family.getByRole("dialog", { name: "Record sale", exact: true });
@@ -86,6 +98,7 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     const first = (await progress()).recent_sales[0]!;
 
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
+    await chooseLiam();
     await card.getByRole("button", { name: "Record sale", exact: true }).click();
     form = family.getByRole("dialog", { name: "Record sale", exact: true });
     await form.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Package Check Buyer");
