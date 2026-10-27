@@ -24,6 +24,7 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   for (const status of ["READY", "ACTIVE"]) expect((await admin.rpc("transition_campaign", { p_campaign_id: id, p_to: status, p_reason: "Synthetic sharing layout acceptance" })).error).toBeNull();
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const tools = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByTestId("seller-tools");
   await expect(tools).toContainText("Step 1");
   await tools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
