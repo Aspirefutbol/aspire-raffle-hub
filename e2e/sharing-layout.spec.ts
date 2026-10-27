@@ -24,6 +24,12 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   for (const status of ["READY", "ACTIVE"]) expect((await admin.rpc("transition_campaign", { p_campaign_id: id, p_to: status, p_reason: "Synthetic sharing layout acceptance" })).error).toBeNull();
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
+  const playerChooser = page.getByRole("navigation", { name: "Choose player" });
+  if (await playerChooser.count()) {
+    await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+    await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
+  }
+  await expect(page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" })).toBeVisible();
   // Parents must be able to hit each top-level action at narrow phone widths.
   for (const width of [320, 360, 390]) {
     await page.setViewportSize({ width, height: 900 });
