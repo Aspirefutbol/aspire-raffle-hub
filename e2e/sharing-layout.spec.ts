@@ -24,6 +24,22 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   for (const status of ["READY", "ACTIVE"]) expect((await admin.rpc("transition_campaign", { p_campaign_id: id, p_to: status, p_reason: "Synthetic sharing layout acceptance" })).error).toBeNull();
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
+  // Parents must be able to hit each top-level action at narrow phone widths.
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const dashboard = page.getByTestId("touch-dashboard");
+    for (const name of ["Share raffle", "Record sale", "My progress"]) {
+      const box = await dashboard.getByRole("button", { name, exact: true }).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThanOrEqual(88);
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    }
+    const requests = await dashboard.getByRole("link", { name: "Requests", exact: true }).boundingBox();
+    expect(requests).not.toBeNull();
+    expect(requests!.height).toBeGreaterThanOrEqual(88);
+  }
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const tools = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByTestId("seller-tools");
   await expect(tools).toContainText("Step 1");
