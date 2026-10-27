@@ -135,7 +135,9 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(family.getByRole("heading", { name: "My fundraising", exact: true })).toBeVisible();
     const raffle = family.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
     await expect(raffle.getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
-    await raffle.getByRole("link", { name: "View raffle", exact: true }).click();
+    await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
+    await expect(family.getByTestId("touch-dashboard")).toBeVisible();
+    for (const name of ["Share raffle","Requests","Record sale","My progress"]) await expect(family.getByRole("link",{name,exact:true})).toBeVisible();
     await expect(family).toHaveURL(new RegExp(`/fundraising/${campaignId}$`));
     const playerCard = family.getByTestId("family-player-card");
     await expect(playerCard).toHaveCount(1);
@@ -148,9 +150,9 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await family.goto(`/o/aspire/team-fundraising/${campaignId}`);
     await expect(family.getByRole("heading", { name: "Team fundraising", exact: true })).toBeVisible();
     await expect(family.getByRole("row").filter({ hasText: "Mateo Garcia" })).toBeVisible();
-    await expect(family.getByRole("button", { name: /^(Record sale|Record completed sale|Resume sale)$/ })).toHaveCount(0);
+    await expect(family.getByRole("button", { name: /^(Record sale|Resume sale)$/ })).toHaveCount(0);
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
-    await playerCard.getByRole("button", { name: "Record completed sale", exact: true }).click();
+    await playerCard.getByRole("button", { name: "Record sale", exact: true }).click();
     const sale = family.getByRole("dialog", { name: "Record sale", exact: true });
     await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Desktop cash buyer");
     await sale.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("2");

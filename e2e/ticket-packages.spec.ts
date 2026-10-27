@@ -66,7 +66,7 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
     const card = family.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
     await expect(family.getByTestId("family-campaign")).toContainText("5 for $90.00");
-    await card.getByRole("button", { name: "Record completed sale", exact: true }).click();
+    await card.getByRole("button", { name: "Record sale", exact: true }).click();
     let form = family.getByRole("dialog", { name: "Record sale", exact: true });
     await form.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Package Cash Buyer");
     await form.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("5");
@@ -86,7 +86,7 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     const first = (await progress()).recent_sales[0]!;
 
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
-    await card.getByRole("button", { name: "Record completed sale", exact: true }).click();
+    await card.getByRole("button", { name: "Record sale", exact: true }).click();
     form = family.getByRole("dialog", { name: "Record sale", exact: true });
     await form.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Package Check Buyer");
     await form.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("6");

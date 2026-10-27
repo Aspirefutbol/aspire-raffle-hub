@@ -110,7 +110,7 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await ticketSummary.click();
   await expect(ticketDetails).toHaveJSProperty("open", false);
   await expectPhoneLayout(page);
-  await card.getByRole("button", { name: "Record completed sale", exact: true }).click();
+  await card.getByRole("button", { name: "Record sale", exact: true }).click();
   const sale = page.getByRole("dialog", { name: "Record sale", exact: true });
   await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Phone cash buyer");
   await sale.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("2");
