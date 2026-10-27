@@ -65,6 +65,7 @@ test("packages: admin setup, family sale/retry, exact receipts, correction, cust
     await signIn(family, "coach@aspire.test");
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
     const card = family.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
+    await family.getByText("Raffle info", { exact: true }).click();
     await expect(family.getByTestId("family-campaign")).toContainText("5 for $90.00");
     await card.getByRole("button", { name: "Record sale", exact: true }).click();
     let form = family.getByRole("dialog", { name: "Record sale", exact: true });
