@@ -24,7 +24,9 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const participant=progress.participants.find(p=>p.player_name==="Liam Smith")!;
   await signIn(page,"coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
+  await page.getByText("Sharing help", { exact: true }).click();
   await expect(page.getByRole("heading",{name:"Parent/Player Seller Toolkit"})).toBeVisible();
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const tools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
   // Opening/cancelling a confirmation must not change any token.
   let linkWrites = 0;
@@ -205,6 +207,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await captainPage.goto(`/o/aspire/team-fundraising/${id}`);
   await expect(captainPage.locator("body")).not.toContainText("sharing-supporter@example.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const currentTools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
   await currentTools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
