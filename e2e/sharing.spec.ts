@@ -23,9 +23,18 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const progress=campaignProgressSchema.parse((await family.rpc("campaign_progress",{p_organization_id:orgId,p_campaign_id:id,p_view:"family"})).data);
   const participant=progress.participants.find(p=>p.player_name==="Liam Smith")!;
   await signIn(page,"coach@aspire.test");
+  const chooseLiam = async () => {
+    const playerChooser = page.getByRole("navigation", { name: "Choose player" });
+    if (await playerChooser.count()) {
+      await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+      await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
+    }
+    await expect(page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" })).toBeVisible();
+  };
   await page.goto(`/o/aspire/fundraising/${id}`);
   await page.getByText("Sharing help", { exact: true }).click();
   await expect(page.getByRole("heading",{name:"Parent/Player Seller Toolkit"})).toBeVisible();
+  await chooseLiam();
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const tools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
   // Opening/cancelling a confirmation must not change any token.
@@ -59,7 +68,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   expect(new URL(url).pathname).toMatch(/^\/s\/[a-f0-9]{64}$/);
   expect(copiedMessage).toContain(url);
   // Task switching must not silently lose/rotate a confirmed seller link.
-  await tools.getByRole("button", { name: "Back to actions", exact: true }).click();
+  await page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByRole("button", { name: "Back to actions", exact: true }).click();
   await page.getByRole("button", { name: "My progress", exact: true }).click();
   await page.getByRole("button", { name: "Back to actions", exact: true }).click();
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
@@ -215,6 +224,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await captainPage.goto(`/o/aspire/team-fundraising/${id}`);
   await expect(captainPage.locator("body")).not.toContainText("sharing-supporter@example.test");
   await page.goto(`/o/aspire/fundraising/${id}`);
+  await chooseLiam();
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const currentTools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
   await currentTools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
