@@ -138,7 +138,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
     await expect(family.getByTestId("touch-dashboard")).toBeVisible();
     for (const name of ["Share raffle", "Record sale", "My progress"]) await expect(family.getByTestId("touch-dashboard").getByRole("button", { name, exact: true })).toBeVisible();
-    await expect(playerCardActions(family).getByRole("link", { name: "Requests", exact: true })).toBeVisible();
+    await expect(family.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true })).toBeVisible();
     await expect(family).toHaveURL(new RegExp(`/fundraising/${campaignId}$`));
     const playerCard = family.getByTestId("family-player-card");
     await expect(playerCard).toHaveCount(1);
