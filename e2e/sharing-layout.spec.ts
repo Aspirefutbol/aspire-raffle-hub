@@ -120,7 +120,7 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await expect(playerCard).toBeVisible();
   await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
   await expect(tools.getByTestId("seller-url")).toHaveText(url);
-  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
 });
