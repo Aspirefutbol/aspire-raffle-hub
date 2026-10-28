@@ -102,5 +102,25 @@ test("parent sharing controls fit phone and tablet widths without changing the l
     await tools.getByText("Link settings", { exact: true }).click();
     await page.screenshot({ path: testInfo.outputPath(`parent-sharing-${width}.png`), fullPage: true });
   }
+  // Switching a linked sibling must not expose the previous player's seller
+  // controls or silently recreate their sharing link when returning.
+  const otherPlayerButton = playerChooser.getByRole("button").filter({ hasNotText: "Liam Smith" }).first();
+  await expect(otherPlayerButton).toBeVisible();
+  const otherName = (await otherPlayerButton.innerText()).trim();
+  await otherPlayerButton.click();
+  await expect(otherPlayerButton).toHaveAttribute("aria-pressed", "true");
+  await expect(playerCard).toBeHidden();
+  const otherCard = page.getByTestId("family-player-card").filter({ hasText: otherName });
+  await expect(otherCard).toBeVisible();
+  await expect(otherCard.getByTestId("touch-dashboard")).toBeVisible();
+  await expect(otherCard.getByTestId("parent-share-task")).toBeHidden();
+  const liamButton = playerChooser.getByRole("button", { name: "Liam Smith", exact: true });
+  await liamButton.click();
+  await expect(liamButton).toHaveAttribute("aria-pressed", "true");
+  await expect(playerCard).toBeVisible();
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
 });
