@@ -140,7 +140,7 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   const siblingCard = page.getByTestId("family-player-card").filter({ hasText: otherName });
   await siblingCard.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Private supporter requests" })).toBeVisible();
-  await page.getByRole("link", { name: "Back to my fundraiser" }).click();
+  await page.getByRole("link", { name: "Back to my fundraiser", exact: true }).click();
   const chooserOnReturn = page.getByRole("navigation", { name: "Choose player" });
   await expect(chooserOnReturn.getByRole("button", { name: otherName, exact: true }))
     .toHaveAttribute("aria-pressed", "true");
