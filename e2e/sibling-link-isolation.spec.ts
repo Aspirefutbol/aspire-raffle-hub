@@ -10,6 +10,7 @@ test("revoking one linked sibling's seller link never disables another sibling o
   }
 
   const admin = await apiAs("admin@aspire.test");
+  const family = await apiAs("coach@aspire.test");
   const org = await admin.from("organizations").select("id").eq("slug", "aspire").single();
   if (org.error) throw org.error;
   const now = Date.now();
@@ -100,10 +101,15 @@ test("revoking one linked sibling's seller link never disables another sibling o
   await expect(supporter.getByRole("button", { name: "Request tickets", exact: true })).toBeVisible();
 
   // Link management alone must not issue tickets, submit requests or record money.
-  for (const table of ["campaign_sales", "money_events", "seller_interest_requests"] as const) {
+  for (const table of ["campaign_sales", "money_events"] as const) {
     const result = await admin.from(table).select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
     expect(result.error).toBeNull();
     expect(result.count).toBe(0);
   }
+  const inbox = await family.rpc("seller_request_inbox", {
+    p_organization_id: org.data.id, p_campaign_id: campaignId,
+  });
+  expect(inbox.error).toBeNull();
+  expect(inbox.data).toHaveLength(0);
   await context.close();
 });
