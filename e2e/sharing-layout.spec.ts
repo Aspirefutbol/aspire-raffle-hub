@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { campaignProgressSchema } from "@/lib/fundraising/types";
 import { apiAs, signIn } from "./helpers";
 
 test.use({ actionTimeout: 15_000 });
@@ -160,17 +161,33 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await expect(revisitDialog).not.toBeVisible();
   expect((await page.request.get(url)).status()).toBe(200);
 
-  // sessionStorage is untrusted browser input. A stale or injected UUID must
+  // Use an EXISTING participant UUID belonging to an unrelated family, not
+  // a made-up UUID. This ensures sessionStorage cannot cross the actual RLS
+  // boundary even when the injected ID is valid in the current campaign.
+  const adminProgress = await admin.rpc("campaign_progress", {
+    p_organization_id: org.data.id, p_campaign_id: id, p_view: "admin",
+  });
+  expect(adminProgress.error).toBeNull();
+  const allParticipants = campaignProgressSchema.parse(adminProgress.data).participants;
+  const visibleFamilyNames = (await chooserOnReturn.getByRole("button").allTextContents()).map((name) => name.trim());
+  const unrelated = allParticipants.find((participant) => !visibleFamilyNames.includes(participant.player_name));
+  if (!unrelated) throw new Error("Fixture must include a real participant outside this family's authorized players");
+
+  // sessionStorage is untrusted browser input. A stale or injected participant
+  // ID must
   // never select a participant outside the current RLS-filtered family list.
   // After a reload we should fall back to the first authorized sibling, and
   // an existing public link must remain valid without a financial write.
-  await page.evaluate((key) => window.sessionStorage.setItem(key, "00000000-0000-4000-8000-000000000000"),
-    `aspire:parent-selected-player:/o/aspire/fundraising/${id}/requests`);
+  await page.evaluate(({ key, participantId }) => window.sessionStorage.setItem(key, participantId), {
+    key: `aspire:parent-selected-player:/o/aspire/fundraising/${id}/requests`,
+    participantId: unrelated.id,
+  });
   await page.reload();
   const chooserWithUntrustedSelection = page.getByRole("navigation", { name: "Choose player" });
   await expect(chooserWithUntrustedSelection).toBeVisible();
   await expect(chooserWithUntrustedSelection.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("family-player-card").first()).toBeVisible();
+  await expect(page.locator("main")).not.toContainText(unrelated.player_name);
   expect((await page.request.get(url)).status()).toBe(200);
 
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
