@@ -42,7 +42,11 @@ export function ParentTouchTasks({ players, requestsHref }: {
   useEffect(() => {
     try {
       const remembered = window.sessionStorage.getItem(storageKey);
-      if (remembered && players.some((player) => player.id === remembered)) setSelectedId(remembered);
+      if (remembered && players.some((player) => player.id === remembered)) {
+        // Hydrate the remembered choice after mount, not during the effect.
+        const timer = window.setTimeout(() => setSelectedId(remembered), 0);
+        return () => window.clearTimeout(timer);
+      }
     } catch {
       // Private browsing can block storage; the chooser still works.
     }
