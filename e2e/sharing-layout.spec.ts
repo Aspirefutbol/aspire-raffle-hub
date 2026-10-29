@@ -125,10 +125,25 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   // A route change deliberately does not restore the raw sharing token.
   // Make that limitation clear before the parent unknowingly disables an
   // already-shared link. Canceling creation must leave the old URL working.
-  await page.goto(`/o/aspire/fundraising/${id}/requests`);
-  await page.goto(`/o/aspire/fundraising/${id}`);
+  await shareBack.click();
+  await otherPlayerButton.click();
+  // A linked sibling chosen by a parent survives a refresh and a trip to the
+  // private Requests page. Only a validated participant ID is stored locally.
+  await page.reload();
+  const chooserAfterReload = page.getByRole("navigation", { name: "Choose player" });
+  await expect(chooserAfterReload.getByRole("button", { name: otherName, exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  const storedPlayer = await page.evaluate((key) => window.sessionStorage.getItem(key),
+    `aspire:parent-selected-player:/o/aspire/fundraising/${id}/requests`);
+  expect(storedPlayer).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(storedPlayer).not.toContain("/s/");
+  const siblingCard = page.getByTestId("family-player-card").filter({ hasText: otherName });
+  await siblingCard.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Private supporter requests" })).toBeVisible();
+  await page.getByRole("link", { name: "Back to my fundraiser" }).click();
   const chooserOnReturn = page.getByRole("navigation", { name: "Choose player" });
-  await expect(chooserOnReturn).toBeVisible();
+  await expect(chooserOnReturn.getByRole("button", { name: otherName, exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
   await chooserOnReturn.getByRole("button", { name: "Liam Smith", exact: true }).click();
   const revisited = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
   await revisited.getByRole("button", { name: "Share raffle", exact: true }).click();
