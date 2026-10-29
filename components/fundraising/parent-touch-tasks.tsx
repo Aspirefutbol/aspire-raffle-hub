@@ -35,6 +35,30 @@ export function ParentTouchTasks({ players, requestsHref }: {
   const articles = useRef(new Map<string, HTMLElement>());
   const hasMounted = useRef(false);
   const selected = players.find((player) => player.id === selectedId) ?? players[0];
+  const storageKey = `aspire:parent-selected-player:${requestsHref}`;
+
+  // Remember only an authorized participant ID within this browser tab and
+  // fundraiser. Never store a seller token, sharing URL, or financial record.
+  useEffect(() => {
+    try {
+      const remembered = window.sessionStorage.getItem(storageKey);
+      if (remembered && players.some((player) => player.id === remembered)) {
+        // Hydrate the remembered choice after mount, not during the effect.
+        const timer = window.setTimeout(() => setSelectedId(remembered), 0);
+        return () => window.clearTimeout(timer);
+      }
+    } catch {
+      // Private browsing can block storage; the chooser still works.
+    }
+  }, [players, storageKey]);
+
+  function selectPlayer(id: string) {
+    setSelectedId(id);
+    setTask("home");
+    try { window.sessionStorage.setItem(storageKey, id); } catch {
+      // An unavailable browser store must never block navigation.
+    }
+  }
 
   // Keep focus on a visible control after the home tiles disappear. Also move
   // the task back into view if the parent was scrolled down in the previous task.
@@ -57,7 +81,7 @@ export function ParentTouchTasks({ players, requestsHref }: {
         <nav aria-label="Choose player" className="grid grid-cols-2 gap-3">
           {players.map((player) => (
             <button key={player.id} type="button" aria-pressed={selected.id === player.id}
-              onClick={() => { setSelectedId(player.id); setTask("home"); }}
+              onClick={() => selectPlayer(player.id)}
               className={`min-h-14 min-w-0 rounded-card border px-3 py-3 text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 ${selected.id === player.id ? "border-brand-400 bg-brand-50 text-brand-800" : "border-line bg-surface text-ink"}`}>
               <span className="block break-words">{player.name}</span>
             </button>
