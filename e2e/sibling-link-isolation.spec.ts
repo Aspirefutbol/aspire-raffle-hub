@@ -36,6 +36,8 @@ test("revoking one linked sibling's seller link never disables another sibling o
     })).error).toBeNull();
   }
 
+  expect((await admin.rpc("prepare_campaign_inventory", { p_organization_id: org.data.id, p_campaign_id: campaignId })).error).toBeNull();
+
   await signIn(page, "coach@aspire.test");
   await page.goto(`/o/aspire/fundraising/${campaignId}`);
   const chooser = page.getByRole("navigation", { name: "Choose player" });
@@ -97,8 +99,8 @@ test("revoking one linked sibling's seller link never disables another sibling o
   await supporter.goto(liamUrl);
   await expect(supporter.getByRole("button", { name: "Request tickets", exact: true })).toBeVisible();
 
-  // Link management is not a sale, allocation, request or financial mutation.
-  for (const table of ["campaign_sales", "money_events", "supporter_interest_requests"]) {
+  // Link management alone must not issue tickets, submit requests or record money.
+  for (const table of ["campaign_sales", "money_events", "seller_interest_requests"] as const) {
     const result = await admin.from(table).select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
     expect(result.error).toBeNull();
     expect(result.count).toBe(0);
