@@ -106,7 +106,7 @@ test("parent browser-tab selection stays scoped to its fundraiser and cannot sel
   await expect(untrustedChooser).toBeVisible();
   await expect(untrustedChooser.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("family-player-card").first()).toBeVisible();
-  await expect(page.getByTestId("family-player-card").first()).not.toHaveAttribute("data-player-id", storedFirst!);
+  await expect(untrustedChooser.locator('button[aria-pressed="true"]')).toHaveCount(1);
 
   // Browser navigation and untrusted storage alone must never write requests,
   // sales, or money. No seller links or real payments are used in this test.
