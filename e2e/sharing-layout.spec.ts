@@ -122,5 +122,29 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await expect(tools.getByTestId("seller-url")).toHaveText(url);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
+  // A route change deliberately does not restore the raw sharing token.
+  // Make that limitation clear before the parent unknowingly disables an
+  // already-shared link. Canceling creation must leave the old URL working.
+  await page.goto(`/o/aspire/fundraising/${id}/requests`);
+  await page.goto(`/o/aspire/fundraising/${id}`);
+  const chooserOnReturn = page.getByRole("navigation", { name: "Choose player" });
+  await expect(chooserOnReturn).toBeVisible();
+  await chooserOnReturn.getByRole("button", { name: "Liam Smith", exact: true }).click();
+  const revisited = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
+  await revisited.getByRole("button", { name: "Share raffle", exact: true }).click();
+  const revisitedTools = revisited.getByTestId("seller-tools");
+  await expect(revisitedTools.getByTestId("existing-link-warning"))
+    .toContainText("A new link disables the old link and QR code.");
+  await expect(revisitedTools.getByTestId("seller-url")).toHaveCount(0);
+  const beforeCancel = await page.request.get(url);
+  expect(beforeCancel.status()).toBe(200);
+  await revisitedTools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
+  const revisitDialog = page.getByRole("dialog", { name: "Create sharing link?", exact: true });
+  await expect(revisitDialog).toContainText("Any previous link or printed QR code will stop working");
+  await revisitDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(revisitDialog).not.toBeVisible();
+  expect((await page.request.get(url)).status()).toBe(200);
+
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
+  expect((await admin.from("money_events").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
 });

@@ -98,7 +98,8 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
     </div>
     {!url ? <>
       <Button className="w-full" size="lg" disabled={pending} onClick={() => setConfirmation("create")}>Create my sharing link</Button>
-      <details className="text-xs text-muted"><summary className="min-h-11 cursor-pointer py-2 font-medium">Need help with sharing?</summary><p>Already saved a link? Keep using it. Creating another replaces the previous link and QR code. Your player’s name is not shown on the supporter page.</p></details>
+      <p data-testid="existing-link-warning" className="text-sm text-ink-soft">Already sent a link? Keep using it from your messages. A new link disables the old link and QR code.</p>
+      <details className="text-xs text-muted"><summary className="min-h-11 cursor-pointer py-2 font-medium">Where is my old link?</summary><p>This page does not reload a previously created link. Reuse it from your messages, or create a replacement and share the new one. Your player’s name is not shown on the supporter page.</p></details>
     </> : <>
       <p className="text-sm font-semibold text-ink">Your sharing link is ready</p>
       <Button className="h-auto min-h-11 w-full whitespace-normal py-3" size="lg" disabled={pending} onClick={() => copy("message")}>Copy invitation to share</Button>
