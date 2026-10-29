@@ -160,6 +160,19 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await expect(revisitDialog).not.toBeVisible();
   expect((await page.request.get(url)).status()).toBe(200);
 
+  // sessionStorage is untrusted browser input. A stale or injected UUID must
+  // never select a participant outside the current RLS-filtered family list.
+  // After a reload we should fall back to the first authorized sibling, and
+  // an existing public link must remain valid without a financial write.
+  await page.evaluate((key) => window.sessionStorage.setItem(key, "00000000-0000-4000-8000-000000000000"),
+    `aspire:parent-selected-player:/o/aspire/fundraising/${id}/requests`);
+  await page.reload();
+  const chooserWithUntrustedSelection = page.getByRole("navigation", { name: "Choose player" });
+  await expect(chooserWithUntrustedSelection).toBeVisible();
+  await expect(chooserWithUntrustedSelection.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("family-player-card").first()).toBeVisible();
+  expect((await page.request.get(url)).status()).toBe(200);
+
   expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
   expect((await admin.from("money_events").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
 });
