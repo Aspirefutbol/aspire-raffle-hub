@@ -37,7 +37,7 @@ export function Sheet({ open, onClose, title, description, children, footer, wid
         if (e.target === ref.current) onClose();
       }}
       aria-labelledby="sheet-title"
-      className={`fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh min-w-0 w-full max-w-[100vw] ${wide ? "sm:max-w-2xl" : "sm:max-w-md"} bg-surface p-0 shadow-pop open:animate-sheet-in`}
+      className={`fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-dvh min-w-0 w-full max-w-[100vw] ${wide ? "sm:max-w-2xl" : "sm:max-w-md"} bg-surface p-0 shadow-pop open:animate-fade-in sm:open:animate-sheet-in`}
     >
       {open && (
         <div className="flex h-full min-w-0 flex-col">
