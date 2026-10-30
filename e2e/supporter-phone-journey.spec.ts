@@ -118,6 +118,39 @@ test("phone-only supporter request: discounted quote, private contact and no iss
   await expect(request.getByRole("link", { name: "7135550123", exact: true }))
     .toHaveAttribute("href", "tel:7135550123");
   await expect(request).not.toContainText("@example");
-  await page.setViewportSize({ width: 320, height: 780 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  // The inbox is a separate parent task: reading a nonbinding supporter
+  // request must not appear to have collected money or issued tickets.
+  await expect(request).toContainText("new");
+  await expect(request).toContainText("After you receive the approved cash or check payment");
+  const completeSale = request.getByRole("button", { name: "I received payment — complete sale", exact: true });
+  const options = request.locator("details").first();
+  const optionsToggle = options.locator("summary");
+  await expect(completeSale).toBeVisible();
+  await expect(options).not.toHaveAttribute("open", "");
+  await expect(request.getByRole("button", { name: "Mark contacted", exact: true })).not.toBeVisible();
+  await expect(request.getByRole("button", { name: "Decline request", exact: true })).not.toBeVisible();
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 780 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    for (const control of [completeSale, optionsToggle]) {
+      const bounds = await control.boundingBox();
+      expect(bounds).not.toBeNull();
+      expect(bounds!.height).toBeGreaterThanOrEqual(44);
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    }
+  }
+  // Secondary actions are available by deliberate disclosure, not crowded
+  // alongside the primary offline-sale handoff on first entry.
+  await optionsToggle.click();
+  await expect(request.getByRole("button", { name: "Mark contacted", exact: true })).toBeVisible();
+  await optionsToggle.click();
+  await expect(options).not.toHaveAttribute("open", "");
+  const untouchedMoney = await admin.from("money_events").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
+  expect(untouchedMoney.error).toBeNull();
+  expect(untouchedMoney.count).toBe(0);
+  const untouchedSales = await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
+  expect(untouchedSales.error).toBeNull();
+  expect(untouchedSales.count).toBe(0);
 });
