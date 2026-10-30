@@ -134,6 +134,9 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(ticketDetails).toHaveJSProperty("open", false);
   await expectPhoneLayout(page);
   await card.getByRole("button", { name: "Back to actions", exact: true }).click();
+  await expect(dashboard).toBeVisible();
+  await expect(card.getByRole("heading", { name: "Liam Smith", exact: true })).toBeFocused();
+  await expect(card.getByTestId("parent-progress-task")).toBeHidden();
   await card.getByRole("button", { name: "Record sale", exact: true }).click();
   const sale = page.getByRole("dialog", { name: "Record sale", exact: true });
   await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Phone cash buyer");
