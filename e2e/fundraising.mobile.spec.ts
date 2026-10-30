@@ -96,7 +96,29 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(card.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("Mateo Garcia");
   await expect(page.locator("main")).not.toContainText("Isaac Martinez");
+
+  // Four clear parent tasks should remain directly tappable without overflow,
+  // even on a 320px phone. Selecting one task must hide the other tasks.
+  const dashboard = card.getByTestId("touch-dashboard");
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 780 });
+    await expect(dashboard).toBeVisible();
+    for (const name of ["Share raffle", "Requests", "Record sale", "My progress"]) {
+      const role = name === "Requests" ? "link" : "button";
+      const tile = dashboard.getByRole(role, { name, exact: true });
+      await expect(tile).toBeVisible();
+      const bounds = await tile.boundingBox();
+      expect(bounds, name + " at " + width + "px").not.toBeNull();
+      expect(bounds!.height, name + " at " + width + "px").toBeGreaterThanOrEqual(88);
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    }
+    await expectPhoneLayout(page);
+  }
   await card.getByRole("button", { name: "My progress", exact: true }).click();
+  await expect(dashboard).toBeHidden();
+  await expect(card.getByTestId("parent-progress-task")).toBeVisible();
+  await expect(card.getByTestId("parent-share-task")).toBeHidden();
   const ticketDetails = card.getByTestId("inventory-details");
   await expect(ticketDetails).toHaveJSProperty("open", false);
   await expect(ticketDetails.getByText("Assigned numbers:", { exact: false })).not.toBeVisible();
