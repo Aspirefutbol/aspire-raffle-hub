@@ -175,6 +175,12 @@ test("phone-only supporter request: discounted quote, private contact and no iss
     expect(sheetBounds).not.toBeNull();
     expect(sheetBounds!.x).toBeGreaterThanOrEqual(0);
     expect(sheetBounds!.x + sheetBounds!.width).toBeLessThanOrEqual(width);
+    // Native date/time controls must shrink with the dialog instead of
+    // forcing a wider-than-viewport sale sheet on 320px phones.
+    expect(await saleSheet.evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
+    const timestamp = await saleSheet.getByLabel("Sale timestamp").boundingBox();
+    expect(timestamp).not.toBeNull();
+    expect(timestamp!.x + timestamp!.width).toBeLessThanOrEqual(width);
     const record = await saleSheet.getByRole("button", { name: "Record sale", exact: true }).boundingBox();
     expect(record).not.toBeNull();
     expect(record!.height).toBeGreaterThanOrEqual(44);
