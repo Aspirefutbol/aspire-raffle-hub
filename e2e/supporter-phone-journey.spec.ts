@@ -133,7 +133,9 @@ test("phone-only supporter request: discounted quote, private contact and no iss
   for (const width of [320, 360, 390]) {
     await page.setViewportSize({ width, height: 780 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    for (const control of [completeSale, optionsToggle]) {
+    // A parent must be able to tap directly to call a supporter without
+    // a tiny inline text target or any horizontal scrolling.
+    for (const control of [completeSale, optionsToggle, request.getByRole("link", { name: "7135550123", exact: true })]) {
       const bounds = await control.boundingBox();
       expect(bounds).not.toBeNull();
       expect(bounds!.height).toBeGreaterThanOrEqual(44);
