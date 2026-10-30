@@ -155,4 +155,38 @@ test("phone-only supporter request: discounted quote, private contact and no iss
   const untouchedSales = await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
   expect(untouchedSales.error).toBeNull();
   expect(untouchedSales.count).toBe(0);
+
+  // Inspecting the offline handoff must not itself issue tickets or record
+  // money. The parent still has to deliberately submit a received payment.
+  await page.setViewportSize({ width: 360, height: 780 });
+  await completeSale.click();
+  const saleSheet = page.getByRole("dialog", { name: "Record sale" });
+  await expect(saleSheet).toBeVisible();
+  await expect(saleSheet.getByLabel("Buyer name")).toHaveValue("Phone-Only Supporter");
+  await expect(saleSheet.getByLabel("Buyer phone")).toHaveValue("7135550123");
+  await expect(saleSheet.getByLabel("Quantity")).toHaveValue("5");
+  await expect(saleSheet.getByRole("status", { name: "Sale pricing summary" })).toContainText("$90.00");
+  const paymentMethod = saleSheet.getByLabel("Payment method");
+  await expect(paymentMethod.locator("option")).toHaveText(["Cash", "Check"]);
+
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 780 });
+    const sheetBounds = await saleSheet.boundingBox();
+    expect(sheetBounds).not.toBeNull();
+    expect(sheetBounds!.x).toBeGreaterThanOrEqual(0);
+    expect(sheetBounds!.x + sheetBounds!.width).toBeLessThanOrEqual(width);
+    const record = await saleSheet.getByRole("button", { name: "Record sale", exact: true }).boundingBox();
+    expect(record).not.toBeNull();
+    expect(record!.height).toBeGreaterThanOrEqual(44);
+    expect(record!.x + record!.width).toBeLessThanOrEqual(width);
+  }
+  await saleSheet.getByRole("button", { name: "Close", exact: true }).last().click();
+  await expect(saleSheet).not.toBeVisible();
+
+  const previewSales = await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
+  const previewMoney = await admin.from("money_events").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
+  expect(previewSales.error).toBeNull();
+  expect(previewMoney.error).toBeNull();
+  expect(previewSales.count).toBe(0);
+  expect(previewMoney.count).toBe(0);
 });
