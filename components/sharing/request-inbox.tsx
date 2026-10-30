@@ -54,7 +54,10 @@ function RequestCard({ request: r, orgSlug, campaignId, progress }: { request: I
   return <article className="space-y-3 rounded-card border border-line bg-surface p-4" data-testid="interest-request">
     <h2 className="break-words text-lg font-semibold">{r.supporter_name}</h2><p>{participant?.player_name} · {r.requested_quantity} requested · <strong>{finished ? "completed" : r.status}</strong></p>
     <p className="text-xs">{new Date(r.created_at).toLocaleString()} · Prefers {r.preferred_contact}</p>
-    <div className="flex flex-wrap gap-4 break-all text-sm underline">{r.supporter_email && <a href={`mailto:${encodeURIComponent(r.supporter_email)}`}>{r.supporter_email}</a>}{r.supporter_phone && <a href={`tel:${r.supporter_phone}`}>{r.supporter_phone}</a>}</div>
+    <div className="flex flex-wrap gap-2 break-all text-sm underline">
+      {r.supporter_email && <a className="inline-flex min-h-11 max-w-full items-center rounded-control px-2 py-2 focus-visible:outline-2 focus-visible:outline-offset-2" href={`mailto:${encodeURIComponent(r.supporter_email)}`}>{r.supporter_email}</a>}
+      {r.supporter_phone && <a className="inline-flex min-h-11 max-w-full items-center rounded-control px-2 py-2 focus-visible:outline-2 focus-visible:outline-offset-2" href={`tel:${r.supporter_phone}`}>{r.supporter_phone}</a>}
+    </div>
     <p className="whitespace-pre-wrap break-words">{r.note}</p>
     {finished && <p className="rounded-control border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-900">Completed — this supporter’s sale has been recorded and tickets were issued.</p>}
     {completion === "linking" && <p role="status" className="text-sm text-ink-soft">Tickets issued. Completing this request…</p>}
