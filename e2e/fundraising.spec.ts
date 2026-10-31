@@ -171,6 +171,12 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(receipt).toContainText("2 tickets sold · $10.00 raised");
     await expect(receipt).toContainText("offline payment is recorded and the tickets have been issued");
     await expect(receipt.getByText("View ticket numbers (2)", { exact: true })).toBeVisible();
+    // A confirmed offline cash sale must refresh Progress First *in place*.
+    // Parents should not need to reload before seeing the new money/ticket totals.
+    // These are RLS-scoped, synthetic fixture values; the sale itself is already
+    // tested above for exact package pricing and idempotent ticket issuance.
+    await expect(playerCard.getByTestId("parent-amount-raised")).toHaveText("$10.00");
+    await expect(playerCard.getByTestId("parent-tickets-sold")).toHaveText("2");
     await expect(receipt.getByRole("listitem")).toHaveCount(0);
     await receipt.locator("details summary").click();
     await expect(receipt.getByRole("listitem")).toHaveText(issuedNumbers);
