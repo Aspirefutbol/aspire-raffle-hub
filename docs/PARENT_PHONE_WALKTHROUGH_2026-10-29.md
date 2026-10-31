@@ -14,7 +14,7 @@ Record the **full integration Git SHA**, its successful exact-head **CI** run, s
 
 ### Verified technical checkpoint (not a human pilot pass)
 
-At the October 31, 2026 checkpoint, integration \`95c55f374e069ecdc5729791fa5ec6cc148f5e63\` passed [full CI](https://github.com/Aspirefutbol/aspire-raffle-hub/actions/runs/41171632959) and [Hosted QA with login/privacy smoke](https://github.com/Aspirefutbol/aspire-raffle-hub/actions/runs/41171633081), and the matching staging deploy was READY (\`6ae57b3f88c8b5bba3669adf\`). **These are historical checkpoints only**: reverify exact HEAD, both runs, authenticated scope, signed-out privacy, and currently published deploy immediately before a real-device test. The unassisted parent walkthrough remains pending.
+At the October 31, 2026 checkpoint, integration `95c55f374e069ecdc5729791fa5ec6cc148f5e63` passed [full CI](https://github.com/Aspirefutbol/aspire-raffle-hub/actions/runs/41171632959) and [Hosted QA with login/privacy smoke](https://github.com/Aspirefutbol/aspire-raffle-hub/actions/runs/41171633081), and the matching staging deploy was READY (`6ae57b3f88c8b5bba3669adf`). **These are historical checkpoints only**: reverify exact HEAD, both runs, authenticated scope, signed-out privacy, and currently published deploy immediately before a real-device test. The unassisted parent walkthrough remains pending.
 
 ## Suggested devices and evidence
 
