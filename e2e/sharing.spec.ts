@@ -71,7 +71,7 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   expect(copiedMessage).toContain(url);
   // Task switching must not silently lose/rotate a confirmed seller link.
   await page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByRole("button", { name: "Back to actions", exact: true }).click();
-  await page.getByRole("button", { name: "My progress", exact: true }).click();
+  await page.getByRole("button", { name: "View full progress", exact: true }).click();
   await page.getByRole("button", { name: "Back to actions", exact: true }).click();
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   await expect(tools.getByTestId("seller-url")).toHaveText(url);

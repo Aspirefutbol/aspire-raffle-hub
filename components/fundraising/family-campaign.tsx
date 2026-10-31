@@ -51,6 +51,9 @@ export function FamilyCampaignView({ orgSlug, progress, detail = false, timeZone
                   team: participant.team_name,
                   raised: formatMoney(participant.raised_cents),
                   ticketsSold: participant.tickets_sold,
+                  goal: participant.goal_amount_cents != null && participant.goal_amount_cents > 0
+                    ? <GoalProgress raisedCents={participant.raised_cents} goalCents={participant.goal_amount_cents} label="Personal fundraising goal" />
+                    : null,
                   share: participant.status === "active"
                     ? <SellerTools orgSlug={orgSlug} participantId={participant.id} price={campaign.ticket_price_cents} ticketPackages={campaign.ticket_packages} />
                     : null,

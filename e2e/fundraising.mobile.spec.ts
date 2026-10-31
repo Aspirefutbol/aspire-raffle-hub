@@ -97,13 +97,20 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expect(page.locator("main")).not.toContainText("Mateo Garcia");
   await expect(page.locator("main")).not.toContainText("Isaac Martinez");
 
-  // Four clear parent tasks should remain directly tappable without overflow,
-  // even on a 320px phone. Selecting one task must hide the other tasks.
+  // Approved family-scoped progress appears without tapping a progress tile.
+  const summary = card.getByTestId("parent-progress-summary");
+  await expect(summary).toBeVisible();
+  await expect(summary.getByTestId("parent-amount-raised")).toHaveText("$0.00");
+  await expect(summary.getByTestId("parent-tickets-sold")).toHaveText("0");
+  await expect(summary.getByTestId("parent-goal-meter")).toBeVisible();
+  await expect(summary.getByRole("progressbar", { name: "Personal fundraising goal" })).toHaveAttribute("value", "0");
+
+  // Three full-size actions; detailed progress is a smaller secondary control.
   const dashboard = card.getByTestId("touch-dashboard");
   for (const width of [320, 360, 390]) {
     await page.setViewportSize({ width, height: 780 });
     await expect(dashboard).toBeVisible();
-    for (const name of ["Share raffle", "Requests", "Record sale", "My progress"]) {
+    for (const name of ["Share raffle", "Requests", "Record sale"]) {
       const role = name === "Requests" ? "link" : "button";
       const tile = dashboard.getByRole(role, { name, exact: true });
       await expect(tile).toBeVisible();
@@ -113,9 +120,12 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     }
+    const fullProgress = card.getByRole("button", { name: "View full progress", exact: true });
+    await expect(fullProgress).toBeVisible();
+    expect((await fullProgress.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await expectPhoneLayout(page);
   }
-  await card.getByRole("button", { name: "My progress", exact: true }).click();
+  await card.getByRole("button", { name: "View full progress", exact: true }).click();
   await expect(dashboard).toBeHidden();
   await expect(card.getByTestId("parent-progress-task")).toBeVisible();
   await expect(card.getByTestId("parent-share-task")).toBeHidden();
@@ -135,8 +145,15 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expectPhoneLayout(page);
   await card.getByRole("button", { name: "Back to actions", exact: true }).click();
   await expect(dashboard).toBeVisible();
-  await expect(card.getByRole("heading", { name: "Liam Smith", exact: true })).toBeFocused();
+  await expect(card.getByRole("button", { name: "View full progress", exact: true })).toBeFocused();
   await expect(card.getByTestId("parent-progress-task")).toBeHidden();
+  // Passive navigation must not write ticket sales or money events.
+  const passiveSales = await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
+  const passiveMoney = await admin.from("money_events").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId);
+  expect(passiveSales.error).toBeNull();
+  expect(passiveMoney.error).toBeNull();
+  expect(passiveSales.count).toBe(0);
+  expect(passiveMoney.count).toBe(0);
   await card.getByRole("button", { name: "Record sale", exact: true }).click();
   const sale = page.getByRole("dialog", { name: "Record sale", exact: true });
   await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Phone cash buyer");
@@ -179,7 +196,7 @@ test("phone family can recover a rejected timestamp and issue exact cash tickets
   await expectPhoneLayout(page);
   await page.screenshot({ path: testInfo.outputPath("phone-ticket-receipt.png"), fullPage: false });
   await receipt.getByRole("button", { name: "Done", exact: true }).click();
-  await card.getByRole("button", { name: "My progress", exact: true }).click();
+  await card.getByRole("button", { name: "View full progress", exact: true }).click();
   await expect(card.getByText("Amount raised", { exact: true }).locator("..").getByText("$10.00", { exact: true })).toBeVisible();
   await expect(card.getByText("Tickets sold", { exact: true }).locator("..").getByText("2", { exact: true })).toBeVisible();
   await expect(card.getByText("2 tickets available", { exact: true })).toBeVisible();
