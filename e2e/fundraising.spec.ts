@@ -137,7 +137,8 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(raffle.getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
     await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
     await expect(family.getByTestId("touch-dashboard")).toBeVisible();
-    for (const name of ["Share raffle", "Record sale", "My progress"]) await expect(family.getByTestId("touch-dashboard").getByRole("button", { name, exact: true })).toBeVisible();
+    for (const name of ["Share raffle", "Record sale"]) await expect(family.getByTestId("touch-dashboard").getByRole("button", { name, exact: true })).toBeVisible();
+    await expect(family.getByRole("button", { name: "View full progress", exact: true })).toBeVisible();
     await expect(family.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true })).toBeVisible();
     await expect(family).toHaveURL(new RegExp(`/fundraising/${campaignId}$`));
     const playerCard = family.getByTestId("family-player-card");
@@ -145,7 +146,11 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(playerCard.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
     await expect(family.locator("main")).not.toContainText("Mateo Garcia");
     await expect(family.locator("main")).not.toContainText("Isaac Martinez");
-    await playerCard.getByRole("button", { name: "My progress", exact: true }).click();
+    await expect(playerCard.getByTestId("parent-progress-summary")).toBeVisible();
+    await expect(playerCard.getByTestId("parent-amount-raised")).toHaveText("$0.00");
+    await expect(playerCard.getByTestId("parent-tickets-sold")).toHaveText("0");
+    await expect(playerCard.getByTestId("parent-goal-meter")).toBeVisible();
+    await playerCard.getByRole("button", { name: "View full progress", exact: true }).click();
     await expect(playerCard.getByText("4 tickets available", { exact: true })).toBeVisible();
 
     // Captain visibility remains a separate read projection, including Mateo.
@@ -183,7 +188,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await family.screenshot({ path: testInfo.outputPath("desktop-family-printable-tickets.png"), fullPage: true });
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
     const refreshedPlayerCard = family.getByTestId("family-player-card");
-    await refreshedPlayerCard.getByRole("button", { name: "My progress", exact: true }).click();
+    await refreshedPlayerCard.getByRole("button", { name: "View full progress", exact: true }).click();
     await expect(refreshedPlayerCard.getByText("Amount raised", { exact: true }).locator("..").getByText("$10.00", { exact: true })).toBeVisible();
     await expect(refreshedPlayerCard.getByText("Tickets sold", { exact: true }).locator("..").getByText("2", { exact: true })).toBeVisible();
     await expect(refreshedPlayerCard.getByText("2 tickets available", { exact: true })).toBeVisible();

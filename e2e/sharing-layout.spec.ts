@@ -38,7 +38,7 @@ test("parent sharing controls fit phone and tablet widths without changing the l
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const dashboard = page.getByTestId("touch-dashboard");
-    for (const name of ["Share raffle", "Record sale", "My progress"]) {
+    for (const name of ["Share raffle", "Record sale"]) {
       const box = await dashboard.getByRole("button", { name, exact: true }).boundingBox();
       expect(box).not.toBeNull();
       expect(box!.height).toBeGreaterThanOrEqual(88);
@@ -48,21 +48,28 @@ test("parent sharing controls fit phone and tablet widths without changing the l
     const requests = await dashboard.getByRole("link", { name: "Requests", exact: true }).boundingBox();
     expect(requests).not.toBeNull();
     expect(requests!.height).toBeGreaterThanOrEqual(88);
+    const detail = await page.getByRole("button", { name: "View full progress", exact: true }).boundingBox();
+    expect(detail).not.toBeNull();
+    expect(detail!.height).toBeGreaterThanOrEqual(44);
   }
   const playerCard = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
-  const playerHeading = playerCard.getByRole("heading", { name: "Liam Smith", exact: true });
+  await expect(playerCard.getByTestId("parent-progress-summary")).toBeVisible();
+  await expect(playerCard.getByTestId("parent-amount-raised")).toHaveText("$0.00");
+  await expect(playerCard.getByTestId("parent-tickets-sold")).toHaveText("0");
+  // No configured goal: never fabricate a progress bar or target.
+  await expect(playerCard.getByTestId("parent-goal-meter")).toHaveCount(0);
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const shareBack = playerCard.getByTestId("parent-share-task").getByRole("button", { name: "Back to actions", exact: true });
   // The tile becomes hidden on navigation: keyboard/screen-reader focus must
   // move to a visible way back, not remain trapped in that hidden tile.
   await expect(shareBack).toBeFocused();
   await shareBack.click();
-  await expect(playerHeading).toBeFocused();
-  await playerCard.getByRole("button", { name: "My progress", exact: true }).click();
+  await expect(playerCard.getByRole("button", { name: "Share raffle", exact: true })).toBeFocused();
+  await playerCard.getByRole("button", { name: "View full progress", exact: true }).click();
   const progressBack = playerCard.getByTestId("parent-progress-task").getByRole("button", { name: "Back to actions", exact: true });
   await expect(progressBack).toBeFocused();
   await progressBack.click();
-  await expect(playerHeading).toBeFocused();
+  await expect(playerCard.getByRole("button", { name: "View full progress", exact: true })).toBeFocused();
   await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
   await expect(shareBack).toBeFocused();
   const tools = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByTestId("seller-tools");
