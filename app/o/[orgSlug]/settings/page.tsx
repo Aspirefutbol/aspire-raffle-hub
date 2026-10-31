@@ -3,11 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MappingsCard } from "@/components/settings/mappings-card";
 import { OrganizationForm } from "@/components/settings/organization-form";
+import { HelpLink } from "@/components/learning/help-link";
 import { SeasonsCard } from "@/components/settings/seasons-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { can, requireOrgContext } from "@/lib/auth/org-context";
+import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
 import { listSeasons } from "@/lib/roster/queries";
 import { TIMEZONES } from "@/lib/settings/schemas";
 import { createClient } from "@/lib/supabase/server";
@@ -17,6 +18,7 @@ export const metadata: Metadata = { title: "Settings" };
 export default async function SettingsPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
   const ctx = await requireOrgContext(orgSlug);
+  requirePagePermission(ctx, "roster.read");
   const supabase = await createClient();
   const orgId = ctx.organization.id;
 
@@ -36,7 +38,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ orgSl
 
   return (
     <>
-      <PageHeader title="Settings" description={org.name} />
+      <PageHeader title="Settings" description={org.name} actions={can(ctx, "organization.manage") && <HelpLink orgSlug={orgSlug} article="roles-and-scope" label="Roles & access guide" />} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card>

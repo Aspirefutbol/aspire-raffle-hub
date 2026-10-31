@@ -1,6 +1,6 @@
 import type { Permission } from "@/lib/permissions";
 
-export type NavIcon = "dashboard" | "people" | "teams" | "campaigns" | "reports" | "settings";
+export type NavIcon = "dashboard" | "people" | "teams" | "campaigns" | "learn" | "reports" | "settings";
 
 export interface NavItem {
   label: string;
@@ -11,7 +11,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Dashboard", href: "/dashboard", icon: "dashboard", permission: "roster.read" },
   {
     label: "People",
     href: "/people",
@@ -23,7 +23,10 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Teams", href: "/teams", icon: "teams", permission: "roster.read" },
-  { label: "Campaigns", href: "/campaigns", icon: "campaigns" },
-  { label: "Reports", href: "/reports", icon: "reports" },
-  { label: "Settings", href: "/settings", icon: "settings" },
+  { label: "Campaigns", href: "/campaigns", icon: "campaigns", permission: "campaigns.read" },
+  { label: "Learning Hub", href: "/learn", icon: "learn", permission: "organization.manage" },
+  { label: "My fundraising", href: "/fundraising", icon: "campaigns", permission: "roster.read_own_family" },
+  { label: "Team fundraising", href: "/team-fundraising", icon: "teams", permission: "roster.read_assigned_teams" },
+  { label: "Reports", href: "/reports", icon: "reports", permission: "roster.read" },
+  { label: "Settings", href: "/settings", icon: "settings", permission: "roster.read" },
 ];

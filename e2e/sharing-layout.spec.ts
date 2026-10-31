@@ -1,0 +1,202 @@
+import { expect, test } from "@playwright/test";
+import { campaignProgressSchema } from "@/lib/fundraising/types";
+import { apiAs, signIn } from "./helpers";
+
+test.use({ actionTimeout: 15_000 });
+
+test("parent sharing controls fit phone and tablet widths without changing the link", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  if (!["localhost", "127.0.0.1"].includes(new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname)) throw new Error("Sharing layout testing requires local Supabase.");
+  const admin = await apiAs("admin@aspire.test");
+  const org = await admin.from("organizations").select("id").eq("slug", "aspire").single();
+  if (org.error) throw org.error;
+  const now = Date.now();
+  const campaign = await admin.from("campaigns").insert({
+    organization_id: org.data.id, name: `Synthetic sharing layout ${now}`,
+    ticket_price_cents: 2000, ticket_packages: [{ quantity: 5, priceCents: 9000 }],
+    ticket_prefix: `SL${now.toString(36).slice(-6).toUpperCase()}`, default_allocation: 10,
+    rules_text: "Synthetic offline test. $20 single and five for $90. External drawing.",
+    starts_at: new Date(now - 3600000).toISOString(),
+    sales_close_at: new Date(now + 86400000).toISOString(), draw_at: new Date(now + 172800000).toISOString(),
+  }).select("id").single();
+  if (campaign.error) throw campaign.error;
+  const id = campaign.data.id;
+  expect((await admin.rpc("enroll_campaign_players", { p_organization_id: org.data.id, p_campaign_id: id, p_all_active: true })).error).toBeNull();
+  for (const status of ["READY", "ACTIVE"]) expect((await admin.rpc("transition_campaign", { p_campaign_id: id, p_to: status, p_reason: "Synthetic sharing layout acceptance" })).error).toBeNull();
+  await signIn(page, "coach@aspire.test");
+  await page.goto(`/o/aspire/fundraising/${id}`);
+  const playerChooser = page.getByRole("navigation", { name: "Choose player" });
+  // This synthetic enrolled-all fixture has multiple linked players.
+  // Require the streamed chooser to exist before clicking; count() can
+  // incorrectly return zero during a fresh page load and skip selection.
+  await expect(playerChooser).toBeVisible();
+  await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+  await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" })).toBeVisible();
+  // Parents must be able to hit each top-level action at narrow phone widths.
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const dashboard = page.getByTestId("touch-dashboard");
+    for (const name of ["Share raffle", "Record sale"]) {
+      const box = await dashboard.getByRole("button", { name, exact: true }).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThanOrEqual(88);
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    }
+    const requests = await dashboard.getByRole("link", { name: "Requests", exact: true }).boundingBox();
+    expect(requests).not.toBeNull();
+    expect(requests!.height).toBeGreaterThanOrEqual(88);
+    const detail = await page.getByRole("button", { name: "View full progress", exact: true }).boundingBox();
+    expect(detail).not.toBeNull();
+    expect(detail!.height).toBeGreaterThanOrEqual(44);
+  }
+  const playerCard = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
+  await expect(playerCard.getByTestId("parent-progress-summary")).toBeVisible();
+  await expect(playerCard.getByTestId("parent-amount-raised")).toHaveText("$0.00");
+  await expect(playerCard.getByTestId("parent-tickets-sold")).toHaveText("0");
+  // No configured goal: never fabricate a progress bar or target.
+  await expect(playerCard.getByTestId("parent-goal-meter")).toHaveCount(0);
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
+  const shareBack = playerCard.getByTestId("parent-share-task").getByRole("button", { name: "Back to actions", exact: true });
+  // The tile becomes hidden on navigation: keyboard/screen-reader focus must
+  // move to a visible way back, not remain trapped in that hidden tile.
+  await expect(shareBack).toBeFocused();
+  await shareBack.click();
+  await expect(playerCard.getByRole("button", { name: "Share raffle", exact: true })).toBeFocused();
+  await playerCard.getByRole("button", { name: "View full progress", exact: true }).click();
+  const progressBack = playerCard.getByTestId("parent-progress-task").getByRole("button", { name: "Back to actions", exact: true });
+  await expect(progressBack).toBeFocused();
+  await progressBack.click();
+  await expect(playerCard.getByRole("button", { name: "View full progress", exact: true })).toBeFocused();
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(shareBack).toBeFocused();
+  const tools = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByTestId("seller-tools");
+  await expect(tools).toContainText("Step 1");
+  await tools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
+  await page.getByRole("dialog", { name: "Create sharing link?", exact: true }).getByRole("button", { name: "Confirm create link", exact: true }).click();
+  // Alternatives are deliberately tucked away, but remain available and touch-friendly.
+  await expect(tools.getByRole("button", { name: "Copy invitation to share", exact: true })).toBeVisible();
+  await expect(tools.getByRole("button", { name: "Copy link", exact: true })).not.toBeVisible();
+  await tools.getByTestId("share-options").locator("summary").click();
+  const url = await tools.getByTestId("seller-url").innerText();
+  expect(decodeURIComponent((await tools.getByRole("link", { name: "Text / SMS", exact: true }).getAttribute("href"))!)).toContain("5 for $90.00");
+  await tools.getByRole("button", { name: "Show QR code", exact: true }).click();
+  await expect(tools.getByRole("img")).toBeVisible();
+  for (const width of [320, 360, 390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await tools.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const shareDisclosure = await tools.getByTestId("share-options").locator("summary").boundingBox();
+    expect(shareDisclosure).not.toBeNull();
+    expect(shareDisclosure!.height).toBeGreaterThanOrEqual(44);
+    for (const name of ["Copy invitation to share", "Copy link"]) {
+      const box = await tools.getByRole("button", { name, exact: true }).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    }
+    const qrBox = await tools.getByRole("img").boundingBox();
+    expect(Math.abs(qrBox!.width - qrBox!.height)).toBeLessThan(1);
+    await tools.getByText("Link settings", { exact: true }).click();
+    await tools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
+    const confirmation = page.getByRole("dialog", { name: "Create sharing link?", exact: true });
+    await expect(confirmation).toContainText("Choose Cancel");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(tools.getByTestId("seller-url")).toHaveText(url);
+    await tools.getByText("Link settings", { exact: true }).click();
+    await page.screenshot({ path: testInfo.outputPath(`parent-sharing-${width}.png`), fullPage: true });
+  }
+  // Switching a linked sibling must not expose the previous player's seller
+  // controls or silently recreate their sharing link when returning.
+  const otherPlayerButton = playerChooser.getByRole("button").filter({ hasNotText: "Liam Smith" }).first();
+  await expect(otherPlayerButton).toBeVisible();
+  const otherName = (await otherPlayerButton.innerText()).trim();
+  await otherPlayerButton.click();
+  await expect(otherPlayerButton).toHaveAttribute("aria-pressed", "true");
+  await expect(playerCard).toBeHidden();
+  const otherCard = page.getByTestId("family-player-card").filter({ hasText: otherName });
+  await expect(otherCard).toBeVisible();
+  await expect(otherCard.getByTestId("touch-dashboard")).toBeVisible();
+  await expect(otherCard.getByTestId("parent-share-task")).toBeHidden();
+  const liamButton = playerChooser.getByRole("button", { name: "Liam Smith", exact: true });
+  await liamButton.click();
+  await expect(liamButton).toHaveAttribute("aria-pressed", "true");
+  await expect(playerCard).toBeVisible();
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  // A route change deliberately does not restore the raw sharing token.
+  // Make that limitation clear before the parent unknowingly disables an
+  // already-shared link. Canceling creation must leave the old URL working.
+  await shareBack.click();
+  await otherPlayerButton.click();
+  // A linked sibling chosen by a parent survives a refresh and a trip to the
+  // private Requests page. Only a validated participant ID is stored locally.
+  await page.reload();
+  const chooserAfterReload = page.getByRole("navigation", { name: "Choose player" });
+  await expect(chooserAfterReload.getByRole("button", { name: otherName, exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  const storedPlayer = await page.evaluate((key) => window.sessionStorage.getItem(key),
+    `aspire:parent-selected-player:/o/aspire/fundraising/${id}/requests`);
+  expect(storedPlayer).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(storedPlayer).not.toContain("/s/");
+  const siblingCard = page.getByTestId("family-player-card").filter({ hasText: otherName });
+  await siblingCard.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Private supporter requests" })).toBeVisible();
+  await page.getByRole("link", { name: "Back to my fundraiser", exact: true }).click();
+  const chooserOnReturn = page.getByRole("navigation", { name: "Choose player" });
+  await expect(chooserOnReturn.getByRole("button", { name: otherName, exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await chooserOnReturn.getByRole("button", { name: "Liam Smith", exact: true }).click();
+  const revisited = page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" });
+  await revisited.getByRole("button", { name: "Share raffle", exact: true }).click();
+  const revisitedTools = revisited.getByTestId("seller-tools");
+  await expect(revisitedTools.getByTestId("existing-link-warning"))
+    .toContainText("A new link disables the old link and QR code.");
+  await expect(revisitedTools.getByTestId("seller-url")).toHaveCount(0);
+  const beforeCancel = await page.request.get(url);
+  expect(beforeCancel.status()).toBe(200);
+  await revisitedTools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
+  const revisitDialog = page.getByRole("dialog", { name: "Create sharing link?", exact: true });
+  await expect(revisitDialog).toContainText("Any previous link or printed QR code will stop working");
+  await revisitDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(revisitDialog).not.toBeVisible();
+  expect((await page.request.get(url)).status()).toBe(200);
+
+  // Use an EXISTING participant UUID belonging to an unrelated family, not
+  // a made-up UUID. This ensures sessionStorage cannot cross the actual RLS
+  // boundary even when the injected ID is valid in the current campaign.
+  const adminProgress = await admin.rpc("campaign_progress", {
+    p_organization_id: org.data.id, p_campaign_id: id, p_view: "admin",
+  });
+  expect(adminProgress.error).toBeNull();
+  const allParticipants = campaignProgressSchema.parse(adminProgress.data).participants;
+  const visibleFamilyNames = (await chooserOnReturn.getByRole("button").allTextContents()).map((name) => name.trim());
+  const unrelated = allParticipants.find((participant) => !visibleFamilyNames.includes(participant.player_name));
+  if (!unrelated) throw new Error("Fixture must include a real participant outside this family's authorized players");
+
+  // sessionStorage is untrusted browser input. A stale or injected participant
+  // ID must
+  // never select a participant outside the current RLS-filtered family list.
+  // After a reload we should fall back to the first authorized sibling, and
+  // an existing public link must remain valid without a financial write.
+  await page.evaluate(({ key, participantId }) => window.sessionStorage.setItem(key, participantId), {
+    key: `aspire:parent-selected-player:/o/aspire/fundraising/${id}/requests`,
+    participantId: unrelated.id,
+  });
+  await page.reload();
+  const chooserWithUntrustedSelection = page.getByRole("navigation", { name: "Choose player" });
+  await expect(chooserWithUntrustedSelection).toBeVisible();
+  await expect(chooserWithUntrustedSelection.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("family-player-card").first()).toBeVisible();
+  await expect(page.locator("main")).not.toContainText(unrelated.player_name);
+  expect((await page.request.get(url)).status()).toBe(200);
+
+  expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
+  expect((await admin.from("money_events").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(0);
+});

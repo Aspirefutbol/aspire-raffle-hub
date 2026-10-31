@@ -8,7 +8,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { can, requireOrgContext } from "@/lib/auth/org-context";
+import { can, requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
 import { buildActionItems, getRosterOverview } from "@/lib/dashboard/overview";
 import { formatRelative } from "@/lib/format";
 import { IMPORT_STATUS } from "@/lib/roster/import/status";
@@ -20,6 +20,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default async function DashboardPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
   const ctx = await requireOrgContext(orgSlug);
+  requirePagePermission(ctx, "roster.read");
   const base = `/o/${orgSlug}`;
   const canWrite = can(ctx, "roster.write");
   const canImport = can(ctx, "roster.import");

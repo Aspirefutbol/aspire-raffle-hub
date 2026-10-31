@@ -1,0 +1,276 @@
+name: Production Preflight
+
+# Read-only production readiness inspection.
+# Runs only from merged main. It never applies migrations or deploys the app.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-preflight
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.PRODUCTION_SUPABASE_ACCESS_TOKEN }}
+      PRODUCTION_DB_URL: ${{ secrets.PRODUCTION_DB_URL }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      PRODUCTION_PROJECT_REF: bsjjzewifpbngbasdvew
+      NETLIFY_SITE_ID: 708004ca-d3af-4677-9a5c-c29cb98f914b
+      PRODUCTION_URL: https://aspirerafflehub.netlify.app
+      EXPECTED_SUPABASE_URL: https://bsjjzewifpbngbasdvew.supabase.co
+
+    steps:
+      - name: Require production credentials
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing PRODUCTION_SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "$PRODUCTION_DB_URL" || { echo "::error::Missing PRODUCTION_DB_URL"; exit 1; }
+          test -n "$NETLIFY_AUTH_TOKEN" || { echo "::error::Missing NETLIFY_AUTH_TOKEN"; exit 1; }
+          echo "::add-mask::$PRODUCTION_DB_URL"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Require this main commit to come from a merged pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          merged_pr_count=$(gh api             -H "Accept: application/vnd.github+json"             "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls"             --jq '[.[] | select(.merged_at != null and .base.ref == "main")] | length')
+          if [ "$merged_pr_count" -lt 1 ]; then
+            echo "::error::Production commits must reach main through a merged pull request."
+            exit 1
+          fi
+
+      - name: Wait for full CI on this main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ -n "$result" ] && [ "$result" != null ]; then
+              echo "::error::CI did not pass for production preflight commit: $result"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for production commit CI"
+          exit 1
+
+      - name: Verify production database URL identity
+        run: |
+          node - <<'NODE'
+          const raw = process.env.PRODUCTION_DB_URL;
+          const ref = process.env.PRODUCTION_PROJECT_REF;
+          let url;
+          try {
+            url = new URL(raw);
+          } catch {
+            console.error("PRODUCTION_DB_URL is not a valid Postgres URL.");
+            process.exit(1);
+          }
+
+          const username = decodeURIComponent(url.username || "");
+          const expectedDirectHost = `db.${ref}.supabase.co`;
+          const projectBound =
+            url.hostname === expectedDirectHost ||
+            username === `postgres.${ref}`;
+
+          if (!projectBound) {
+            console.error("PRODUCTION_DB_URL does not identify the approved production Supabase project.");
+            process.exit(1);
+          }
+          if (!["postgres:", "postgresql:"].includes(url.protocol)) {
+            console.error("PRODUCTION_DB_URL must use postgres:// or postgresql://.");
+            process.exit(1);
+          }
+          if (url.searchParams.get("sslmode") !== "require") {
+            console.error("PRODUCTION_DB_URL must explicitly require SSL with sslmode=require.");
+            process.exit(1);
+          }
+          console.log("Production database URL identity and SSL requirement are correct.");
+          NODE
+
+      - name: Verify production Auth configuration
+        run: |
+          code="$(curl -sS -o /tmp/auth-config.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/config/auth"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read production Supabase Auth configuration (HTTP $code)."
+            exit 1
+          fi
+
+          node - <<'NODE'
+          const fs = require("fs");
+          const config = JSON.parse(fs.readFileSync("/tmp/auth-config.json", "utf8"));
+          const expectedSite = process.env.PRODUCTION_URL;
+          const failures = [];
+          if (config.site_url !== expectedSite) failures.push(`site_url must equal ${expectedSite}`);
+
+          const allow = String(config.uri_allow_list || "")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+          const callbackAllowed = allow.some((value) =>
+            value === `${expectedSite}/**` ||
+            value === `${expectedSite}/auth/confirm` ||
+            value.startsWith(`${expectedSite}/auth/confirm?`)
+          );
+          if (!callbackAllowed) failures.push("uri_allow_list must allow the production /auth/confirm callback");
+          if (config.disable_signup !== true) failures.push("public Auth signup must be disabled");
+          if (config.external_email_enabled !== true) failures.push("email Auth must be enabled");
+          for (const key of ["smtp_admin_email", "smtp_host", "smtp_port", "smtp_user", "smtp_pass"]) {
+            if (!String(config[key] || "").trim()) failures.push(`${key} must be configured for custom production SMTP`);
+          }
+          if (failures.length) {
+            console.error("Production Auth configuration blockers:");
+            for (const failure of failures) console.error(`- ${failure}`);
+            process.exit(1);
+          }
+          console.log("Production Auth configuration passed.");
+          NODE
+
+      - name: Verify production database SSL enforcement
+        run: |
+          code="$(curl -sS -o /tmp/ssl-enforcement.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/ssl-enforcement"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read production database SSL enforcement (HTTP $code)."
+            exit 1
+          fi
+          SSL_CONFIG_JSON="$(cat /tmp/ssl-enforcement.json)" node - <<'NODE'
+          const config = JSON.parse(process.env.SSL_CONFIG_JSON);
+          if (config?.currentConfig?.database !== true || config?.appliedSuccessfully !== true) {
+            console.error("Production Postgres SSL enforcement is not enabled/applied.");
+            process.exit(1);
+          }
+          console.log("Production Postgres SSL enforcement is enabled.");
+          NODE
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify required production Netlify environment
+        run: |
+          env_dump="$(npx netlify-cli@27.12.0 env:list --plain --context production --site "$NETLIFY_SITE_ID")"
+
+          require_exact() {
+            key="$1"
+            expected="$2"
+            if ! printf '%s\n' "$env_dump" | grep -Fqx "$key=$expected"; then
+              echo "::error::Production Netlify environment variable $key does not match the approved production value."
+              exit 1
+            fi
+          }
+
+          require_prefix() {
+            key="$1"
+            prefix="$2"
+            if ! printf '%s\n' "$env_dump" | grep -Eq "^$key=$prefix"; then
+              echo "::error::Production Netlify environment variable $key is missing or is not using the approved modern key format."
+              exit 1
+            fi
+          }
+
+          require_exact "NEXT_PUBLIC_SITE_URL" "$PRODUCTION_URL"
+          require_exact "NEXT_PUBLIC_SUPABASE_URL" "$EXPECTED_SUPABASE_URL"
+          require_prefix "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "sb_publishable_"
+          require_prefix "SUPABASE_SECRET_KEY" "sb_secret_"
+
+          echo "Production Netlify environment passed."
+
+      - name: Preview production migration delta — no writes
+        run: |
+          echo "=== Linked migration history ==="
+          npx supabase migration list --db-url "$PRODUCTION_DB_URL"
+          echo "=== Dry-run only ==="
+          npx supabase db push --db-url "$PRODUCTION_DB_URL" --dry-run
+
+      - name: Inspect current production public API exposure — no writes
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client >/dev/null
+          fi
+
+          tables_without_rls="$(psql "$PRODUCTION_DB_URL" -Atqc "
+            select count(*)
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public'
+              and c.relkind = 'r'
+              and not c.relrowsecurity;
+          ")"
+          if [ "$tables_without_rls" != "0" ]; then
+            echo "::error::Production has $tables_without_rls public table(s) without RLS."
+            exit 1
+          fi
+
+          anon_privileged="$(psql "$PRODUCTION_DB_URL" -Atqc "
+            select coalesce(string_agg(p.proname, ',' order by p.proname), '')
+            from pg_proc p
+            join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public'
+              and p.prosecdef
+              and has_function_privilege('anon', p.oid, 'EXECUTE');
+          ")"
+          if [ "$anon_privileged" != "public_seller_page,submit_seller_interest_request" ]; then
+            echo "::error::Anonymous SECURITY DEFINER exposure does not match the approved two-function allowlist."
+            exit 1
+          fi
+
+          echo "Current production API exposure preflight passed."
+
+      - name: Verify current production security advisors — no writes
+        run: |
+          code="$(curl -sS -o /tmp/security-advisors.json -w "%{http_code}"             "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/advisors/security?lint_type=sql"             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")"
+          if [ "$code" != "200" ]; then
+            echo "::error::Could not read Supabase Security Advisors (HTTP $code)."
+            exit 1
+          fi
+          node - <<'NODE'
+          const fs = require("fs");
+          const payload = JSON.parse(fs.readFileSync("/tmp/security-advisors.json", "utf8"));
+          const lints = payload.lints || [];
+          const allowedAnonSecurityDefiners = new Set([
+            "public_seller_page",
+            "submit_seller_interest_request",
+          ]);
+          const unexpectedAnon = lints
+            .filter((lint) => lint.name === "anon_security_definer_function_executable")
+            .flatMap((lint) => lint.findings || [])
+            .filter((finding) => !allowedAnonSecurityDefiners.has(finding.metadata?.name));
+          const blockers = lints.filter((lint) =>
+            String(lint.level || "").toUpperCase() === "ERROR" ||
+            lint.name === "auth_leaked_password_protection"
+          );
+          if (blockers.length || unexpectedAnon.length) {
+            console.error("Production security advisor blockers:", blockers.map((lint) => lint.name));
+            console.error("Unexpected anonymous SECURITY DEFINER functions:", unexpectedAnon.map((finding) => finding.metadata?.name));
+            process.exit(1);
+          }
+          console.log("Current production Security Advisors passed preflight.");
+          NODE
+
+      - name: Write preflight summary
+        run: |
+          {
+            echo "# Production Preflight"
+            echo
+            echo "- Commit: `$GITHUB_SHA`"
+            echo "- Result: PASS"
+            echo "- No migrations or application deploys were performed."
+            echo "- Review the migration dry-run output above before starting Production Bootstrap."
+          } >> "$GITHUB_STEP_SUMMARY"

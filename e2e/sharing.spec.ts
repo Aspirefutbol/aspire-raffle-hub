@@ -1,0 +1,276 @@
+import { randomUUID } from "node:crypto";
+import { test, expect } from "@playwright/test";
+import jsQR from "jsqr";
+import { PNG } from "pngjs";
+import { apiAs, signIn } from "./helpers";
+import { campaignProgressSchema } from "@/lib/fundraising/types";
+
+test.use({ actionTimeout: 15_000 });
+
+test("seller sharing: private family link, signed-out request retry, QR, offline sale handoff and revocation", async ({ page, browser }, testInfo) => {
+  test.setTimeout(180_000);
+  if (!["localhost","127.0.0.1"].includes(new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname)) throw new Error("Synthetic sharing test requires local Supabase.");
+  const admin=await apiAs("admin@aspire.test"), family=await apiAs("coach@aspire.test");
+  const org=await admin.from("organizations").select("id").eq("slug","aspire").single();
+  if(org.error) throw org.error;
+  const orgId=org.data.id, now=Date.now();
+  const campaign=await admin.from("campaigns").insert({organization_id:orgId,name:`Synthetic sharing ${now}`,description:"Support our synthetic fundraiser.",ticket_price_cents:500,ticket_prefix:`SH${now.toString(36).slice(-6).toUpperCase()}`,default_allocation:10,rules_text:"Synthetic approved offline rules. Physical drawing.", support_email:"support@aspire.test",starts_at:new Date(now-3600000).toISOString(),sales_close_at:new Date(now+86400000).toISOString(),draw_at:new Date(now+172800000).toISOString()}).select("id").single();
+  if(campaign.error) throw campaign.error;
+  const id=campaign.data.id;
+  expect((await admin.rpc("enroll_campaign_players",{p_organization_id:orgId,p_campaign_id:id,p_all_active:true})).error).toBeNull();
+  for(const status of ["READY","ACTIVE"]) expect((await admin.rpc("transition_campaign",{p_campaign_id:id,p_to:status,p_reason:"Synthetic sharing launch"})).error).toBeNull();
+  expect((await admin.rpc("prepare_campaign_inventory",{p_organization_id:orgId,p_campaign_id:id})).error).toBeNull();
+  const progress=campaignProgressSchema.parse((await family.rpc("campaign_progress",{p_organization_id:orgId,p_campaign_id:id,p_view:"family"})).data);
+  const participant=progress.participants.find(p=>p.player_name==="Liam Smith")!;
+  await signIn(page,"coach@aspire.test");
+  const chooseLiam = async () => {
+    const playerChooser = page.getByRole("navigation", { name: "Choose player" });
+    // This synthetic enrolled-all fixture has multiple linked players.
+    // Require the streamed chooser to exist before clicking; count() can
+    // incorrectly return zero during a fresh page load and skip selection.
+    await expect(playerChooser).toBeVisible();
+    await playerChooser.getByRole("button", { name: "Liam Smith", exact: true }).click();
+    await expect(playerChooser.getByRole("button", { name: "Liam Smith", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" })).toBeVisible();
+  };
+  await page.goto(`/o/aspire/fundraising/${id}`);
+  await page.getByText("Sharing help", { exact: true }).click();
+  await expect(page.getByRole("heading",{name:"Parent/Player Seller Toolkit"})).toBeVisible();
+  await chooseLiam();
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
+  const tools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
+  // Opening/cancelling a confirmation must not change any token.
+  let linkWrites = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.headers()["next-action"] && new URL(request.url()).pathname === `/o/aspire/fundraising/${id}`) linkWrites += 1;
+  });
+  await tools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
+  const createDialog = page.getByRole("dialog", { name: "Create sharing link?", exact: true });
+  await expect(createDialog).toContainText("Any previous link or printed QR code will stop working");
+  await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(createDialog).not.toBeVisible();
+  expect(linkWrites).toBe(0);
+  await expect(tools.getByTestId("seller-url")).toHaveCount(0);
+  await tools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
+  // Two events in the same render must result in one mutation, not two rotations.
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await expect(createDialog).not.toBeVisible();
+  expect(linkWrites).toBe(1);
+  // Only one prominent share action is visible until alternatives are expanded.
+  await expect(tools.getByRole("button",{name:"Copy invitation to share",exact:true})).toBeVisible();
+  await expect(tools.getByTestId("share-options")).not.toHaveAttribute("open", "");
+  await expect(tools.getByRole("button",{name:"Copy link",exact:true})).not.toBeVisible();
+  await page.context().grantPermissions(["clipboard-read","clipboard-write"]);
+  await tools.getByRole("button", { name: "Copy invitation to share", exact: true }).click();
+  const copiedMessage = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copiedMessage).toContain("offline payment");
+  expect(copiedMessage).not.toMatch(/checkout|reserve tickets|buy now/i);
+  await tools.getByTestId("share-options").locator("summary").click();
+  const url=await tools.getByTestId("seller-url").innerText();
+  expect(new URL(url).pathname).toMatch(/^\/s\/[a-f0-9]{64}$/);
+  expect(copiedMessage).toContain(url);
+  // Task switching must not silently lose/rotate a confirmed seller link.
+  await page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByRole("button", { name: "Back to actions", exact: true }).click();
+  await page.getByRole("button", { name: "View full progress", exact: true }).click();
+  await page.getByRole("button", { name: "Back to actions", exact: true }).click();
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(linkWrites).toBe(1);
+
+  for(const name of ["Text / SMS","Email","WhatsApp"]) {
+    const href=await tools.getByRole("link",{name,exact:true}).getAttribute("href");
+    expect(decodeURIComponent(href!)).toContain(url);
+    expect(decodeURIComponent(href!)).toContain("offline payment");
+    expect(decodeURIComponent(href!)).not.toMatch(/checkout|reserve tickets|buy now/i);
+  }
+  await tools.getByRole("button",{name:"Copy link",exact:true}).click();
+  expect(await page.evaluate(()=>navigator.clipboard.readText())).toBe(url);
+  expect(linkWrites).toBe(1);
+  // A blocked clipboard gets a selectable fallback, not a false success message.
+  await page.evaluate(() => Object.defineProperty(navigator.clipboard, "writeText", {
+    configurable: true, value: async () => { throw new DOMException("Blocked by test", "NotAllowedError"); },
+  }));
+  await tools.getByRole("button", { name: "Copy link", exact: true }).click();
+  await expect(tools.getByRole("textbox", { name: "Copy manually", exact: true })).toHaveValue(url);
+  await expect(tools.getByRole("status")).toContainText("could not copy automatically");
+  await page.evaluate(() => { delete (navigator.clipboard as Partial<Clipboard>).writeText; });
+  await tools.getByRole("button", { name: "Copy link", exact: true }).click();
+  await expect(tools.getByRole("textbox", { name: "Copy manually", exact: true })).toHaveCount(0);
+  // Settings are separate from routine sharing. Cancel preserves the current link.
+  await expect(tools.getByRole("button", { name: "Create a new sharing link", exact: true })).toHaveCount(0);
+  await tools.getByText("Link settings",{exact:true}).click();
+  await tools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
+  await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(linkWrites).toBe(1);
+  await tools.getByRole("button", { name: "Revoke seller link", exact: true }).click();
+  const disableDialog = page.getByRole("dialog", { name: "Disable sharing link?", exact: true });
+  await disableDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(linkWrites).toBe(1);
+  await tools.getByText("Link settings",{exact:true}).click();
+  await tools.getByRole("button",{name:"Show QR code"}).click();
+  const qr=tools.getByRole("img",{name:"QR code for your supporter request page"});
+  const png=PNG.sync.read(Buffer.from((await qr.getAttribute("src"))!.split(",")[1]!,"base64"));
+  expect(jsQR(new Uint8ClampedArray(png.data),png.width,png.height)?.data).toBe(url);
+  await page.setViewportSize({width:360,height:780});
+  await expect(tools.getByRole("img")).toBeVisible();
+  const primaryShare=await tools.getByRole("button",{name:"Copy invitation to share",exact:true}).boundingBox();
+  expect(primaryShare!.height).toBeGreaterThanOrEqual(44);
+  await tools.getByTestId("share-options").locator("summary").click();
+  await expect(tools.getByRole("button",{name:"Copy link",exact:true})).not.toBeVisible();
+  const shareDisclosure=await tools.getByTestId("share-options").locator("summary").boundingBox();
+  expect(shareDisclosure!.height).toBeGreaterThanOrEqual(44);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await tools.getByTestId("share-options").locator("summary").click();
+  await expect(tools.getByRole("img")).toBeVisible();
+  for (const name of ["Text / SMS","Email","WhatsApp"]) expect((await tools.getByRole("link",{name,exact:true}).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath("sharing-family-360.png"),fullPage:true});
+  await page.setViewportSize({width:1280,height:900});
+  const publicContext=await browser.newContext({viewport:{width:360,height:780}}), supporter=await publicContext.newPage();
+  const response=await supporter.goto(url);
+  expect(response?.headers()["x-robots-tag"]).toContain("noindex");
+  expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
+  await expect(supporter.getByRole("heading",{name:campaign.data ? `Synthetic sharing ${now}` : ""})).toBeVisible();
+  await expect(supporter.getByRole("heading",{name:"Request raffle tickets"})).toBeVisible();
+  await expect(supporter.locator("form")).toContainText("No payment is collected here.");
+  const body=await supporter.locator("body").innerText();
+  for(const hidden of ["Liam Smith",participant.id,participant.player_id,orgId,"Assigned span","Money still due"]) expect(body).not.toContain(hidden);
+  // Keep the request short: only the chosen contact field and no optional note by default.
+  await expect(supporter.getByLabel(/^Email\s*\*?$/)).toBeVisible();
+  await expect(supporter.getByLabel(/^Email\s*\*?$/)).toHaveAttribute("required","");
+  await expect(supporter.getByLabel(/^Phone\s*\*?$/)).toHaveCount(0);
+  await supporter.getByRole("combobox",{name:"Preferred contact"}).selectOption("phone");
+  await expect(supporter.getByLabel(/^Phone\s*\*?$/)).toBeVisible();
+  await expect(supporter.getByLabel(/^Phone\s*\*?$/)).toHaveAttribute("required","");
+  await expect(supporter.getByLabel(/^Email\s*\*?$/)).toHaveCount(0);
+  await expect(supporter.locator('input[name="email"][type="hidden"]')).toHaveValue("");
+  await supporter.getByRole("combobox",{name:"Preferred contact"}).selectOption("email");
+  await expect(supporter.locator('input[name="phone"][type="hidden"]')).toHaveValue("");
+  await expect(supporter.getByLabel("Note",{exact:true})).not.toBeVisible();
+  await supporter.getByText("Add a note (optional)",{exact:true}).click();
+  await expect(supporter.getByLabel("Note",{exact:true})).toBeVisible();
+  for (const width of [320,360,390]) {
+    await supporter.setViewportSize({width,height:780});
+    expect(await supporter.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  await supporter.getByText("Add a note (optional)",{exact:true}).click();
+  await supporter.setViewportSize({width:360,height:780});
+  await supporter.screenshot({path:testInfo.outputPath("sharing-public-360.png"),fullPage:true});
+  const before=await admin.from("campaign_sales").select("id",{count:"exact",head:true}).eq("campaign_id",id);
+  let dropped=false;
+  await supporter.route("**/s/*/request",async route=>{if(!dropped){dropped=true;await route.fetch();await route.abort("failed");}else await route.continue();});
+  await supporter.getByLabel("Your name",{exact:true}).fill("Synthetic Supporter");
+  await supporter.getByLabel(/^Email\s*\*?$/).fill("sharing-supporter@example.test");
+  await supporter.getByLabel("How many tickets?").fill("5");
+  await expect(supporter.getByRole("status",{name:"Requested ticket total"})).toContainText("5 tickets · $25.00");
+  await supporter.getByRole("button",{name:"Request tickets"}).click();
+  await expect(supporter.locator("form").getByRole("alert")).toContainText("Retry the same request");
+  await supporter.getByRole("button",{name:"Retry same request"}).click();
+  await expect(supporter.getByRole("status")).toContainText("Request sent!");
+  await expect(supporter.getByRole("status")).toContainText("5 tickets · $25.00");
+  await expect(supporter.getByRole("status")).toContainText("No payment was collected on this page.");
+  expect((await admin.from("campaign_sales").select("id",{count:"exact",head:true}).eq("campaign_id",id)).count).toBe(before.count);
+  const inbox=await family.rpc("seller_request_inbox",{p_organization_id:orgId,p_campaign_id:id});
+  expect(inbox.error).toBeNull();expect(inbox.data).toHaveLength(1);
+  await page.goto(`/o/aspire/fundraising/${id}/requests`);
+  const request=page.getByTestId("interest-request");
+  await expect(request).toContainText("sharing-supporter@example.test");
+  await expect(request.getByRole("link",{name:"sharing-supporter@example.test"})).toHaveAttribute("href","mailto:sharing-supporter%40example.test");
+  await page.setViewportSize({width:360,height:780});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(request).toBeVisible();
+  await expect(request.getByRole("link",{name:"sharing-supporter@example.test"})).toBeVisible();
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:testInfo.outputPath("sharing-inbox-360.png"),fullPage:true});
+  await page.setViewportSize({width:1280,height:900});
+  await request.locator("summary").click();
+  await request.getByRole("button",{name:"Mark contacted"}).click();
+  await expect(request).toContainText("contacted");
+  await request.getByRole("button",{name:"I received payment — complete sale",exact:true}).click();
+  await expect(page.getByRole("textbox",{name:"Buyer name",exact:true})).toHaveValue("Synthetic Supporter");
+  await expect(page.getByRole("spinbutton",{name:"Quantity",exact:true})).toHaveValue("5");
+  await expect(page.getByRole("textbox",{name:"Amount collected ($)",exact:true})).toHaveValue("25.00");
+  await page.getByRole("dialog").getByRole("button",{name:"Record sale",exact:true}).click();
+  await expect(page.getByRole("dialog")).toContainText("Tickets issued");
+  await expect(page.getByRole("dialog")).toContainText("Sale complete!");
+  await expect(page.getByRole("dialog")).toContainText("5 tickets sold · $25.00 raised");
+  await expect(page.getByRole("dialog").getByRole("link",{name:"Back to fundraiser — share again",exact:true})).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("View ticket numbers (5)")).toBeVisible();
+  await page.getByRole("dialog").getByText("View ticket numbers (5)").click();
+  await expect(page.getByRole("dialog").locator("details li")).toHaveCount(5);
+  // A server refresh that closes the request must NOT unmount the issued-tickets receipt.
+  await expect(request).toContainText("Completed — this supporter’s sale has been recorded and tickets were issued.");
+  await expect(page.getByRole("dialog")).toContainText("Tickets issued");
+  await page.getByRole("dialog").getByRole("button",{name:"Done",exact:true}).click();
+  await expect(request.getByRole("button", { name: "I received payment — complete sale", exact: true })).toHaveCount(0);
+  await expect(request.getByRole("link", { name: "Back to my fundraiser", exact: true })).toBeVisible();
+  await expect(request).not.toContainText("Recorded sale reference:");
+  const linkedInbox=await family.rpc("seller_request_inbox",{p_organization_id:orgId,p_campaign_id:id});
+  expect(linkedInbox.error).toBeNull();
+  expect(linkedInbox.data).toHaveLength(1);
+  expect(linkedInbox.data[0].status).toBe("completed");
+  const recordedSaleId=linkedInbox.data[0].sale_id;
+  expect(recordedSaleId).toMatch(/^[0-9a-f-]{36}$/i);
+  const linkedSale=await family.from("campaign_sales").select("id,participant_id,quantity,amount_cents").eq("id",recordedSaleId).single();
+  expect(linkedSale.error).toBeNull();
+  expect(linkedSale.data?.participant_id).toBe(participant.id);
+  expect(linkedSale.data?.quantity).toBe(5);
+  expect(linkedSale.data?.amount_cents).toBe(2500);
+  await page.reload();
+  await expect(request).toContainText("Completed — this supporter’s sale has been recorded and tickets were issued.");
+  await expect(request.getByRole("button",{name:"I received payment — complete sale",exact:true})).toHaveCount(0);
+  const captain=await browser.newContext(), captainPage=await captain.newPage();
+  await signIn(captainPage,"coach@aspire.test");
+  await captainPage.goto(`/o/aspire/team-fundraising/${id}`);
+  await expect(captainPage.locator("body")).not.toContainText("sharing-supporter@example.test");
+  await page.goto(`/o/aspire/fundraising/${id}`);
+  await chooseLiam();
+  await page.getByRole("button", { name: "Share raffle", exact: true }).click();
+  const currentTools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
+  await currentTools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
+  await expect(createDialog).not.toBeVisible();
+  await currentTools.getByTestId("share-options").locator("summary").click();
+  const newUrl=await currentTools.getByTestId("seller-url").innerText();
+  expect(newUrl).not.toBe(url);
+  await supporter.goto(url);await expect(supporter.getByRole("button",{name:"Request tickets"})).toHaveCount(0);
+  // Losing the server response after replacement must hide the obsolete link.
+  await currentTools.getByRole("button", { name: "Show QR code", exact: true }).click();
+  await expect(currentTools.getByRole("img")).toBeVisible();
+  let lostReplacement = false;
+  await page.route(`**/o/aspire/fundraising/${id}`, async (route) => {
+    if (!lostReplacement && route.request().method() === "POST" && route.request().headers()["next-action"]) {
+      lostReplacement = true; await route.fetch(); await route.abort("failed");
+    } else await route.continue();
+  });
+  await currentTools.getByText("Link settings",{exact:true}).click();
+  await currentTools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
+  await expect(currentTools.getByRole("status")).toContainText("could not confirm the link change");
+  await expect(currentTools.getByTestId("seller-url")).toHaveCount(0);
+  await expect(currentTools.getByRole("img")).toHaveCount(0);
+  await expect(currentTools.getByRole("button", { name: "Copy link", exact: true })).toHaveCount(0);
+  await currentTools.getByRole("button", { name: "Create my sharing link", exact: true }).click();
+  await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
+  await expect(createDialog).not.toBeVisible();
+  await currentTools.getByTestId("share-options").locator("summary").click();
+  const recoveredUrl = await currentTools.getByTestId("seller-url").innerText();
+  expect(recoveredUrl).not.toBe(newUrl);
+  await supporter.goto(recoveredUrl);
+  await expect(supporter.getByRole("button", { name: "Request tickets", exact: true })).toBeVisible();
+  // Revoking requires its own confirmation; requests and recorded sales survive.
+  await currentTools.getByRole("button",{name:"Revoke seller link",exact:true}).click();
+  await disableDialog.getByRole("button", { name: "Confirm disable link", exact: true }).click();
+  await expect(currentTools.getByRole("status")).toContainText("Link revoked");
+  await supporter.goto(recoveredUrl);await expect(supporter.getByRole("button",{name:"Request tickets"})).toHaveCount(0);
+  expect((await family.rpc("seller_request_inbox", { p_organization_id: orgId, p_campaign_id: id })).data).toHaveLength(1);
+  expect((await admin.from("campaign_sales").select("id", { count: "exact", head: true }).eq("campaign_id", id)).count).toBe(1);
+  // Invalid and cross-origin requests never become sales.
+  const invalid=await supporter.request.post(`${newUrl}/request`,{data:{key:randomUUID(),request:{name:"Bad"}}});expect(invalid.status()).toBe(200);
+  const crossOrigin=await supporter.request.post(`${newUrl}/request`,{headers:{Origin:"https://other.example"},data:{}});expect(crossOrigin.status()).toBe(403);
+  await page.setViewportSize({width:360,height:780});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await publicContext.close();await captain.close();
+});
