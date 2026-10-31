@@ -1,6 +1,6 @@
 # Parent phone pilot walkthrough — synthetic staging only
 
-_Prepared October 29, 2026. This is a human-review script, not evidence of completed testing, authorization to enroll real families, or legal approval._
+_Updated October 31, 2026 for Progress First → Action Second. This is a human-review script, not evidence of completed testing, authorization to enroll real families, or legal approval._
 
 ## Entry gate — do not begin until all three match
 
@@ -11,6 +11,10 @@ Record the **full integration Git SHA**, its successful exact-head **CI** run, s
 - Preserve the October 20 DRAWN rehearsal; create a **new TEST** campaign if an operational transaction exercise is needed.
 - Verify the campaign displays **$20 for 1 / $90 for 5** and an *external physical drawing* only where those values were explicitly configured by the test operator.
 - This is a guided **human observation**. Automated Playwright screenshots or CI passing are not a substitute for an actual parent/coach usability review.
+
+### Verified technical checkpoint (not a human pilot pass)
+
+At the October 31, 2026 checkpoint, integration `95c55f374e069ecdc5729791fa5ec6cc148f5e63` passed [full CI](https://github.com/Aspirefutbol/aspire-raffle-hub/actions/runs/41171632959) and [Hosted QA with login/privacy smoke](https://github.com/Aspirefutbol/aspire-raffle-hub/actions/runs/41171633081), and the matching staging deploy was READY (`6ae57b3f88c8b5bba3669adf`). **These are historical checkpoints only**: reverify exact HEAD, both runs, authenticated scope, signed-out privacy, and currently published deploy immediately before a real-device test. The unassisted parent walkthrough remains pending.
 
 ## Suggested devices and evidence
 
@@ -26,7 +30,7 @@ For each step, note **PASS / FAIL / FRICTION**, total taps, mis-taps, wording qu
 | --- | --- | --- |
 | 1. Find | “Open your fundraiser.” | Clearly named campaign; only authorized linked children; no unrelated roster or captain-wide sale tools. |
 | 2. Choose | “Switch to your other child.” | Child name/team changes, the other child's card is hidden and no cross-child sales, progress or share link bleeds through. |
-| 3. Four actions | “Tell me how you would share, check requests, record a cash sale and view progress.” | Large **Share raffle / Requests / Record sale / My progress** actions visible on phone; no horizontal scroll or obscured tap target. |
+| 3. Progress first, then actions | “Open your fundraiser. What have you raised, and how many tickets have you sold? Now find how you would share, check requests, and record an offline cash sale.” | The selected player's **amount raised and ticket count** appear immediately. Show a **personal goal meter only when that player's authorized goal is configured**—never fabricate a goal. Three large **Share raffle / Requests / Record sale** actions are obvious, while **View full progress** is smaller and secondary. No horizontal scrolling or obstructed tap targets. |
 | 4. Share | “Send someone a link.” | Creation confirmation shown only when no active link; Copy invitation is obvious; secondary SMS/QR/link settings are disclosed on demand. No online checkout. |
 | 5. Return | “Go back, open Share again, then reload.” | Existing valid link persists; routine navigation/reload never silently revokes or regenerates the token. Do not expose raw token in browser storage/screenshots. |
 | 6. Siblings | “Now share for your other child.” | Distinct sharing URLs per child; selecting/reloading uses only authorized participant IDs; returning to first child preserves its existing link. |
@@ -35,7 +39,7 @@ For each step, note **PASS / FAIL / FRICTION**, total taps, mis-taps, wording qu
 | 9. Supporter | “What can someone do without signing in?” | Public page is **request-only**. Clearly states no payment collected and no ticket reserved/issued; no private family, inventory, money or supporter-inbox data disclosed. |
 | 10. Requests | “Where would you find a new expression of interest?” | Authenticated, scoped request inbox; an interest request is never presented as a confirmed sale or paid ticket. |
 | 11. Offline sale | “Record a fictional, already-collected cash payment.” | Distinct confirmation and receipt; exact price/package/ticket count; one authorized player's stock; cash/check only. If user cannot tell *request* from *sale*, mark FRICTION/FAIL. |
-| 12. Progress | “Check what you have raised and what is still available.” | Player-specific amounts and tickets; assigned ticket numbers hidden in secondary disclosure; no assertion that recorded seller collection equals deposited club funds. |
+| 12. Full progress | “Open your detailed progress and check what is still available without making a sale.” | **View full progress** opens details for the selected player only, **Back to actions** restores visible focus, and opening/closing details causes **no money, ticket, sale, or supporter-request writes**. Assigned ticket numbers remain in a secondary disclosure. Recorded collections are not falsely represented as deposited club funds. |
 
 ### Money and lifecycle negative-path spot check
 
@@ -45,7 +49,7 @@ The public request page must never collect payment, reserve tickets, or issue en
 
 ## Phone acceptance observations
 
-At narrow widths (320 / 360 / 390px), record: horizontal overflow (must be none); primary action minimum touch size (target >=44px, major tiles >=88px); selected sibling indication; readable prices and errors; successful scroll/focus after opening/closing a task; native share/SMS behavior; canceled dialog state; progress disclosure closed by default. Note real-device failures even when automated tests pass.
+At narrow widths (320 / 360 / 390px), record: horizontal overflow (must be none); **raised amount and tickets visible at entry**; **no invented goal or goal meter** when the personal goal is absent; three primary actions and smaller **View full progress**; primary action minimum touch size (target >=44px, major tiles >=88px); selected sibling indication; readable prices and errors; successful scroll/focus after opening/closing Share or Full Progress; native share/SMS behavior; canceled dialog state; full progress details closed by default. Note real-device failures even when automated tests pass.
 
 Do not mark a human walkthrough PASS unless an actual tester completed the task unaided. Label each failure as **functional / privacy-security / transaction-integrity / accessibility / confusion**. Privacy, unauthorized scope, incorrect pricing, automatic link rotation, duplicate ticket/money issuance, public checkout or stale revoked links are **STOP / NO-GO**.
 
