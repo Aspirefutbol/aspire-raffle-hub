@@ -66,6 +66,10 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await shareBack.click();
   await expect(playerCard.getByRole("button", { name: "Share raffle", exact: true })).toBeFocused();
   await expect(playerCard.getByText("How would you like to sell tickets?")).toBeVisible();
+  const sellingSteps = playerCard.getByTestId("parent-selling-steps");
+  await expect(sellingSteps).toContainText("Players share a link or ask in person.");
+  await expect(sellingSteps).toContainText("a parent records the sale to issue tickets");
+  await expect(sellingSteps).toContainText("Requests alone do not issue tickets.");
   await expect(playerCard.getByText("Sell In Person", { exact: true })).toBeVisible();
   await expect(playerCard.getByText("Record the sale after approved cash or check payment.")).toBeVisible();
   await playerCard.getByRole("button", { name: "View full progress", exact: true }).click();
