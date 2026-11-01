@@ -20,12 +20,29 @@ export default async function FamilyFundraisingPage({ params }: { params: Promis
   // The server has already applied family scope to each projection. Only one
   // eligible active campaign may bypass the extra fundraiser-selection step.
   const solo = singleActiveFamilyCampaign(visible);
+  // Retain safe access to previously authorized campaigns without interrupting the live fundraiser.
+  const otherCampaigns = solo ? visible.filter(({ campaign }) => campaign.id !== solo.campaign.id) : [];
 
   return (
     <>
       <PageHeader title="My fundraising" description={solo ? "Share your raffle or sell tickets in person." : "Choose a fundraiser to start selling."} />
       {solo ? (
-        <FamilyCampaignView orgSlug={orgSlug} progress={solo} detail timeZone={ctx.organization.timezone} />
+        <div className="space-y-5">
+          <FamilyCampaignView orgSlug={orgSlug} progress={solo} detail timeZone={ctx.organization.timezone} />
+          {otherCampaigns.length > 0 && (
+            <details data-testid="other-family-campaigns" className="rounded-card border border-line bg-surface shadow-card">
+              <summary className="min-h-12 cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
+                Other fundraisers ({otherCampaigns.length})
+              </summary>
+              <div className="space-y-5 border-t border-line p-4">
+                {otherCampaigns.map((campaign) => (
+                  <FamilyCampaignView key={campaign.campaign.id} orgSlug={orgSlug}
+                    progress={campaign} timeZone={ctx.organization.timezone} />
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
       ) : visible.length ? (
         <div className="space-y-5">
           {visible.map((campaign) => <FamilyCampaignView key={campaign.campaign.id} orgSlug={orgSlug} progress={campaign} timeZone={ctx.organization.timezone} />)}

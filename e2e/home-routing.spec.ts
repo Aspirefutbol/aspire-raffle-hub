@@ -5,6 +5,7 @@ import { apiAs, MAILPIT_URL, PASSWORD, signIn, uniqueEmail } from "./helpers";
 const familyEmail = uniqueEmail("home-family");
 const captainEmail = uniqueEmail("home-captain");
 let campaignId: string;
+let futureCampaignId: string;
 
 async function submitLogin(page: Page, email: string) {
   await page.getByLabel("Email").fill(email);
@@ -143,6 +144,22 @@ test.beforeAll(async ({ browser }) => {
     expect((await admin.rpc("transition_campaign", {
       p_campaign_id: campaignId, p_to: "ACTIVE", p_reason: "Activate isolated local home-routing acceptance fixture",
     })).error).toBeNull();
+    // The same family can see an upcoming READY raffle, but its one ACTIVE
+    // raffle must still open directly without a redundant selection screen.
+    const future = await admin.from("campaigns").insert({
+      organization_id: orgId, name: `Upcoming home routing ${now.toString(36)}`,
+      ticket_price_cents: 500, ticket_prefix: `HF${now.toString(36).slice(-6).toUpperCase()}`,
+      starts_at: new Date(now + day).toISOString(), sales_close_at: new Date(now + 8 * day).toISOString(),
+      draw_at: new Date(now + 9 * day).toISOString(),
+    }).select("id").single();
+    expect(future.error).toBeNull();
+    futureCampaignId = z.object({ id: z.uuid() }).parse(future.data).id;
+    expect((await admin.rpc("enroll_campaign_players", {
+      p_organization_id: orgId, p_campaign_id: futureCampaignId, p_team_ids: [teamId],
+    })).error).toBeNull();
+    expect((await admin.rpc("transition_campaign", {
+      p_campaign_id: futureCampaignId, p_to: "READY",
+    })).error).toBeNull();
   } finally {
     await context.close();
   }
@@ -152,6 +169,41 @@ test("family login and denied-admin dashboard fallback return to linked-family f
   await signIn(page, familyEmail);
   await expect(page).toHaveURL(/\/o\/aspire\/fundraising$/);
   await expectFamilyFixture(page);
+  const activeCard = page.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
+  await expect(activeCard.getByTestId("parent-progress-summary")).toBeVisible();
+  await expect(activeCard.getByTestId("touch-dashboard")).toBeVisible();
+  await expect(activeCard.getByRole("button", { name: "Share raffle", exact: true })).toBeVisible();
+  await expect(activeCard.getByRole("link", { name: "Requests", exact: true })).toBeVisible();
+  await expect(activeCard.getByRole("button", { name: "Record sale", exact: true })).toBeVisible();
+  await expect(activeCard.getByRole("link", { name: "Open fundraiser", exact: true })).toHaveCount(0);
+  const others = page.getByTestId("other-family-campaigns");
+  await expect(others).toBeVisible();
+  const futureCard = page.locator(`[data-testid="family-campaign"][data-campaign-id="${futureCampaignId}"]`);
+  await expect(futureCard).not.toBeVisible();
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(activeCard.getByTestId("parent-progress-summary")).toBeVisible();
+    for (const name of ["Share raffle", "Record sale"]) {
+      const box = await activeCard.getByRole("button", { name, exact: true }).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThanOrEqual(88);
+    }
+  }
+  await others.locator("summary").click();
+  await expect(futureCard).toBeVisible();
+  await expect(futureCard.getByRole("link", { name: "Open fundraiser", exact: true })).toBeVisible();
+  await others.locator("summary").click();
+  await expect(futureCard).not.toBeVisible();
+  // Navigation and campaign disclosure never create a financial transaction.
+  const admin = await apiAs("admin@aspire.test");
+  for (const id of [campaignId, futureCampaignId]) {
+    for (const table of ["campaign_sales", "money_events"] as const) {
+      const response = await admin.from(table).select("id", { count: "exact", head: true }).eq("campaign_id", id);
+      expect(response.error).toBeNull();
+      expect(response.count).toBe(0);
+    }
+  }
   await recoverToHome(page, "/o/aspire/dashboard", /\/o\/aspire\/fundraising$/);
   await expectFamilyFixture(page);
   await recoverToHome(page, `/o/aspire/team-fundraising/${campaignId}`, /\/o\/aspire\/fundraising$/);
