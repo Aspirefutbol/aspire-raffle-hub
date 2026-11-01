@@ -14,6 +14,15 @@ describe("family home entry", () => {
     const one = fixture();
     expect(singleActiveFamilyCampaign([one], NOW)).toBe(one);
   });
+  it("opens a single eligible active fundraiser even when authorized READY and historical campaigns exist", () => {
+    const active = fixture();
+    const ready = fixture("READY");
+    const historical = fixture("CLOSED");
+    expect(singleActiveFamilyCampaign([ready, historical, active], NOW)).toBe(active);
+    const outOfWindow = fixture();
+    outOfWindow.campaign.starts_at = "2026-11-03T00:00:00Z";
+    expect(singleActiveFamilyCampaign([outOfWindow, active], NOW)).toBe(active);
+  });
   it("retains the selector whenever multiple authorized campaigns are visible", () => {
     expect(singleActiveFamilyCampaign([fixture(), fixture()], NOW)).toBeNull();
   });
