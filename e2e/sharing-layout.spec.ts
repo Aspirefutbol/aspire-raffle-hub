@@ -65,6 +65,9 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await expect(shareBack).toBeFocused();
   await shareBack.click();
   await expect(playerCard.getByRole("button", { name: "Share raffle", exact: true })).toBeFocused();
+  await expect(playerCard.getByText("How would you like to sell tickets?")).toBeVisible();
+  await expect(playerCard.getByText("Sell In Person", { exact: true })).toBeVisible();
+  await expect(playerCard.getByText("Record the sale after approved cash or check payment.")).toBeVisible();
   await playerCard.getByRole("button", { name: "View full progress", exact: true }).click();
   const progressBack = playerCard.getByTestId("parent-progress-task").getByRole("button", { name: "Back to actions", exact: true });
   await expect(progressBack).toBeFocused();
@@ -126,14 +129,21 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await liamButton.click();
   await expect(liamButton).toHaveAttribute("aria-pressed", "true");
   await expect(playerCard).toBeVisible();
+  // A known in-memory link shares directly from the parent dashboard, without
+  // entering a settings screen or rotating the token.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "share", { configurable: true, value: async (data: ShareData) => {
+      (window as unknown as { __lastRaffleShare?: ShareData }).__lastRaffleShare = data;
+    } });
+  });
   await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
-  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  await expect(playerCard.getByTestId("touch-dashboard")).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __lastRaffleShare?: ShareData }).__lastRaffleShare?.url)).toBe(url);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   // A route change deliberately does not restore the raw sharing token.
   // Make that limitation clear before the parent unknowingly disables an
   // already-shared link. Canceling creation must leave the old URL working.
-  await shareBack.click();
   await otherPlayerButton.click();
   // A linked sibling chosen by a parent survives a refresh and a trip to the
   // private Requests page. Only a validated participant ID is stored locally.
