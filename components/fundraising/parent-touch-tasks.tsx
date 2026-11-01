@@ -150,7 +150,7 @@ export function ParentTouchTasks({ players, requestsHref }: {
                 }}
                 className="col-span-2 flex min-h-24 min-w-0 items-center justify-center gap-3 rounded-card border border-brand-400 bg-brand-50 px-4 py-4 text-center text-base font-semibold text-brand-800 shadow-card disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2">
                 <Share2 aria-hidden className="size-6 shrink-0" />
-                <span><span className="block">Share My Raffle</span>
+                <span><span className="block">Share raffle</span>
                   <span className="mt-1 block text-xs font-normal">Friends and family request tickets; no online payment.</span>
                 </span>
               </button>
