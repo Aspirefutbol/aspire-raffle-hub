@@ -172,19 +172,31 @@ test("family login and denied-admin dashboard fallback return to linked-family f
   const activeCard = page.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
   const futureCard = page.locator(`[data-testid="family-campaign"][data-campaign-id="${futureCampaignId}"]`);
   await expect(activeCard).toBeVisible();
-  // Other E2E workers may concurrently enroll the seeded player into their
-  // own ACTIVE raffles. In that valid multi-active state, the family selector
-  // must remain visible; with one eligible ACTIVE, the READY campaign belongs
-  // in the secondary disclosure. Test both, never assume global DB exclusivity.
+  // The family RPC may intentionally hide an upcoming READY fundraiser,
+  // while parallel E2E workers may create other ACTIVE ones. Assert the actual
+  // family-scoped projection, not global fixture existence: a sole eligible
+  // ACTIVE campaign opens directly; multiple eligible campaigns keep a chooser.
   const others = page.getByTestId("other-family-campaigns");
-  if (await others.count()) {
-    await expect(futureCard).not.toBeVisible();
-    await others.locator("summary").click();
-    await expect(futureCard).toBeVisible();
-    await expect(futureCard.getByRole("link", { name: "Open fundraiser", exact: true })).toBeVisible();
-    await others.locator("summary").click();
+  const directEntry = await activeCard.getByTestId("parent-progress-summary").isVisible();
+  if (directEntry) {
+    await expect(activeCard.getByRole("link", { name: "Open fundraiser", exact: true })).toHaveCount(0);
+    if (await futureCard.count()) {
+      // Any READY campaign actually returned by the RPC stays accessible,
+      // but must not interrupt the only ACTIVE campaign.
+      await expect(others).toBeVisible();
+      await expect(futureCard).not.toBeVisible();
+      await others.locator("summary").click();
+      await expect(futureCard.getByRole("link", { name: "Open fundraiser", exact: true })).toBeVisible();
+      await others.locator("summary").click();
+    } else {
+      await expect(others).toHaveCount(0);
+    }
   } else {
-    await expect(futureCard.getByRole("link", { name: "Open fundraiser", exact: true })).toBeVisible();
+    await expect(activeCard.getByRole("link", { name: "Open fundraiser", exact: true })).toBeVisible();
+    await expect(others).toHaveCount(0);
+    if (await futureCard.count()) {
+      await expect(futureCard.getByRole("link", { name: "Open fundraiser", exact: true })).toBeVisible();
+    }
   }
   // The campaign's direct route always shows the active player's task-focused
   // dashboard, irrespective of other workers' synthetic active fundraisers.
