@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, BarChart3, Inbox, Share2 } from "lucide-react";
+
+export type QuickShareAction = (onCopied: (feedback: string) => void, onFallback: () => void) => boolean;
+export const ParentQuickShareContext = createContext<((participantId: string, action: QuickShareAction | null) => void) | null>(null);
 
 export type ParentTouchPlayer = {
   id: string;
@@ -35,6 +38,12 @@ export function ParentTouchTasks({ players, requestsHref }: {
   const containerRef = useRef<HTMLDivElement>(null);
   const articles = useRef(new Map<string, HTMLElement>());
   const hasMounted = useRef(false);
+  const shareActions = useRef(new Map<string, QuickShareAction>());
+  const [shareFeedback, setShareFeedback] = useState("");
+  const registerQuickShare = useCallback((id: string, action: QuickShareAction | null) => {
+    if (action) shareActions.current.set(id, action);
+    else shareActions.current.delete(id);
+  }, []);
   const returnFocusTask = useRef<"share" | "progress" | null>(null);
   const selected = players.find((player) => player.id === selectedId) ?? players[0];
   const storageKey = `aspire:parent-selected-player:${requestsHref}`;
@@ -55,6 +64,7 @@ export function ParentTouchTasks({ players, requestsHref }: {
   }, [players, storageKey]);
 
   function selectPlayer(id: string) {
+    setShareFeedback("");
     returnFocusTask.current = null;
     setSelectedId(id);
     setTask("home");
@@ -87,6 +97,7 @@ export function ParentTouchTasks({ players, requestsHref }: {
   if (!selected) return null;
 
   return (
+    <ParentQuickShareContext.Provider value={registerQuickShare}>
     <div ref={containerRef} data-testid="parent-touch-tasks" className="scroll-mt-24 space-y-4">
       {players.length > 1 && (
         <nav aria-label="Choose player" className="grid grid-cols-2 gap-3">
@@ -128,19 +139,39 @@ export function ParentTouchTasks({ players, requestsHref }: {
             )}
           </section>
           <div hidden={task !== "home"} className="space-y-3">
-            <p className="text-sm font-semibold text-ink-soft">Take the next step</p>
+            <p className="text-sm font-semibold text-ink-soft">How would you like to sell tickets?</p>
             <nav data-testid="touch-dashboard" aria-label={`Raffle actions for ${player.name}`}
               className="grid grid-cols-2 gap-3">
-              <button type="button" data-parent-share-trigger disabled={!player.share} onClick={() => setTask("share")}
+              <button type="button" aria-label="Share raffle" data-parent-share-trigger disabled={!player.share}
+                onClick={() => {
+                  setShareFeedback("");
+                  const action = shareActions.current.get(player.id);
+                  if (!action || !action((feedback) => setShareFeedback(feedback), () => setTask("share"))) setTask("share");
+                }}
                 className="col-span-2 flex min-h-24 min-w-0 items-center justify-center gap-3 rounded-card border border-brand-400 bg-brand-50 px-4 py-4 text-center text-base font-semibold text-brand-800 shadow-card disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2">
-                <Share2 aria-hidden className="size-6 shrink-0" /> Share raffle
+                <Share2 aria-hidden className="size-6 shrink-0" />
+                <span><span className="block">Share raffle</span>
+                  <span className="mt-1 block text-xs font-normal">Friends and family request tickets; no online payment.</span>
+                </span>
               </button>
-              <Link href={requestsHref}
+              <Link href={requestsHref} aria-label="Requests"
                 className="flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 rounded-card border border-line-strong bg-surface px-3 py-4 text-center text-base font-semibold text-ink shadow-card focus-visible:outline-2 focus-visible:outline-offset-2">
                 <Inbox aria-hidden className="size-6" /> Requests
+                <span className="text-xs font-normal">Follow up with supporters</span>
               </Link>
-              {player.saleButton}
+              <div className="min-w-0 space-y-2">
+                <p className="text-center text-sm font-semibold text-ink">Sell In Person</p>
+                {player.saleButton}
+                <p className="text-xs text-muted">Record the sale after approved cash or check payment.</p>
+              </div>
             </nav>
+            {shareFeedback && <p role="status" className="text-sm text-brand-800">{shareFeedback}</p>}
+            {player.share && (
+              <button type="button" onClick={() => setTask("share")}
+                className="inline-flex min-h-11 items-center rounded-control px-2 py-2 text-sm font-medium text-brand-700 underline focus-visible:outline-2 focus-visible:outline-offset-2">
+                Sharing link settings
+              </button>
+            )}
             <button type="button" data-parent-progress-trigger onClick={() => setTask("progress")}
               className="inline-flex min-h-11 items-center gap-2 rounded-control px-2 py-2 text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2">
               <BarChart3 aria-hidden className="size-4" /> View full progress
@@ -165,5 +196,6 @@ export function ParentTouchTasks({ players, requestsHref }: {
         </article>
       ))}
     </div>
+    </ParentQuickShareContext.Provider>
   );
 }

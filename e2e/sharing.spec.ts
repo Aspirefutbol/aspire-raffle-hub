@@ -73,9 +73,17 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await page.getByTestId("family-player-card").filter({ hasText: "Liam Smith" }).getByRole("button", { name: "Back to actions", exact: true }).click();
   await page.getByRole("button", { name: "View full progress", exact: true }).click();
   await page.getByRole("button", { name: "Back to actions", exact: true }).click();
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "share", { configurable: true, value: async (data: ShareData) => {
+      (window as unknown as { __lastRaffleShare?: ShareData }).__lastRaffleShare = data;
+    } });
+  });
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
-  await expect(tools.getByTestId("seller-url")).toHaveText(url);
+  expect(await page.evaluate(() => (window as unknown as { __lastRaffleShare?: ShareData }).__lastRaffleShare?.url)).toBe(url);
   expect(linkWrites).toBe(1);
+  // Link management remains separate from the one-tap share action.
+  await page.getByRole("button", { name: "Sharing link settings", exact: true }).click();
+  await expect(tools.getByTestId("seller-url")).toHaveText(url);
 
   for(const name of ["Text / SMS","Email","WhatsApp"]) {
     const href=await tools.getByRole("link",{name,exact:true}).getAttribute("href");

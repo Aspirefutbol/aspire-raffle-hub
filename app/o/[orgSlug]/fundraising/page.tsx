@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireOrgContext, requirePagePermission } from "@/lib/auth/org-context";
 import { getCampaignProgress, listFundraisingCampaigns } from "@/lib/fundraising/queries";
+import { singleActiveFamilyCampaign } from "@/lib/fundraising/family-entry";
 
 export const metadata: Metadata = { title: "My fundraising" };
 
@@ -16,11 +17,16 @@ export default async function FamilyFundraisingPage({ params }: { params: Promis
   const campaigns = await listFundraisingCampaigns(ctx, "family");
   const progress = await Promise.all(campaigns.map(({ campaign }) => getCampaignProgress(ctx, campaign.id, "family")));
   const visible = progress.filter((campaign) => campaign !== null);
+  // The server has already applied family scope to each projection. Only one
+  // eligible active campaign may bypass the extra fundraiser-selection step.
+  const solo = singleActiveFamilyCampaign(visible);
 
   return (
     <>
-      <PageHeader title="My fundraising" description="Choose a fundraiser to start selling." />
-      {visible.length ? (
+      <PageHeader title="My fundraising" description={solo ? "Share your raffle or sell tickets in person." : "Choose a fundraiser to start selling."} />
+      {solo ? (
+        <FamilyCampaignView orgSlug={orgSlug} progress={solo} detail timeZone={ctx.organization.timezone} />
+      ) : visible.length ? (
         <div className="space-y-5">
           {visible.map((campaign) => <FamilyCampaignView key={campaign.campaign.id} orgSlug={orgSlug} progress={campaign} timeZone={ctx.organization.timezone} />)}
         </div>
