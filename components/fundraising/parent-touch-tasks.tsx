@@ -140,6 +140,9 @@ export function ParentTouchTasks({ players, requestsHref }: {
           </section>
           <div hidden={task !== "home"} className="space-y-3">
             <p className="text-sm font-semibold text-ink-soft">How would you like to sell tickets?</p>
+            <p data-testid="parent-selling-steps" className="text-sm leading-relaxed text-ink-soft">
+              Players share a link or ask in person. After approved cash or check payment is received, a parent records the sale to issue tickets. Requests alone do not issue tickets.
+            </p>
             <nav data-testid="touch-dashboard" aria-label={`Raffle actions for ${player.name}`}
               className="grid grid-cols-2 gap-3">
               <button type="button" aria-label="Share raffle" data-parent-share-trigger disabled={!player.share}
