@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useCallback, useContext, useEffect, useRef, useState, useTransition } from "react";
 import QRCode from "qrcode";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { manageSellerLink } from "@/lib/sharing/actions";
 import { shareLinks } from "@/lib/sharing/schemas";
 import { formatMoney } from "@/lib/fundraising/money";
 import { bundleOfferText } from "@/lib/fundraising/campaign-pricing";
+import { ParentQuickShareContext } from "@/components/fundraising/parent-touch-tasks";
 
 export function SellerTools({ orgSlug, participantId, price, ticketPackages = [] }: {
   orgSlug: string;
@@ -26,6 +27,52 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
   const mutationInFlight = useRef(false);
   const currentUrl = useRef("");
   const links = shareLinks(url, price === null ? "the published price" : formatMoney(price), bundleOfferText(ticketPackages));
+
+  const registerQuickShare = useContext(ParentQuickShareContext);
+  // A link is deliberately kept in memory only. The server stores its hash,
+  // not recoverable plaintext, so returning after a reload never silently
+  // creates (and revokes) a link that was already sent.
+  const quickShare = useCallback((onCopied: (feedback: string) => void, onFallback: () => void): boolean => {
+    const sourceUrl = currentUrl.current;
+    if (!sourceUrl || mutationInFlight.current) return false;
+    if (typeof navigator.share === "function") {
+      try {
+        void navigator.share({
+          title: "Support my fundraiser",
+          text: "Request raffle tickets through my supporter link. Payments are handled offline.",
+          url: sourceUrl,
+        }).catch((error: unknown) => {
+          if (error instanceof Error && error.name === "AbortError") return;
+          if (currentUrl.current !== sourceUrl) return;
+          setMessage("Sharing could not open. You can copy the invitation below.");
+          onFallback();
+        });
+        return true;
+      } catch {
+        // Some browsers expose the API but block it in this context.
+      }
+    }
+    if (navigator.clipboard?.writeText) {
+      const invitation = shareLinks(
+        sourceUrl, price === null ? "the published price" : formatMoney(price), bundleOfferText(ticketPackages),
+      ).text;
+      void navigator.clipboard.writeText(invitation).then(() => {
+        if (currentUrl.current === sourceUrl) onCopied("Invitation copied. Paste it into a message.");
+      }).catch(() => {
+        if (currentUrl.current !== sourceUrl) return;
+        setManualCopy(invitation);
+        setMessage("Automatic sharing is blocked. Select and copy the invitation below.");
+        onFallback();
+      });
+      return true;
+    }
+    return false;
+  }, [price, ticketPackages]);
+
+  useEffect(() => {
+    registerQuickShare?.(participantId, quickShare);
+    return () => registerQuickShare?.(participantId, null);
+  }, [participantId, quickShare, registerQuickShare]);
 
   function clearDisplayedLink(nextUrl = "") {
     currentUrl.current = nextUrl;
