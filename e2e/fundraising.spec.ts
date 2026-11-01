@@ -20,6 +20,11 @@ async function expectStat(page: Page, label: string, value: string) {
 
 test("raffle: admin prepares inventory, family issues cash tickets, and approved correction preserves history", async ({ page, browser }, testInfo) => {
   test.setTimeout(180_000);
+  // Diagnostic-only elapsed milestones: find the first stalled step without
+  // increasing timeouts, skipping assertions, or exposing synthetic identities.
+  const phaseStart = Date.now();
+  const phase = (label: string) => console.info(`[raffle-e2e-phase] ${label}: +${Date.now() - phaseStart}ms`);
+  phase("start");
   const day = 86_400_000;
   const suffix = Date.now().toString(36).toUpperCase();
   const campaignName = `Desktop raffle ${suffix}`;
@@ -29,6 +34,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   expect(organization.error).toBeNull();
   const orgId = z.object({ id: z.uuid() }).parse(organization.data).id;
 
+  phase("admin sign in");
   await signIn(page, "admin@aspire.test");
   await page.goto("/o/aspire/campaigns");
   await page.getByRole("button", { name: "New campaign", exact: true }).click();
@@ -50,6 +56,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await draft.getByRole("button", { name: "Create draft", exact: true }).click();
   await expect(page).toHaveURL(/\/o\/aspire\/campaigns\/[0-9a-f-]+$/);
   const campaignId = z.uuid().parse(new URL(page.url()).pathname.split("/").at(-1));
+  phase("draft created");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(campaignName);
 
   const prize = await admin.rpc("upsert_campaign_prize", {
@@ -92,9 +99,11 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await activation.getByRole("textbox", { name: "Reason", exact: true }).fill("Board approved the desktop raffle pilot");
   await activation.getByRole("button", { name: "Activate campaign", exact: true }).click();
   await expect(activation).not.toBeVisible();
+  phase("prepare inventory");
   await page.getByRole("button", { name: "Prepare inventory", exact: true }).click();
   await expect.poll(async () => (await progress()).participants.reduce((sum, participant) => sum + participant.available_tickets, 0)).toBe(12);
   const prepared = await progress();
+  phase("inventory prepared");
   expect(prepared.campaign.status).toBe("ACTIVE");
   await page.getByRole("button", { name: "Edit campaign", exact: true }).click();
   const edit = page.getByRole("dialog", { name: "Edit raffle campaign", exact: true });
@@ -125,16 +134,22 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   const issuedNumbers = inventory.slice(0, 2).map((ticket) => ticket.ticket_number);
   const replacementNumbers = inventory.slice(2).map((ticket) => ticket.ticket_number);
   expect(issuedNumbers.every((number) => number.startsWith(`${prefix}-`))).toBe(true);
+  phase("screenshot desktop-admin-prepared.png start");
   await page.screenshot({ path: testInfo.outputPath("desktop-admin-prepared.png"), fullPage: true });
+  phase("screenshot desktop-admin-prepared.png done");
 
+  phase("family context");
   const familyContext = await browser.newContext({ baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000" });
   try {
     const family = await familyContext.newPage();
+    phase("family sign in");
     await signIn(family, "coach@aspire.test");
+    phase("family campaign list");
     await family.goto("/o/aspire/fundraising");
     await expect(family.getByRole("heading", { name: "My fundraising", exact: true })).toBeVisible();
     const raffle = family.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
     await expect(raffle.getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
+    phase("open fundraiser");
     await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
     await expect(family.getByTestId("touch-dashboard")).toBeVisible();
     for (const name of ["Share raffle", "Record sale"]) await expect(family.getByTestId("touch-dashboard").getByRole("button", { name, exact: true })).toBeVisible();
@@ -159,6 +174,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(family.getByRole("row").filter({ hasText: "Mateo Garcia" })).toBeVisible();
     await expect(family.getByRole("button", { name: /^(Record sale|Resume sale)$/ })).toHaveCount(0);
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
+    phase("record cash sale");
     await playerCard.getByRole("button", { name: "Record sale", exact: true }).click();
     const sale = family.getByRole("dialog", { name: "Record sale", exact: true });
     await sale.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Desktop cash buyer");
@@ -166,6 +182,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(sale.getByRole("textbox", { name: "Amount collected ($)", exact: true })).toHaveValue("10.00");
     await sale.getByLabel("Payment method", { exact: true }).selectOption("cash");
     await sale.getByRole("button", { name: "Record sale", exact: true }).click();
+  phase("cash sale submitted");
     const receipt = family.getByRole("dialog", { name: "Tickets issued", exact: true });
     await expect(receipt).toContainText("Sale complete!");
     await expect(receipt).toContainText("2 tickets sold · $10.00 raised");
@@ -180,7 +197,10 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(receipt.getByRole("listitem")).toHaveCount(0);
     await receipt.locator("details summary").click();
     await expect(receipt.getByRole("listitem")).toHaveText(issuedNumbers);
+    phase("screenshot desktop-family-ticket-receipt.png start");
     await family.screenshot({ path: testInfo.outputPath("desktop-family-ticket-receipt.png"), fullPage: true });
+    phase("screenshot desktop-family-ticket-receipt.png done");
+    phase("open printable tickets");
     await receipt.getByRole("link", { name: "View / print tickets", exact: true }).click();
     await expect(family.getByRole("heading", { name: "Issued raffle tickets", exact: true })).toBeVisible();
     await expect(family.getByRole("button", { name: "Print tickets", exact: true })).toBeVisible();
@@ -191,7 +211,9 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(family.getByText("$5.00", { exact: true }).first()).toBeVisible();
     await expect(family.getByTestId("issued-ticket").first()).toContainText("Coaching package: Donated synthetic coaching package and equipment bundle (estimated value $250.00)");
     await expect(family.getByText("Prize award / drawing date", { exact: true }).first()).toBeVisible();
+    phase("screenshot desktop-family-printable-tickets.png start");
     await family.screenshot({ path: testInfo.outputPath("desktop-family-printable-tickets.png"), fullPage: true });
+    phase("screenshot desktop-family-printable-tickets.png done");
     await family.goto(`/o/aspire/fundraising/${campaignId}`);
     const refreshedPlayerCard = family.getByTestId("family-player-card");
     await refreshedPlayerCard.getByRole("button", { name: "View full progress", exact: true }).click();
@@ -199,19 +221,26 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(refreshedPlayerCard.getByText("Tickets sold", { exact: true }).locator("..").getByText("2", { exact: true })).toBeVisible();
     await expect(refreshedPlayerCard.getByText("2 tickets available", { exact: true })).toBeVisible();
     await expect(refreshedPlayerCard.getByRole("progressbar", { name: "Personal fundraising goal", exact: true })).toHaveAttribute("value", "10");
+    phase("screenshot desktop-family-progress.png start");
     await family.screenshot({ path: testInfo.outputPath("desktop-family-progress.png"), fullPage: true });
+    phase("screenshot desktop-family-progress.png done");
 
+    phase("team totals");
     await family.goto(`/o/aspire/team-fundraising/${campaignId}`);
     await expectStat(family, "Assigned teams raised", "$10.00");
     const liamRow = family.getByRole("row").filter({ hasText: "Liam Smith" });
     await expect(liamRow.getByRole("cell", { name: "$10.00", exact: true })).toBeVisible();
     await expect(liamRow.getByText("Low progress", { exact: true })).toBeVisible();
     await expect(family.getByRole("row").filter({ hasText: "Mateo Garcia" }).getByText("No sales", { exact: true })).toBeVisible();
+    phase("screenshot desktop-team-progress.png start");
     await family.screenshot({ path: testInfo.outputPath("desktop-team-progress.png"), fullPage: true });
+    phase("screenshot desktop-team-progress.png done");
   } finally {
+    phase("family context close");
     await familyContext.close();
   }
 
+  phase("admin collected totals");
   const collected = await progress();
   expect(collected.totals).toEqual({ raised_cents: 1000, tickets_sold: 2, player_count: 3, team_count: 1 });
   expect(collected.teams[0]).toMatchObject({ raised_cents: 1000, tickets_sold: 2, player_count: 3 });
@@ -223,6 +252,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await expectStat(page, "Total raised", "$10.00");
   await expectStat(page, "Tickets sold", "2");
   const originalRow = page.getByTestId(`campaign-sale-${originalSale.id}`);
+  phase("reverse sale");
   await originalRow.getByRole("button", { name: "Reverse sale", exact: true }).click();
   const reversal = page.getByRole("dialog", { name: "Reverse sale", exact: true });
   await reversal.getByRole("textbox", { name: "Reason for reversal", exact: true }).fill("Buyer details corrected with director approval");
@@ -238,6 +268,7 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await page.goto(`/o/aspire/campaigns/${campaignId}`);
   const refreshedOriginalRow = page.getByTestId(`campaign-sale-${originalSale.id}`);
 
+  phase("record approved correction");
   await refreshedOriginalRow.getByRole("button", { name: "Record correction", exact: true }).click();
   const correction = page.getByRole("dialog", { name: "Record sale", exact: true });
   await correction.getByRole("textbox", { name: "Buyer name", exact: true }).fill("Corrected desktop cash buyer");
@@ -255,8 +286,11 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
   await correctionReceipt.getByRole("button", { name: "Done", exact: true }).click();
   await expectStat(page, "Total raised", "$10.00");
   await expectStat(page, "Tickets sold", "2");
+  phase("screenshot desktop-admin-corrected-history.png start");
   await page.screenshot({ path: testInfo.outputPath("desktop-admin-corrected-history.png"), fullPage: true });
+  phase("screenshot desktop-admin-corrected-history.png done");
 
+  phase("final financial and audit assertions");
   const finalProgress = await progress();
   expect(finalProgress.totals).toEqual(collected.totals);
   expect(finalProgress.recent_sales).toHaveLength(2);
