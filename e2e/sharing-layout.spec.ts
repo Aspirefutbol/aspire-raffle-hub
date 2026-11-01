@@ -145,6 +145,39 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   expect(await page.evaluate(() => (window as unknown as { __lastRaffleShare?: ShareData }).__lastRaffleShare?.url)).toBe(url);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
+  // A valid link must share in one tap without the native share API too.
+  // This must only COPY the invitation: no link replacement or ticket writes.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (value: string) => {
+        (window as unknown as { __raffleClipboardText?: string }).__raffleClipboardText = value;
+      } },
+    });
+  });
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(playerCard.getByTestId("touch-dashboard")).toBeVisible();
+  await expect(playerCard.getByRole("status")).toContainText("Invitation copied. Paste it into a message.");
+  expect(await page.evaluate(() =>
+    (window as unknown as { __raffleClipboardText?: string }).__raffleClipboardText)).toContain(url);
+  await expect(playerCard.getByTestId("parent-share-task")).toBeHidden();
+
+  // A denied clipboard must offer manual copy, not prompt a destructive
+  // replacement link or leave the parent stranded on an inert button.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => { throw new Error("Synthetic clipboard denial"); } },
+    });
+  });
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(playerCard.getByTestId("parent-share-task")).toBeVisible();
+  await expect(playerCard.getByRole("status")).toContainText("Automatic sharing is blocked");
+  expect(await playerCard.getByRole("textbox", { name: "Copy manually" }).inputValue()).toContain(url);
+  await shareBack.click();
+  await expect(playerCard.getByRole("button", { name: "Share raffle", exact: true })).toBeFocused();
+
   // A route change deliberately does not restore the raw sharing token.
   // Make that limitation clear before the parent unknowingly disables an
   // already-shared link. Canceling creation must leave the old URL working.
