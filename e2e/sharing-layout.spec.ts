@@ -85,6 +85,12 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await page.getByRole("dialog", { name: "Create sharing link?", exact: true }).getByRole("button", { name: "Confirm create link", exact: true }).click();
   // Alternatives are deliberately tucked away, but remain available and touch-friendly.
   await expect(tools.getByRole("button", { name: "Copy invitation to share", exact: true })).toBeVisible();
+  // First-time creation must warn before the one-time plaintext URL is lost.
+  // This guidance does not store, rotate or revoke an existing invitation.
+  await expect(tools.getByTestId("save-sharing-link-reminder"))
+    .toContainText("Save or send this invitation now.");
+  await expect(tools.getByTestId("save-sharing-link-reminder"))
+    .toContainText("It cannot be recovered here after a reload");
   await expect(tools.getByRole("button", { name: "Copy link", exact: true })).not.toBeVisible();
   await tools.getByTestId("share-options").locator("summary").click();
   const url = await tools.getByTestId("seller-url").innerText();
