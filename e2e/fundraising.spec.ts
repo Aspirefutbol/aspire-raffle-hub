@@ -135,13 +135,28 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(family.getByRole("heading", { name: "My fundraising", exact: true })).toBeVisible();
     const raffle = family.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
     await expect(raffle.getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
-    await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
+    // One eligible live fundraiser opens its dashboard directly on the list page.
+    // With multiple eligible campaigns, the family must explicitly choose one.
+    // Both paths exercise the same authorized cash-sale and audit workflow.
+    const inlineDashboard = raffle.getByTestId("touch-dashboard");
+    const openFundraiser = raffle.getByRole("link", { name: "Open fundraiser", exact: true });
+    if (await inlineDashboard.isVisible()) {
+      await expect(openFundraiser).toHaveCount(0);
+      await expect(family).toHaveURL(/\/o\/aspire\/fundraising$/);
+    } else {
+      await expect(openFundraiser).toHaveAttribute("href", `/o/aspire/fundraising/${campaignId}`);
+      await openFundraiser.click();
+      await expect(family).toHaveURL(new RegExp(`/fundraising/${campaignId}$`));
+    }
     await expect(family.getByTestId("touch-dashboard")).toBeVisible();
     for (const name of ["Share raffle", "Record sale"]) await expect(family.getByTestId("touch-dashboard").getByRole("button", { name, exact: true })).toBeVisible();
     await expect(family.getByRole("button", { name: "View full progress", exact: true })).toBeVisible();
     await expect(family.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true })).toBeVisible();
-    await expect(family).toHaveURL(new RegExp(`/fundraising/${campaignId}$`));
-    const playerCard = family.getByTestId("family-player-card");
+    await expect(family).toHaveURL(new RegExp(`/fundraising(?:/${campaignId})?$`));
+    // The Progress First list can retain authorized historical fundraisers in a
+    // collapsed disclosure. Their preview cards still exist in the DOM; scope
+    // this assertion to the selected live raffle dashboard, not every campaign.
+    const playerCard = raffle.getByTestId("family-player-card");
     await expect(playerCard).toHaveCount(1);
     await expect(playerCard.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
     await expect(family.locator("main")).not.toContainText("Mateo Garcia");

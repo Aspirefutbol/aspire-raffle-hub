@@ -151,6 +151,7 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
       <p className="text-sm font-semibold text-ink">Your sharing link is ready</p>
       <Button className="h-auto min-h-11 w-full whitespace-normal py-3" size="lg" disabled={pending} onClick={() => copy("message")}>Copy invitation to share</Button>
       <p className="text-sm text-ink-soft">Paste the invitation into a text or group chat with your supporters.</p>
+      <p data-testid="save-sharing-link-reminder" className="text-sm text-ink-soft">Save or send this invitation now. It cannot be recovered here after a reload; a new link disables the old link and any QR codes you shared.</p>
       <details className="rounded-control border border-line" data-testid="share-options">
         <summary className="min-h-11 cursor-pointer px-3 py-3 text-sm font-medium text-ink">More ways to share</summary>
         <div className="space-y-3 border-t border-line p-3">
