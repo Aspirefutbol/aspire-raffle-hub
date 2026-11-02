@@ -150,8 +150,11 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     const raffle = family.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
     await expect(raffle.getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
     phase("open fundraiser");
+    phase("fundraiser link click start");
     await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
+    phase("fundraiser link click resolved");
     await expect(family.getByTestId("touch-dashboard")).toBeVisible();
+    phase("fundraiser dashboard visible");
     for (const name of ["Share raffle", "Record sale"]) await expect(family.getByTestId("touch-dashboard").getByRole("button", { name, exact: true })).toBeVisible();
     await expect(family.getByRole("button", { name: "View full progress", exact: true })).toBeVisible();
     await expect(family.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true })).toBeVisible();
