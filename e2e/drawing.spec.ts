@@ -31,9 +31,27 @@ async function localTimestamp(page: Page, milliseconds: number) {
   return page.evaluate((value) => {
     const date = new Date(value);
     const pad = (part: number) => String(part).padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    // datetime-local normalizes trailing :00 away. Playwright's fill requires
+    // exactly the browser-normalized value; retain seconds when nonzero.
+    const minute = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    return date.getSeconds() === 0 ? minute : `${minute}:${pad(date.getSeconds())}`;
   }, milliseconds);
 }
+
+test("drawing datetime-local input accepts zero and nonzero seconds without retries", async ({ page }) => {
+  const minuteBoundary = Date.UTC(2026, 10, 2, 13, 7, 0);
+  const zeroSeconds = await localTimestamp(page, minuteBoundary);
+  const nonzeroSeconds = await localTimestamp(page, minuteBoundary + 1000);
+  expect(zeroSeconds).toMatch(/T\d{2}:\d{2}$/);
+  expect(nonzeroSeconds).toMatch(/T\d{2}:\d{2}:01$/);
+
+  await page.setContent('<label for="when">Drawing timestamp</label><input id="when" type="datetime-local" step="1">');
+  const timestamp = page.getByLabel("Drawing timestamp");
+  await timestamp.fill(zeroSeconds);
+  await expect(timestamp).toHaveValue(zeroSeconds);
+  await timestamp.fill(nonzeroSeconds);
+  await expect(timestamp).toHaveValue(nonzeroSeconds);
+});
 
 async function downloadFile(page: Page, section: Locator, label: string, file: string, testInfo: TestInfo) {
   const downloading = page.waitForEvent("download");
