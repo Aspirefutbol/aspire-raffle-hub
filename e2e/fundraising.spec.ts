@@ -150,9 +150,59 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     const raffle = family.locator(`[data-testid="family-campaign"][data-campaign-id="${campaignId}"]`);
     await expect(raffle.getByRole("heading", { level: 2, name: new RegExp(campaignName) })).toContainText(campaignName);
     phase("open fundraiser");
-    phase("fundraiser link click start");
-    await raffle.getByRole("link", { name: "Open fundraiser", exact: true }).click();
-    phase("fundraiser link click resolved");
+    // Retain a real browser click/navigation assertion. Diagnose the intermittent
+    // first-attempt stall without bypassing the link or increasing test timeouts.
+    const targetHref = `/o/aspire/fundraising/${campaignId}`;
+    const openFundraiser = raffle.getByRole("link", { name: "Open fundraiser", exact: true });
+    await expect(openFundraiser).toHaveAttribute("href", targetHref);
+    const routeKind = (requestUrl: string) => {
+      try {
+        const pathname = new URL(requestUrl).pathname;
+        return pathname === targetHref ? "detail" : pathname === "/o/aspire/fundraising" ? "list" : null;
+      } catch { return null; }
+    };
+    const onRouteRequest = (request: import("@playwright/test").Request) => {
+      const kind = routeKind(request.url());
+      if (kind) phase(`route request ${kind} ${request.resourceType()}`);
+    };
+    const onRouteResponse = (response: import("@playwright/test").Response) => {
+      const kind = routeKind(response.url());
+      if (kind) phase(`route response ${kind} HTTP ${response.status()}`);
+    };
+    const onRouteFailure = (request: import("@playwright/test").Request) => {
+      const kind = routeKind(request.url());
+      if (kind) phase(`route failure ${kind}: ${request.failure()?.errorText ?? "unknown"}`);
+    };
+    family.on("request", onRouteRequest);
+    family.on("response", onRouteResponse);
+    family.on("requestfailed", onRouteFailure);
+    const stallSnapshot = setTimeout(() => {
+      void family.evaluate((href) => {
+        const link = [...document.querySelectorAll<HTMLAnchorElement>("a")].find((candidate) => candidate.getAttribute("href") === href);
+        const bounds = link?.getBoundingClientRect();
+        const top = bounds ? document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2) : null;
+        return {
+          onDetailRoute: location.pathname === href,
+          documentReady: document.readyState,
+          linkPresent: Boolean(link?.isConnected),
+          linkVisible: Boolean(bounds && bounds.width > 0 && bounds.height > 0),
+          linkPointerEvents: link ? getComputedStyle(link).pointerEvents : null,
+          topElementTag: top?.tagName ?? null,
+          topElementIsLink: Boolean(link && top && (top === link || link.contains(top))),
+        };
+      }, targetHref).then((state) => phase(`navigation stalled snapshot ${JSON.stringify(state)}`))
+        .catch(() => phase("navigation stalled snapshot unavailable"));
+    }, 12_000);
+    try {
+      phase("fundraiser link click start");
+      await openFundraiser.click({ timeout: 25_000 });
+      phase("fundraiser link click resolved");
+    } finally {
+      clearTimeout(stallSnapshot);
+      family.off("request", onRouteRequest);
+      family.off("response", onRouteResponse);
+      family.off("requestfailed", onRouteFailure);
+    }
     await expect(family.getByTestId("touch-dashboard")).toBeVisible();
     phase("fundraiser dashboard visible");
     for (const name of ["Share raffle", "Record sale"]) await expect(family.getByTestId("touch-dashboard").getByRole("button", { name, exact: true })).toBeVisible();
