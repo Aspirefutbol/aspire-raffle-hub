@@ -153,7 +153,10 @@ test("raffle: admin prepares inventory, family issues cash tickets, and approved
     await expect(family.getByRole("button", { name: "View full progress", exact: true })).toBeVisible();
     await expect(family.getByTestId("touch-dashboard").getByRole("link", { name: "Requests", exact: true })).toBeVisible();
     await expect(family).toHaveURL(new RegExp(`/fundraising(?:/${campaignId})?$`));
-    const playerCard = family.getByTestId("family-player-card");
+    // The Progress First list can retain authorized historical fundraisers in a
+    // collapsed disclosure. Their preview cards still exist in the DOM; scope
+    // this assertion to the selected live raffle dashboard, not every campaign.
+    const playerCard = family.getByTestId("touch-dashboard").getByTestId("family-player-card");
     await expect(playerCard).toHaveCount(1);
     await expect(playerCard.getByRole("heading", { name: "Liam Smith", exact: true })).toBeVisible();
     await expect(family.locator("main")).not.toContainText("Mateo Garcia");
