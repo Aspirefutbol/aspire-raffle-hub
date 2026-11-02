@@ -1,6 +1,6 @@
 # Seller Sharing & Parent/Player Seller Toolkit
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-11-02 (nonproduction parent journey; legal/operator approval still required)_
 
 Implementation/QA runbook: `docs/seller-sharing-operations.md`. The implementation
 uses derived active/expired state, one-time token display, immutable request bodies,
@@ -21,9 +21,9 @@ The public experience is an **interest/request page**, not a purchase page.
 
 ## Primary user journey
 
-1. A family opens **My fundraising**.
-2. They select a linked player.
-3. They copy or share an opaque seller link using:
+1. A family opens **My fundraising**. One eligible active campaign opens directly to Progress First; multiple eligible active campaigns retain the fundraiser selector.
+2. When multiple linked players are eligible, they choose the correct player. For a single linked player, no player-selection step is needed.
+3. If an already-created valid link remains available in the current page, **Share raffle** invokes native sharing or copies the invitation in one tap. Otherwise, the share panel explains the existing-link limitation and requires explicit confirmation before first creation or replacement. Families must save or send the original invitation before leaving the page. Sharing options include:
    - Copy link
    - Text / SMS
    - Email
@@ -131,7 +131,7 @@ Rules:
 
 - token values are generated server-side with high entropy
 - store only a one-way hash in Postgres
-- one active link may be reused or rotated by the authorized seller
+- an active URL already sent to supporters remains valid until an authorized explicit revoke/rotation; only its hash is stored server-side, so the original plaintext URL cannot be reconstructed in the parent dashboard after a reload. Creating a replacement requires confirmation and invalidates previous links/QR codes; never silently replace a link merely because the URL is unavailable in page memory
 - revocation creates audit evidence; do not silently reuse a revoked token
 - links never grant authenticated application access
 
@@ -268,7 +268,7 @@ Do not add CAPTCHA unless abuse proves it necessary; start with low-friction con
 
 Authenticated seller card should include:
 
-- **Share fundraiser** primary action
+- **Share raffle** primary action: native share/one-tap copy when a valid URL is already in page memory; otherwise open link guidance without implicitly creating or rotating a link
 - Copy link
 - Text message
 - Email
@@ -280,7 +280,7 @@ Authenticated seller card should include:
 
 Suggested share copy:
 
-> I’m helping raise funds for Aspire. Raffle tickets are $5 each. Use this page to let me know how many you’d like, and I’ll follow up with payment and ticket details.
+> I’m helping raise funds for Aspire. See the approved ticket prices and packages on the fundraiser page, then use my link to request tickets. I’ll follow up about approved offline cash/check payment and ticket details.
 
 Do not say **Buy now**, **Purchase**, **Checkout**, **Reserve tickets**, or **Your entry is confirmed** on the public request experience.
 
@@ -360,7 +360,7 @@ Add a lightweight toolkit beside sharing tools.
 
 Text:
 
-> Hi! I’m helping Aspire raise funds through our raffle. Tickets are $5 each. This link lets you tell me how many you’d like, and I’ll follow up with payment and ticket details: [link]
+> Hi! I’m helping Aspire raise funds through our raffle. This link shows the approved ticket prices and lets you request tickets (not purchase or reserve them). I’ll follow up about approved offline cash/check payment and ticket details: [link]
 
 Follow-up:
 
