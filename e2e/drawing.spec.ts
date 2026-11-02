@@ -42,8 +42,8 @@ test("drawing datetime-local input accepts zero and nonzero seconds without retr
   const minuteBoundary = Date.UTC(2026, 10, 2, 13, 7, 0);
   const zeroSeconds = await localTimestamp(page, minuteBoundary);
   const nonzeroSeconds = await localTimestamp(page, minuteBoundary + 1000);
-  expect(zeroSeconds).toMatch(/T\\d{2}:\\d{2}$/);
-  expect(nonzeroSeconds).toMatch(/T\\d{2}:\\d{2}:01$/);
+  expect(zeroSeconds).toMatch(/T\d{2}:\d{2}$/);
+  expect(nonzeroSeconds).toMatch(/T\d{2}:\d{2}:01$/);
 
   await page.setContent('<label for="when">Drawing timestamp</label><input id="when" type="datetime-local" step="1">');
   const timestamp = page.getByLabel("Drawing timestamp");
