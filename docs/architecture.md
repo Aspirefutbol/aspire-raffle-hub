@@ -1,7 +1,9 @@
 # Raffle Hub — Architecture
 
-Status: Phase 1 (foundation + master roster). Primary product spec:
+Status: Phase 0 foundation + master roster, with the Phase 1 raffle first slice.
+Primary product spec:
 [`Raffle-Hub-Developer-Blueprint.pdf`](./Raffle-Hub-Developer-Blueprint.pdf).
+Pilot launch gaps and later scope: [`raffle-pilot-backlog.md`](./raffle-pilot-backlog.md).
 
 ## 1. What we are building
 
@@ -12,8 +14,11 @@ Aspire-specific. Aspire's identity, legal profile and branding live in data
 
 The raffle product model (blueprint §1–2) is **direct/offline payment →
 immediate ACTIVE digital ticket → later seller reconciliation**, with no online
-raffle checkout in Texas CREA mode. Phase 1 builds none of the sale machinery,
-but the foundation is shaped so it slots in without rework (see §7).
+raffle checkout in Texas CREA mode. The current slice adds assigned ticket
+inventory, manual cash/check sales, scoped progress, and approved reversals and
+linked corrections. Collection totals describe seller collections, not money
+received, deposited, or reconciled by the organization. Those operational
+workflows and drawing exports remain required pilot launch work (see §7).
 
 ```
 PLATFORM
@@ -25,9 +30,11 @@ PLATFORM
        │    ├─ Households
        │    ├─ Guardians ── player_guardians (many-to-many)
        │    └─ Organization users (organization_members)
-       └─ CAMPAIGNS                     (schema only in Phase 1)
+       └─ CAMPAIGNS                     (raffle first slice)
             └─ CAMPAIGN PARTICIPANTS    (reference players; never copy them)
-                 └─ sellers / tickets / sales / reconciliation  (later phases)
+                 ├─ TICKET ALLOCATIONS → TICKETS
+                 └─ IMMUTABLE SALES → COLLECTION EVENTS
+                                      └─ REVERSALS / LINKED CORRECTIONS
 ```
 
 ## 2. Stack
@@ -56,19 +63,25 @@ app/
     people/players/                           Directory, profile, add, import wizard
     people/households/                        Households + guardians
     teams/                                    Teams
-    campaigns/, reports/                      Phase-1 placeholders
+    campaigns/                                Admin campaign list, setup, and progress route contract
+    fundraising/                              Linked-family campaign route contract
+    team-fundraising/                         Assigned-team campaign route contract
+    reports/                                  Future reporting
     settings/                                 Org profile, seasons, members, mappings, activity
   platform/                                   SUPER_ADMIN: organizations
 components/
   ui/                                         Design system primitives
   layout/                                     Sidebar, mobile nav, org switcher
-  roster/, import/, settings/, platform/      Feature components
+  roster/, import/, settings/, platform/      Roster and organization feature components
+  fundraising/                                Raffle interface integration
 lib/
   supabase/                                   server / browser / proxy clients; admin.ts (server-only, auth admin ops)
   auth/                                       session + organization context, permission guards
   permissions/                                permission keys + role catalog (mirrors DB)
   roster/                                     roster domain: validation schemas, queries, actions
   roster/import/                              mapping, normalization, validation, duplicates, households
+  campaigns/                                  lifecycle, setup schemas, guarded setup actions
+  fundraising/                                scoped queries, transactional actions, money/goal validation
   validation.ts, actions.ts                   shared Zod helpers, server-action wrapper
   dashboard/, audit/, settings/, platform/     overview + Action Needed, audit labels, settings & platform actions
   database/                                   generated DB types
@@ -100,11 +113,26 @@ Browser ──► proxy.ts (refresh Supabase session cookie; redirect anonymous 
   and sending invitation emails (`inviteUserByEmail`). Membership and invitation
   rows are always written with the *user's* client, so RLS and the grant rules
   still apply. Everything else uses the publishable key plus the user's session.
-  `scripts/seed-dev.mjs` (local only) is the only other service-role user.
+  The other trusted uses are `scripts/seed-dev.mjs` (local fixtures) and
+  `scripts/audit-checkpoint.mjs` (verification on CI/trusted machines).
 - **Tenant isolation** is enforced three ways: RLS (`organization_id` checked on
   every row), composite foreign keys on `(id, organization_id)` (a row cannot
   reference another tenant's row), and URL-scoped org context (`/o/[orgSlug]`)
   resolved against the user's memberships.
+- **Scoped fundraising views are explicit.** `admin` requires `campaigns.read`,
+  `family` requires `roster.read_own_family` and current linked-player scope, and
+  `team` requires `roster.read_assigned_teams`, an assigned enrollment team, and
+  current player/team scope. Enrollment snapshots preserve attribution, not
+  continuing authorization. Removing a guardian link, team assignment, or live
+  player scope revokes the corresponding scoped access.
+- **Read scope never grants sale scope.** Sale recording requires `tickets.issue`
+  plus either `organization.manage` or the exact participant's current family
+  scope. Captain, campaign-reader, and broad-roster permissions cannot widen a
+  combined family's selling scope. Existing role grants remain unchanged.
+- **Buyer data stays separate from progress.** Scoped progress projections omit
+  buyer contacts and private notes. Raw sale reads use financial/audit permissions
+  or the issuing family's current participant scope; campaign readers and team
+  captains do not gain buyer details through their progress view.
 
 ## 5. Transactions & business logic
 
@@ -120,13 +148,69 @@ write is a Postgres function executed with `rpc()`:
 | `set_primary_guardian`, `set_household_primary_contact` | flag swaps under unique constraints |
 | `commit_player_import` | execute an import plan, all-or-nothing |
 | `roster_overview` | dashboard metrics + Action Needed counts |
+| `enroll_campaign_players`, `withdraw_campaign_participant` | enroll active roster players by all/team/player selection; withdraw with a reason |
+| `set_campaign_participant_goal`, `set_campaign_team_goal` | audited goal overrides; null inherits campaign defaults |
+| `generate_campaign_tickets`, `allocate_campaign_tickets`, `prepare_campaign_inventory` | generate unique campaign numbers and assign participant stock |
+| `record_campaign_sale` | atomically consume assigned tickets, insert immutable sale facts, and append collection/issuance events |
+| `reverse_campaign_sale` | append an approved reversal and permanently void the original tickets |
+| `fundraising_campaigns`, `campaign_progress` | explicitly scoped, redacted campaign/player/team projections |
 
-Functions are `SECURITY INVOKER` (caller's RLS applies) and call
-`assert_org_permission` first so failures produce clear messages.
+Roster functions use `SECURITY INVOKER` (caller's RLS applies). Fundraising
+transaction writers use `SECURITY DEFINER`, a fixed search path, and explicit
+caller-bound permission and tenant checks; direct table writes are revoked.
+Fundraising projection functions likewise enforce the selected view's permission
+and scope before calculating metrics. Server actions retain the independent
+permission check and call these functions with the user's JWT.
 
 Pure logic that benefits from unit tests (column mapping, value normalization,
 duplicate scoring, household grouping) lives in `lib/roster/import/*` and runs in
-server actions; the database function only executes the reviewed plan.
+server actions; the database function only executes the reviewed plan. Exact
+integer-cent conversion, validation, goal/progress calculations, and capability
+combinations live in `lib/fundraising/*`.
+
+The transactional foundation is introduced by these migrations:
+
+- `20261014000100_fundraising_foundation.sql`: campaign player/team goal defaults,
+  team overrides, ticket counters/inventory/allocations, immutable sale and
+  reversal records, tenant/campaign constraints, guarded enrollment and stock RPCs.
+- `20261014000200_fundraising_sales.sql`: atomic offline issuance, caller-bound
+  idempotency, and approved reversals/corrections.
+- `20261014000300_fundraising_views.sql`: scoped SELECT policies and redacted
+  family/team/admin projections; existing role and raw-ledger grants remain intact.
+- `20261014000400_correction_progress.sql`: correction/replacement IDs in the
+  same authorized progress subset, allowing the UI to identify completed corrections.
+
+Ticket numbers are unique per campaign and generated under campaign/counter
+locks. Linked guardians share the participant's assigned pool. A sale requires an
+active player/participant, an ACTIVE raffle with an open sales window, available
+assigned stock, and exact quantity × ticket price. Its idempotency key is bound
+to organization + actor; identical retries return the original result, while a
+different request with the same key is rejected. The transaction writes no
+partial sale, collection, or ticket history on failure.
+
+Reversal requires both `tickets.void` and `adjustments.approve`, with a reason;
+the database derives the approving actor. It appends a negative money event and
+an immutable association to the original sale, then voids those tickets without
+recycling their numbers. New ticket-changing reversals stop once the drawing is
+recorded. A replacement sale references an approved reversal for the same player
+and campaign and uses fresh stock; it never edits the original sale.
+
+### Fundraising route and query contracts
+
+Interface integration uses `/o/[orgSlug]/campaigns` and
+`/o/[orgSlug]/campaigns/[campaignId]` for administration,
+`/o/[orgSlug]/fundraising` for family cards, and
+`/o/[orgSlug]/team-fundraising` for captain progress. Route completion and browser
+acceptance are verified separately from the database foundation.
+
+`listFundraisingCampaigns(ctx, view)` calls `fundraising_campaigns`;
+`getCampaignProgress(ctx, campaignId, view, { teamId?, playerId? })` calls
+`campaign_progress`. Each RPC receives the organization derived from the
+authenticated context. Filters apply before totals, rankings, and recent sales;
+foreign filters reveal no records. Progress returns campaign metadata, net
+collection/ticket totals, participant goals/stock, team totals, and a bounded
+recent-sales list without buyer details. `getCampaignSetup` uses a bounded
+organization/campaign read and the existing `campaign_readiness` checks.
 
 ## 6. Auditability
 
@@ -136,27 +220,37 @@ server actions; the database function only executes the reviewed plan.
   `PLAYER_CREATED / UPDATED / ARCHIVED / RESTORED / IMPORTED`,
   `PLAYER_TEAM_CHANGED`, `PLAYER_GUARDIAN_LINKED / UNLINKED`, `TEAM_*`,
   `HOUSEHOLD_*`, `GUARDIAN_*`, `IMPORT_STARTED / COMPLETED / CANCELLED`,
-  `MEMBER_ADDED`, `ROLE_CHANGED`, `ORGANIZATION_UPDATED`, `CAMPAIGN_*`.
+  `MEMBER_ADDED`, `ROLE_CHANGED`, `ORGANIZATION_UPDATED`, `CAMPAIGN_*`,
+  `TICKET_*`, `TICKET_ALLOCATION_*`, `SALE_*`, `SALE_REVERSAL_*`, `MONEY_EVENT_*`.
 - Each event stores actor, timestamp, before/after JSON and changed fields.
 - Inside an import, the session variable `raffle_hub.import_id` turns
   `*_CREATED` into `*_IMPORTED` and tags events with the import id.
+- `campaign_sales`, `ticket_allocations`, and `sale_reversals` are immutable facts.
+  Tickets retain their identity/attribution while guarded transactions change
+  inventory state; the ticket ledger records allocation, issuance, and voiding.
+- Existing `campaign_events`, `ticket_events`, `money_events`, and `audit_events`
+  row shapes and historical hash payloads remain unchanged. New relationships
+  use immutable associations and existing metadata, with additional scoped
+  constraints rather than added columns on hashed ledger rows. Continue running
+  hash-chain and checkpoint verification after every financial workflow.
 
 ## 7. Prepared for later phases (not built)
 
 | Future system | Hook already in place |
 |---|---|
-| Campaign participants / sellers | `campaign_participants` references `players`; snapshots team/household |
-| Seller accounts / family logins | `guardians.profile_id`; `PARTICIPANT_FAMILY` role; `players.source = 'self_registration'` |
-| Digital tickets, inventory, sales | Attach to `campaign_participants`; `campaigns.status` uses the blueprint state machine |
-| Reconciliation / liabilities | `FINANCE_ADMIN` role; permission catalog is extensible |
+| Money status, turn-ins, reconciliation / liabilities | collection/reversal events exist; receipts, outstanding balances, check exceptions, deposits, and reconciliation workflows remain |
+| Drawing export / snapshot, prizes, winners | existing lifecycle and issued/voided tickets support a later reproducible eligible-ticket snapshot and operator drawing evidence |
+| Seller sharing, ticket delivery / receipts | linked-family access and issued tickets exist; sharing and delivery expectations remain pilot decisions |
 | Jurisdiction rules | `organizations.jurisdiction_profile` → copied to `campaigns.jurisdiction_mode` |
-| Drawings, prizes, winners | Append-only audit model; no hard deletes on fundraising tables |
 | Notifications / SMS / email | `guardians.communication_preferences` |
 | Multiple fundraiser types | `campaigns.campaign_type` |
 | Subscriptions | `organizations.status`, `organizations.settings` |
 
-Deliberately **absent**: any payment, checkout, card, or payment-link structure
-(blueprint §2, §26, §34).
+Deliberately **absent**: online raffle checkout, card processing, payment links,
+other fundraiser implementations, and campaign boosts. The current authorized
+payment methods are offline cash/check. A passing first slice does not establish
+pilot launch readiness; required next slices and operator rehearsal are tracked
+in [`raffle-pilot-backlog.md`](./raffle-pilot-backlog.md).
 
 ## 8. UX principles applied
 
@@ -199,8 +293,8 @@ From the request and blueprint §37–42:
   `transition_campaign` (permission + reason + readiness checks); ticket-critical
   fields lock at activation (`guard_campaign_write`). Mirrored in `lib/campaigns/lifecycle.ts`.
 - **Ledgers.** Append-only, hash-chained `campaign_events`, `ticket_events`,
-  `money_events` (the latter two prepared for later phases, written only by
-  `SECURITY DEFINER` functions). See `docs/AUDIT.md`.
+  `money_events`, and `audit_events`; fundraising writes go through guarded
+  transaction functions. See `docs/AUDIT.md`.
 - **Scale.** Lists that could exceed PostgREST's 1,000-row cap are counted,
   filtered and paginated in SQL (`list_households`, `list_org_members`,
   `list_possible_duplicates`, `team_player_counts`) or paged with `fetchAll`.

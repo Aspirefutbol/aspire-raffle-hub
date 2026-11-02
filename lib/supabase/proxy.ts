@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database/types.gen";
 import { publicEnv } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+const PUBLIC_PATHS = ["/login", "/auth", "/s"];
 
 /**
  * The hostname the browser actually requested. Behind a proxy or under

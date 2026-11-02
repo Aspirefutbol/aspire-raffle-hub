@@ -1,0 +1,143 @@
+name: Hosted QA Deploy
+
+# Temporary feature-branch deployment lane for PR #2.
+# Apply additive migrations to the existing staging database before refreshing
+# the existing site. No seed, reset, merge, or production database operation.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/phase-1-fundraising-slice]
+
+concurrency:
+  group: hosted-qa-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/feat/phase-1-fundraising-slice'
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+    env:
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+      STAGING_POOLER_HOST: ${{ vars.STAGING_POOLER_HOST }}
+      STAGING_PROJECT_REF: ixhpidqhqzbpfbklofrs
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 6da8219b-6bb1-4029-bd4a-a71e7d6eb4c1
+      STAGING_URL: https://aspire-raffle-hub-staging.netlify.app
+    steps:
+      - name: Require Netlify credential
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "::error::Missing NETLIFY_AUTH_TOKEN. Add it as a GitHub Actions secret (prefer the staging environment/repository secret) and rerun."
+            exit 1
+          fi
+
+      - name: Build validated staging session-pooler connection
+        run: |
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::Missing STAGING_DB_PASSWORD staging secret."
+            exit 1
+          fi
+          if [ -z "$STAGING_POOLER_HOST" ]; then
+            echo "::error::Missing STAGING_POOLER_HOST staging environment variable. Copy only the hostname from Supabase Connect → Session pooler."
+            exit 1
+          fi
+
+          db_url="$(node - <<'NODE'
+          const host = process.env.STAGING_POOLER_HOST;
+          const ref = process.env.STAGING_PROJECT_REF;
+          const password = process.env.SUPABASE_DB_PASSWORD;
+
+          if (!host.endsWith(".pooler.supabase.com")) {
+            console.error("STAGING_POOLER_HOST must be a Supabase shared-pooler hostname.");
+            process.exit(1);
+          }
+          if (host.includes("/") || host.includes(":")) {
+            console.error("STAGING_POOLER_HOST must contain only the hostname, with no protocol or port.");
+            process.exit(1);
+          }
+
+          const url = new URL("postgresql://placeholder/postgres");
+          url.username = `postgres.${ref}`;
+          url.password = password;
+          url.hostname = host;
+          url.port = "5432";
+          url.pathname = "/postgres";
+          url.searchParams.set("sslmode", "require");
+          process.stdout.write(url.toString());
+          NODE
+          )"
+
+          echo "::add-mask::$db_url"
+          echo "STAGING_DB_URL=$db_url" >> "$GITHUB_ENV"
+          echo "Validated staging session-pooler host for project $STAGING_PROJECT_REF."
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Wait for full CI on this feature commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ -n "$result" ] && [ "$result" != null ]; then echo "::error::CI did not pass: $result"; exit 1; fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for feature CI"; exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Preview pending staging migrations
+        run: |
+          npx supabase migration list --db-url "$STAGING_DB_URL"
+          npx supabase db push --db-url "$STAGING_DB_URL" --dry-run
+
+      - name: Apply tracked staging migrations only
+        run: npx supabase db push --db-url "$STAGING_DB_URL" --yes
+
+      - name: Verify staging migration history
+        run: npx supabase migration list --db-url "$STAGING_DB_URL"
+
+      - name: Verify hosted schema matches committed TypeScript contract
+        run: |
+          npx supabase gen types typescript --db-url "$STAGING_DB_URL" > /tmp/types.gen.ts
+          diff -u lib/database/types.gen.ts /tmp/types.gen.ts
+
+      # Hosted QA intentionally uses the least-privilege staging DB connection
+      # and does not require a broad Supabase management PAT.
+
+      - name: Show Netlify CLI version
+        run: npx netlify-cli@27.12.0 --version
+
+      - name: Deploy current feature branch to existing staging site
+        run: npx netlify-cli@27.12.0 deploy --build --prod --site "$NETLIFY_SITE_ID" --message "hosted-qa $(git rev-parse --short HEAD)"
+
+      - name: Smoke-check hosted staging
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code="$(curl -sS -o /tmp/login.html -w "%{http_code}" "$STAGING_URL/login" || true)"
+            if [ "$code" = "200" ] && grep -qi "sign in" /tmp/login.html; then
+              echo "Hosted login smoke check passed."
+              public_code=$(curl -sS -D /tmp/public-headers -o /tmp/public.html -w "%{http_code}" "$STAGING_URL/s/0000000000000000000000000000000000000000000000000000000000000000")
+              if [ "$public_code" != 404 ] && [ "$public_code" != 200 ]; then echo "::error::Public link route unexpectedly redirects/fails ($public_code)"; exit 1; fi
+              if ! grep -qi 'x-robots-tag:.*noindex' /tmp/public-headers; then echo "::error::Missing public noindex header"; exit 1; fi
+              if grep -qi 'Send nonbinding request' /tmp/public.html; then echo "::error::Invalid public link exposed a request form"; exit 1; fi
+              echo "Hosted public route privacy smoke check passed."
+              exit 0
+            fi
+            echo "Attempt $attempt: staging not ready yet (HTTP $code)."
+            sleep 10
+          done
+          echo "::error::Hosted staging smoke check did not pass."
+          exit 1

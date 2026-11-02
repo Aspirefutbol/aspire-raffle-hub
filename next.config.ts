@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "6mb" }, // roster CSV uploads (limit enforced at 5 MB in code)
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [{ source: "/:path*", headers: securityHeaders }, { source: "/s/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }, { key: "Referrer-Policy", value: "no-referrer" }, { key: "Cache-Control", value: "no-store" }] }];
   },
 };
 

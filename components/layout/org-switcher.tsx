@@ -52,7 +52,7 @@ export function OrgSwitcher({ current, organizations }: { current: OrganizationS
           {organizations.map((org) => (
             <Link
               key={org.id}
-              href={`/o/${org.slug}/dashboard`}
+              href={`/o/${org.slug}`}
               role="option"
               aria-selected={org.id === current.id}
               onClick={() => setOpen(false)}

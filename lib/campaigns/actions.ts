@@ -5,13 +5,16 @@ import { type ActionResult, describeDbError, fail, ok, orgAction } from "@/lib/a
 import { can } from "@/lib/auth/org-context";
 import { createClient } from "@/lib/supabase/server";
 import { canTransition, editableFieldsFilter, isCampaignStatus, transitionNeedsReason, transitionPermission } from "./lifecycle";
-import { createCampaignSchema, transitionCampaignSchema, updateCampaignSchema } from "./schemas";
+import { archiveCampaignPrizeSchema, campaignPrizeSchema, confirmCampaignComplianceSchema, createCampaignSchema, transitionCampaignSchema, updateCampaignSchema } from "./schemas";
 
-// Campaign setup actions (Phase 0 hardening). There is deliberately no campaign UI,
-// ticket issuance or money handling yet; these exist so the lifecycle and its
-// locks are exercised end-to-end through the same server/RLS path the UI will use.
+// Campaign setup keeps the existing lifecycle and readiness checks. Fundraising
+// inventory and sale mutations use separate transactional database functions.
 
-const refresh = (orgSlug: string) => revalidatePath(`/o/${orgSlug}/campaigns`, "layout");
+function refresh(orgSlug: string) {
+  revalidatePath(`/o/${orgSlug}/campaigns`, "layout");
+  revalidatePath(`/o/${orgSlug}/fundraising`, "layout");
+  revalidatePath(`/o/${orgSlug}/team-fundraising`, "layout");
+}
 
 export async function createCampaignDraft(orgSlug: string, input: unknown): Promise<ActionResult<{ id: string }>> {
   return orgAction(orgSlug, "campaigns.manage", createCampaignSchema, input, async (ctx, data) => {
@@ -65,6 +68,7 @@ export async function transitionCampaign(orgSlug: string, input: unknown): Promi
     if (!current || !isCampaignStatus(current.status)) return fail("Campaign not found.");
     if (!canTransition(current.status, to)) return fail(`A campaign can’t move from ${current.status} to ${to}.`);
     if (!can(ctx, transitionPermission(current.status, to))) return fail("You don't have permission to do that.");
+    if (to === "DRAWN" && !can(ctx, "drawing.certify")) return fail("Drawing certification permission is required to mark this campaign drawn.");
     if (transitionNeedsReason(current.status, to) && (!reason || reason.length < 3)) {
       return fail("A reason is required for this change.", { reason: "Give a short reason (recorded in the audit log)." });
     }
@@ -75,5 +79,58 @@ export async function transitionCampaign(orgSlug: string, input: unknown): Promi
     if (error) return fail(describeDbError(error));
     refresh(orgSlug);
     return ok({ status: data ?? to }, `Campaign moved to ${to}`);
+  });
+}
+
+
+export async function confirmCampaignCompliance(orgSlug: string, input: unknown): Promise<ActionResult> {
+  return orgAction(orgSlug, "campaigns.activate", confirmCampaignComplianceSchema, input, async (ctx, data) => {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("confirm_campaign_compliance", {
+      p_campaign_id: data.campaign_id,
+      p_reason: data.reason,
+      p_entity_confirmed: data.entity_confirmed,
+      p_raffle_count_confirmed: data.raffle_count_confirmed,
+      p_prize_sales_confirmed: data.prize_sales_confirmed,
+    });
+    if (error) return fail(describeDbError(error));
+    refresh(orgSlug);
+    return ok(undefined, "Texas compliance attestation recorded");
+  });
+}
+
+
+export async function upsertCampaignPrize(orgSlug: string, input: unknown): Promise<ActionResult<{ id: string }>> {
+  return orgAction(orgSlug, "campaigns.manage", campaignPrizeSchema, input, async (ctx, data) => {
+    const supabase = await createClient();
+    const { data: prizeId, error } = await supabase.rpc("upsert_campaign_prize", {
+      p_organization_id: ctx.organization.id,
+      p_campaign_id: data.campaign_id,
+      p_prize_id: data.prize_id ?? undefined,
+      p_name: data.name,
+      p_description: data.description,
+      p_fair_value_cents: data.fair_value_cents,
+      p_source: data.source,
+      p_possession_basis: data.possession_basis,
+      p_evidence_ref: data.evidence_ref,
+    });
+    if (error) return fail(describeDbError(error));
+    if (!prizeId) return fail("Prize compliance record did not return an ID.");
+    refresh(orgSlug);
+    return ok({ id: prizeId }, data.prize_id ? "Prize compliance record updated" : "Prize compliance record added");
+  });
+}
+
+export async function archiveCampaignPrize(orgSlug: string, input: unknown): Promise<ActionResult> {
+  return orgAction(orgSlug, "campaigns.manage", archiveCampaignPrizeSchema, input, async (ctx, data) => {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("archive_campaign_prize", {
+      p_organization_id: ctx.organization.id,
+      p_prize_id: data.prize_id,
+      p_reason: data.reason,
+    });
+    if (error) return fail(describeDbError(error));
+    refresh(orgSlug);
+    return ok(undefined, "Prize removed from active compliance records");
   });
 }

@@ -24,7 +24,9 @@ export default async function OrgLayout({ children, params }: {
   }
 
   const navItems = NAV_ITEMS.filter((item) => !item.permission || can(ctx, item.permission));
-  const hasWorkspaceAccess = can(ctx, "roster.read");
+  const hasWorkspaceAccess = can(ctx, "roster.read")
+    || can(ctx, "roster.read_own_family")
+    || can(ctx, "roster.read_assigned_teams");
 
   return (
     <AppShell
@@ -44,7 +46,7 @@ export default async function OrgLayout({ children, params }: {
         <EmptyState
           icon={<ShieldOff className="size-5" />}
           title="Your workspace isn’t ready yet"
-          description={`Your role in ${ctx.organization.name} doesn’t include the admin workspace. Team and family experiences arrive with campaigns.`}
+          description={`Ask an administrator of ${ctx.organization.name} to review your account’s role and family or team access.`}
         />
       )}
     </AppShell>

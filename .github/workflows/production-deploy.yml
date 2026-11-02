@@ -1,0 +1,170 @@
+name: Production App Deploy
+
+# Manual-only production application deployment.
+# Runs only from merged main after the exact commit has passed full CI.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-app-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 708004ca-d3af-4677-9a5c-c29cb98f914b
+      PRODUCTION_URL: https://aspirerafflehub.netlify.app
+
+    steps:
+      - name: Require production Netlify credential
+        run: |
+          test -n "$NETLIFY_AUTH_TOKEN" || { echo "::error::Missing NETLIFY_AUTH_TOKEN in the production GitHub environment/repository secrets."; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Require this main commit to come from a merged pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          merged_pr_count=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+            --jq '[.[] | select(.merged_at != null and .base.ref == "main")] | length')
+          if [ "$merged_pr_count" -lt 1 ]; then
+            echo "::error::Production commits must reach main through a merged pull request. Direct-push commits are not eligible for production workflows."
+            exit 1
+          fi
+          echo "Verified: this production commit is associated with a merged pull request to main."
+
+      - name: Wait for full CI on this main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ -n "$result" ] && [ "$result" != null ]; then
+              echo "::error::CI did not pass for production commit: $result"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for production commit CI"
+          exit 1
+
+      - name: Require successful production database bootstrap for this main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            success_count=$(gh run list --workflow production-bootstrap.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
+            if [ "$success_count" -gt 0 ]; then
+              echo "Production database bootstrap passed for this exact commit."
+              exit 0
+            fi
+
+            active_count=$(gh run list --workflow production-bootstrap.yml --commit "$GITHUB_SHA" --json status --jq '[.[] | select(.status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending")] | length')
+            if [ "$active_count" -gt 0 ]; then
+              echo "Production database bootstrap is still running for this commit."
+              sleep 20
+              continue
+            fi
+
+            echo "::error::No successful Production Bootstrap run exists for this exact main commit. Run and approve Production Bootstrap before deploying the application."
+            exit 1
+          done
+          echo "::error::Timed out waiting for Production Bootstrap on this exact main commit."
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Show pinned Netlify CLI version
+        run: npx netlify-cli@27.12.0 --version
+
+      - name: Verify required production Netlify environment
+        env:
+          EXPECTED_SUPABASE_URL: https://bsjjzewifpbngbasdvew.supabase.co
+        run: |
+          env_dump="$(npx netlify-cli@27.12.0 env:list --plain --context production --site "$NETLIFY_SITE_ID")"
+
+          require_key() {
+            key="$1"
+            if ! printf '%s\n' "$env_dump" | grep -q "^$key="; then
+              echo "::error::Missing required production Netlify environment variable: $key"
+              exit 1
+            fi
+          }
+
+          require_exact() {
+            key="$1"
+            expected="$2"
+            if ! printf '%s\n' "$env_dump" | grep -Fqx "$key=$expected"; then
+              echo "::error::Production Netlify environment variable $key does not match the approved production value."
+              exit 1
+            fi
+          }
+
+          require_prefix() {
+            key="$1"
+            prefix="$2"
+            if ! printf '%s\n' "$env_dump" | grep -Eq "^$key=$prefix"; then
+              echo "::error::Production Netlify environment variable $key is missing or is not using the approved modern key format."
+              exit 1
+            fi
+          }
+
+          require_exact "NEXT_PUBLIC_SITE_URL" "$PRODUCTION_URL"
+          require_exact "NEXT_PUBLIC_SUPABASE_URL" "$EXPECTED_SUPABASE_URL"
+          require_prefix "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "sb_publishable_"
+          require_prefix "SUPABASE_SECRET_KEY" "sb_secret_"
+
+          echo "Required production Netlify environment keys are present, use modern Supabase key formats, and production public URLs match."
+
+      - name: Deploy exact main commit to production site
+        run: npx netlify-cli@27.12.0 deploy --build --prod --site "$NETLIFY_SITE_ID" --message "production $(git rev-parse --short HEAD)"
+
+      - name: Smoke-check production
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code="$(curl -sS -o /tmp/login.html -w "%{http_code}" "$PRODUCTION_URL/login" || true)"
+            if [ "$code" = "200" ] && grep -qi "sign in" /tmp/login.html; then
+              echo "Production login smoke check passed."
+
+              public_code=$(curl -sS -D /tmp/public-headers -o /tmp/public.html -w "%{http_code}" "$PRODUCTION_URL/s/0000000000000000000000000000000000000000000000000000000000000000")
+              if [ "$public_code" != "404" ] && [ "$public_code" != "200" ]; then
+                echo "::error::Public link route unexpectedly redirects/fails ($public_code)"
+                exit 1
+              fi
+              if ! grep -qi 'x-robots-tag:.*noindex' /tmp/public-headers; then
+                echo "::error::Missing public noindex header"
+                exit 1
+              fi
+              if grep -qi 'Send nonbinding request' /tmp/public.html; then
+                echo "::error::Invalid public link exposed a request form"
+                exit 1
+              fi
+              echo "Production public route privacy smoke check passed."
+              exit 0
+            fi
+            echo "Attempt $attempt: production not ready yet (HTTP $code)."
+            sleep 10
+          done
+          echo "::error::Production smoke check did not pass."
+          exit 1

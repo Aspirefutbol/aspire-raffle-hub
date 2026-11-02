@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -7,6 +7,20 @@ import {
 } from "./lifecycle";
 
 const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261012000200_campaign_lifecycle.sql"), "utf8");
+const migrationsDirectory = join(__dirname, "../../supabase/migrations");
+function latestSqlFunction(name: string): string {
+  const pattern = new RegExp(`create (?:or replace )?function public\\.${name}\\(`, "i");
+  for (const filename of readdirSync(migrationsDirectory).filter((file) => file.endsWith(".sql")).sort().reverse()) {
+    const migration = readFileSync(join(migrationsDirectory, filename), "utf8");
+    const match = pattern.exec(migration);
+    if (!match) continue;
+    const bodyStart = migration.indexOf("as $$", match.index);
+    const bodyEnd = migration.indexOf("$$;", bodyStart + 5);
+    if (bodyStart === -1 || bodyEnd === -1) throw new Error(`Cannot extract ${name} from ${filename}`);
+    return migration.slice(match.index, bodyEnd + 3);
+  }
+  throw new Error(`Missing SQL function ${name}`);
+}
 
 describe("campaign lifecycle mirror", () => {
   it("transition edges match campaign_transition_allowed()", () => {
@@ -16,8 +30,8 @@ describe("campaign lifecycle mirror", () => {
     expect(mirror).toEqual(edges);
   });
 
-  it("locked fields match campaign_locked_fields()", () => {
-    const body = sql.slice(sql.indexOf("function public.campaign_locked_fields"), sql.indexOf("function public.campaign_transition_allowed"));
+  it("locked fields match the latest campaign_locked_fields()", () => {
+    const body = latestSqlFunction("campaign_locked_fields");
     const fields = [...body.matchAll(/'([a-z_]+)', c\./g)].map((m) => m[1]).sort();
     expect([...CAMPAIGN_LOCKED_FIELDS].sort()).toEqual(fields);
   });

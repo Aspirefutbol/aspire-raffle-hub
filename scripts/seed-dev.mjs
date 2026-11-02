@@ -180,6 +180,9 @@ await seedOrganization({
     postal_code: "77000",
     support_email: "support@aspire.test",
     jurisdiction_profile: "TEXAS_CREA_OFFLINE_PAYMENT",
+    // Fictional local demo org: legal/compliance behavior is covered by dedicated
+    // pgTAP fixtures, so generic browser flows explicitly opt out.
+    platform_config: { texas_crea_compliance_required: false },
   },
   members: [
     { email: "admin@aspire.test", fullName: "Alex Admin", roles: ["ORGANIZATION_ADMIN", "DIRECTOR"] },
