@@ -85,6 +85,12 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await page.getByRole("dialog", { name: "Create sharing link?", exact: true }).getByRole("button", { name: "Confirm create link", exact: true }).click();
   // Alternatives are deliberately tucked away, but remain available and touch-friendly.
   await expect(tools.getByRole("button", { name: "Copy invitation to share", exact: true })).toBeVisible();
+  // First-time creation must warn before the one-time plaintext URL is lost.
+  // This guidance does not store, rotate or revoke an existing invitation.
+  await expect(tools.getByTestId("save-sharing-link-reminder"))
+    .toContainText("Save or send this invitation now.");
+  await expect(tools.getByTestId("save-sharing-link-reminder"))
+    .toContainText("It cannot be recovered here after a reload");
   await expect(tools.getByRole("button", { name: "Copy link", exact: true })).not.toBeVisible();
   await tools.getByTestId("share-options").locator("summary").click();
   const url = await tools.getByTestId("seller-url").innerText();
@@ -144,6 +150,39 @@ test("parent sharing controls fit phone and tablet widths without changing the l
   await expect(playerCard.getByTestId("touch-dashboard")).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { __lastRaffleShare?: ShareData }).__lastRaffleShare?.url)).toBe(url);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  // A valid link must share in one tap without the native share API too.
+  // This must only COPY the invitation: no link replacement or ticket writes.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (value: string) => {
+        (window as unknown as { __raffleClipboardText?: string }).__raffleClipboardText = value;
+      } },
+    });
+  });
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(playerCard.getByTestId("touch-dashboard")).toBeVisible();
+  await expect(playerCard.getByRole("status")).toContainText("Invitation copied. Paste it into a message.");
+  expect(await page.evaluate(() =>
+    (window as unknown as { __raffleClipboardText?: string }).__raffleClipboardText)).toContain(url);
+  await expect(playerCard.getByTestId("parent-share-task")).toBeHidden();
+
+  // A denied clipboard must offer manual copy, not prompt a destructive
+  // replacement link or leave the parent stranded on an inert button.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => { throw new Error("Synthetic clipboard denial"); } },
+    });
+  });
+  await playerCard.getByRole("button", { name: "Share raffle", exact: true }).click();
+  await expect(playerCard.getByTestId("parent-share-task")).toBeVisible();
+  await expect(playerCard.getByRole("status")).toContainText("Automatic sharing is blocked");
+  expect(await playerCard.getByRole("textbox", { name: "Copy manually" }).inputValue()).toContain(url);
+  await shareBack.click();
+  await expect(playerCard.getByRole("button", { name: "Share raffle", exact: true })).toBeFocused();
 
   // A route change deliberately does not restore the raw sharing token.
   // Make that limitation clear before the parent unknowingly disables an
