@@ -6,7 +6,7 @@ export const sellerToken = z.string().regex(/^[a-f0-9]{64}$/);
 // A failed response may follow a successful DB write: never initiate a retry or rotation here.
 const sellerLinkRpcResultShape = z.object({
   token: sellerToken.optional(),
-  expires_at: z.string().min(1).optional(),
+  expires_at: z.iso.datetime({ offset: true }).optional(),
   revoked: z.literal(true).optional(),
 }).strict();
 export function parseSellerLinkRpcResult(data: unknown, revoke: boolean) {
