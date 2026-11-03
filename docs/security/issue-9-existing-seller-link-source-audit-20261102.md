@@ -18,7 +18,8 @@
 - **Critical: do not put recoverable token material in the existing RLS SELECT row.** It currently permits authorized metadata reads, including organization managers, and `audit_row_change` sees inserted/updated row values. Any proposed ciphertext storage must be separated and audited for privilege and trigger data exposure. This is a design constraint, not a chosen storage implementation.
 - **Critical: use current revocation/expiry and identity checks at time of recovery.** Recovery must never re-enable revoked links or return previously valid but now expired/ineligible URLs. Handle concurrent rotation/recovery with an explicit transaction/isolation test; require negative cross-org, second guardian and admin cases.
 - **Important: link creation currently requires `tickets.issue`.** Do not expand permissions or merge a new recovery capability into a broader role without explicit authorization and RLS review.
-- **Important: action error text currently mentions replacement on failed confirmation.** Any proposed new flow must avoid encouraging destructive rotation following a recoverable read failure. No UI change is implemented in this audit.
+- **Important: unknown RPC responses must not report false success.** At baseline `lib/sharing/actions.ts:12-15` parses an object whose `token`, `expires_at` and `revoked` properties are *all optional*. A response shaped `{}` therefore passes that Zod parse, while `components/sharing/seller-tools.tsx:83-103` may display "Link ready" (without a URL) or "Link revoked" (without a confirmed `revoked:true`). Future recovery and existing issuance/revocation need **operation-specific return-shape validation**, explicit unknown-outcome treatment, and synthetic negative tests; this finding is not a claim that this malformed response occurred in production.
+- **Important: uncertain client/server outcomes must not encourage destructive rotation.** Baseline server error text and the client `catch` both suggested creating a replacement when the result could not be confirmed; that could invalidate previously shared invitations. Isolated draft PR #17 proposes copy-only non-destructive administrator-contact guidance for both paths. It remains unpromoted, and clean CI on an older PR #17 head cannot validate its newer amendment. Do not interpret guidance copy as confirmation of link validity or as implementation of recovery.
 
 ## Existing synthetic coverage reviewed
 
@@ -34,6 +35,7 @@
 5. New protected secret is never exposed in RLS projections, audit rows, SSR, telemetry, errors, logs, browser persistence, or public anonymous responses.
 6. On page reload, recovery requires explicit parent action, returns the exact same URL/token for newly protected links, then cleanly falls back to manual share if clipboard is denied.
 7. 320/360/390px controls at least 44px, visible keyboard focus, no hidden confirmation and no confusing Share versus Sell In Person/Requests.
+8. Unexpected RPC results (`{}`, missing `token` on create, missing or false `revoked` on revoke), lost/timeout server response, and concurrent rotation: UI must not falsely claim a new/revoked link or urge unsafe silent replacement; no extra DB writes or secret leakage.
 
 ## Status/approval gate
 
