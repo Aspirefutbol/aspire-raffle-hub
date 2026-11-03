@@ -10,7 +10,7 @@ export async function manageSellerLink(orgSlug: string, input: unknown) {
     const result = await db.rpc("manage_seller_link", { p_organization_id: ctx.organization.id, p_participant_id: data.participant, p_revoke: data.revoke });
     if (result.error) return fail(describeDbError(result.error));
     const parsed = z.object({ token: z.string().optional(), expires_at: z.string().optional(), revoked: z.boolean().optional() }).safeParse(result.data);
-    if (!parsed.success) return fail("Link result could not be confirmed. Replace the link to recover safely.");
+    if (!parsed.success) return fail("We could not confirm whether the sharing-link action completed. Contact your club administrator before creating or revoking another link.");
     return ok(parsed.data);
   });
 }
