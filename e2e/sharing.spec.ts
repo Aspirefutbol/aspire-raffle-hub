@@ -233,10 +233,23 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await signIn(captainPage,"coach@aspire.test");
   await captainPage.goto(`/o/aspire/team-fundraising/${id}`);
   await expect(captainPage.locator("body")).not.toContainText("sharing-supporter@example.test");
+  // Returning to the fundraiser after navigation/reload must never silently
+  // rotate an earlier hash-only link or pretend its secret is recoverable.
+  const linksBeforeReturn=await admin.from("campaign_seller_links")
+    .select("id",{count:"exact",head:true}).eq("participant_id",participant.id);
+  expect(linksBeforeReturn.error).toBeNull();
   await page.goto(`/o/aspire/fundraising/${id}`);
   await chooseLiam();
   await page.getByRole("button", { name: "Share raffle", exact: true }).click();
   const currentTools=page.getByTestId("family-player-card").filter({hasText:"Liam Smith"}).getByTestId("seller-tools");
+  await expect(currentTools.getByTestId("existing-link-warning")).toContainText("A new link disables the old link");
+  await expect(currentTools.getByTestId("seller-url")).toHaveCount(0);
+  const linksAfterReturn=await admin.from("campaign_seller_links")
+    .select("id",{count:"exact",head:true}).eq("participant_id",participant.id);
+  expect(linksAfterReturn.error).toBeNull();
+  expect(linksAfterReturn.count).toBe(linksBeforeReturn.count);
+  await supporter.goto(url);
+  await expect(supporter.getByRole("button",{name:"Request tickets",exact:true})).toBeVisible();
   await currentTools.getByRole("button",{name:"Create my sharing link",exact:true}).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
   await expect(createDialog).not.toBeVisible();
