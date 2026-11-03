@@ -1,6 +1,22 @@
 import { z } from "zod";
 import { ticketBundlesSchema } from "@/lib/fundraising/campaign-pricing";
 export const sellerToken = z.string().regex(/^[a-f0-9]{64}$/);
+
+// Do not confirm issuance or revocation from an empty/mismatched RPC response.
+// A failed response may follow a successful DB write: never initiate a retry or rotation here.
+const sellerLinkRpcResultShape = z.object({
+  token: sellerToken.optional(),
+  expires_at: z.string().min(1).optional(),
+  revoked: z.literal(true).optional(),
+}).strict();
+export function parseSellerLinkRpcResult(data: unknown, revoke: boolean) {
+  return sellerLinkRpcResultShape.superRefine((value, context) => {
+    const confirmed = revoke
+      ? value.revoked === true && value.token === undefined && value.expires_at === undefined
+      : value.token !== undefined && value.expires_at !== undefined && value.revoked === undefined;
+    if (!confirmed) context.addIssue({ code: "custom", message: "Seller link RPC did not confirm the requested operation." });
+  }).safeParse(data);
+}
 const email = z.union([z.literal(""), z.email().max(254)]);
 const phone = z.string().max(50).refine(v => !v || /^\+?[0-9() .-]{7,50}$/.test(v), "Enter a valid phone number.");
 export const interestSchema = z.object({
