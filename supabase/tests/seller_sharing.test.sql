@@ -299,14 +299,14 @@ select ok(public.public_seller_page((select value->>'token' from pg_temp.test_va
   'first guardian issuing own link does not rotate second guardian');
 select is((select count(*) from public.campaign_seller_links where participant_id=pg_temp.participant('main','a1') and revoked_at is null),
   2::bigint,'one independent active link per guardian on same participant');
-select lives_ok($select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)$,
+select lives_ok($$select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)$$,
   'first guardian explicitly revokes only their link');
 select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='first-guardian-reissued')),
   null::jsonb,'first guardian revoked URL is unavailable');
 select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='co-guardian-link')) is not null,
   'second guardian URL survives first guardian revocation');
 select pg_temp.as_user('shared-family');
-select lives_ok($select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)$,
+select lives_ok($$select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)$$,
   'second guardian can revoke their own link');
 select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='co-guardian-link')),
   null::jsonb,'second guardian explicitly revoked URL unavailable');
