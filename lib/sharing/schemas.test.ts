@@ -22,6 +22,8 @@ describe("nonbinding supporter requests", () => {
     for (const malformed of [null, {}, [], { revoked: false }, { revoked: true },
       { token: issued.token }, { expires_at: issued.expires_at },
       { token: "not-a-valid-token", expires_at: issued.expires_at },
+      { ...issued, expires_at: "not-a-date" }, { ...issued, expires_at: "2026-11-23" },
+      { ...issued, expires_at: "2026-11-23T23:00:00" },
       { ...issued, revoked: true }, { ...issued, extra: "unexpected" }]) {
       expect(parseSellerLinkRpcResult(malformed, false).success).toBe(false);
     }
