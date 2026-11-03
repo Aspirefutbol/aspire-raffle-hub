@@ -100,7 +100,7 @@ export function SellerTools({ orgSlug, participantId, price, ticketPackages = []
         // The server may have changed the token before the response was lost.
         // Never keep offering an old link/QR code as if it were still confirmed.
         clearDisplayedLink();
-        setMessage("We could not confirm the link change. Any previous link may no longer work. Create a new sharing link before sharing again. Existing requests remain in your inbox.");
+        setMessage("We could not confirm whether the link change completed. Do not create or revoke another link yet. Contact your club administrator to check its status. Existing requests remain in your inbox.");
       } finally {
         mutationInFlight.current = false;
         setConfirmation(null);
