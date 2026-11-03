@@ -310,6 +310,29 @@ select lives_ok($$select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.p
   'second guardian can revoke their own link');
 select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='co-guardian-link')),
   null::jsonb,'second guardian explicitly revoked URL unavailable');
+
+-- An org administrator's existing emergency revoke intentionally disables
+-- ALL active guardians for the participant; this permission must NEVER imply
+-- authority to read/decrypt the guardians' bearer tokens in a recovery design.
+select pg_temp.as_user('family-a');
+insert into pg_temp.test_values values('admin-stop-family-a',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1')));
+select pg_temp.as_user('shared-family');
+insert into pg_temp.test_values values('admin-stop-shared-family',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1')));
+select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='admin-stop-family-a')) is not null,
+  'first guardian URL valid before admin emergency revoke');
+select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='admin-stop-shared-family')) is not null,
+  'second guardian URL valid before admin emergency revoke');
+select pg_temp.as_user('admin-director');
+select is(public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)->>'revoked','true',
+  'organization manager emergency revocation succeeds without returning tokens');
+select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='admin-stop-family-a')),
+  null::jsonb,'first guardian URL unavailable after admin emergency revoke');
+select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='admin-stop-shared-family')),
+  null::jsonb,'second guardian URL unavailable after admin emergency revoke');
+select is((select count(*) from public.campaign_seller_links where participant_id=pg_temp.participant('main','a1') and revoked_at is null),
+  0::bigint,'admin revocation leaves no active guardian link for this participant');
 reset role;
 select pg_temp.as_db_admin();
 insert into public.campaign_seller_links(organization_id,campaign_id,participant_id,seller_user_id,opaque_token_hash,expires_at)
