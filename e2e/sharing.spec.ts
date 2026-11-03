@@ -256,7 +256,10 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   await currentTools.getByText("Link settings",{exact:true}).click();
   await currentTools.getByRole("button", { name: "Create a new sharing link", exact: true }).click();
   await createDialog.getByRole("button", { name: "Confirm create link", exact: true }).click();
-  await expect(currentTools.getByRole("status")).toContainText("could not confirm the link change");
+  // Unknown server outcome must warn against a second destructive rotation, not just hide the stale QR.
+  await expect(currentTools.getByRole("status")).toContainText("could not confirm whether the link change completed");
+  await expect(currentTools.getByRole("status")).toContainText("Do not create or revoke another link yet");
+  await expect(currentTools.getByRole("status")).toContainText("Contact your club administrator");
   await expect(currentTools.getByTestId("seller-url")).toHaveCount(0);
   await expect(currentTools.getByRole("img")).toHaveCount(0);
   await expect(currentTools.getByRole("button", { name: "Copy link", exact: true })).toHaveCount(0);
