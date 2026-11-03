@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { interestSchema, sellerToken, shareLinks } from "./schemas";
+import { interestSchema, parseSellerLinkRpcResult, sellerToken, shareLinks } from "./schemas";
 const request = { name: "Supporter", email: "buyer@example.test", phone: "", contact: "email", quantity: 2, note: "", website: "" };
 describe("nonbinding supporter requests", () => {
   it("accepts one preferred contact and caps quantities", () => {
@@ -14,6 +14,22 @@ describe("nonbinding supporter requests", () => {
   it("accepts only the opaque token encoding", () => {
     expect(sellerToken.safeParse("a".repeat(64)).success).toBe(true);
     for(const value of ["1","a".repeat(63),"/o/aspire", "z".repeat(64)]) expect(sellerToken.safeParse(value).success).toBe(false);
+  });
+  it("confirms only correctly shaped seller-link issuance and revocation RPC results", () => {
+    const issued = { token: "a".repeat(64), expires_at: "2026-11-23T23:00:00+00:00" };
+    expect(parseSellerLinkRpcResult(issued, false).success).toBe(true);
+    expect(parseSellerLinkRpcResult({ revoked: true }, true).success).toBe(true);
+    for (const malformed of [null, {}, [], { revoked: false }, { revoked: true },
+      { token: issued.token }, { expires_at: issued.expires_at },
+      { token: "not-a-valid-token", expires_at: issued.expires_at },
+      { ...issued, revoked: true }, { ...issued, extra: "unexpected" }]) {
+      expect(parseSellerLinkRpcResult(malformed, false).success).toBe(false);
+    }
+    for (const malformed of [null, {}, [], { revoked: false }, issued,
+      { ...issued, revoked: true }, { revoked: true, token: issued.token },
+      { revoked: true, extra: "unexpected" }]) {
+      expect(parseSellerLinkRpcResult(malformed, true).success).toBe(false);
+    }
   });
   it("encodes identical compliant copy for all sharing channels", () => {
     const url="https://example.test/s/"+"a".repeat(64), links=shareLinks(url,"$5.00");
