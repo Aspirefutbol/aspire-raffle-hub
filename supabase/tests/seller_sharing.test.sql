@@ -280,6 +280,36 @@ select lives_ok($$select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.p
 select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='replacement')),null::jsonb,'revoked unavailable');
 select is((select count(*) from public.campaign_seller_links where organization_id=pg_temp.id('org-a')),2::bigint,'revocation retains links');
 select is((select count(*) from public.seller_interest_requests where organization_id=pg_temp.id('org-a')),11::bigint,'revocation retains inbox');
+
+-- Two independently linked guardians may hold different active links for the
+-- same participant. Neither family user's rotation nor revocation may disable
+-- the other guardian's valid URL. Recovery must preserve this exact-owner rule.
+select pg_temp.as_user('shared-family');
+insert into pg_temp.test_values values('co-guardian-link',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1')));
+select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='co-guardian-link')) is not null,
+  'second guardian can create valid own link for same player');
+select pg_temp.as_user('family-a');
+insert into pg_temp.test_values values('first-guardian-reissued',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1')));
+select isnt((select value->>'token' from pg_temp.test_values where label='co-guardian-link'),
+  (select value->>'token' from pg_temp.test_values where label='first-guardian-reissued'),
+  'two guardians never share plaintext token');
+select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='co-guardian-link')) is not null,
+  'first guardian issuing own link does not rotate second guardian');
+select is((select count(*) from public.campaign_seller_links where participant_id=pg_temp.participant('main','a1') and revoked_at is null),
+  2::bigint,'one independent active link per guardian on same participant');
+select lives_ok($select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)$,
+  'first guardian explicitly revokes only their link');
+select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='first-guardian-reissued')),
+  null::jsonb,'first guardian revoked URL is unavailable');
+select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='co-guardian-link')) is not null,
+  'second guardian URL survives first guardian revocation');
+select pg_temp.as_user('shared-family');
+select lives_ok($select public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)$,
+  'second guardian can revoke their own link');
+select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='co-guardian-link')),
+  null::jsonb,'second guardian explicitly revoked URL unavailable');
 reset role;
 select pg_temp.as_db_admin();
 insert into public.campaign_seller_links(organization_id,campaign_id,participant_id,seller_user_id,opaque_token_hash,expires_at)
