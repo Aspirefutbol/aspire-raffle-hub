@@ -3,13 +3,14 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { orgAction, ok, fail, describeDbError } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/server";
+import { parseSellerLinkRpcResult } from "@/lib/sharing/schemas";
 export async function manageSellerLink(orgSlug: string, input: unknown) {
   return orgAction(orgSlug, "roster.read_own_family", z.object({ participant: z.uuid(), revoke: z.boolean() }), input, async (ctx, data) => {
     if (!ctx.permissions.has("tickets.issue")) return fail("Sale permission is required.");
     const db = await createClient();
     const result = await db.rpc("manage_seller_link", { p_organization_id: ctx.organization.id, p_participant_id: data.participant, p_revoke: data.revoke });
     if (result.error) return fail(describeDbError(result.error));
-    const parsed = z.object({ token: z.string().optional(), expires_at: z.string().optional(), revoked: z.boolean().optional() }).safeParse(result.data);
+    const parsed = parseSellerLinkRpcResult(result.data, data.revoke);
     if (!parsed.success) return fail("We could not confirm whether the sharing-link action completed. Contact your club administrator before creating or revoking another link.");
     return ok(parsed.data);
   });
