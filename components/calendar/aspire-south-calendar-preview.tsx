@@ -3,11 +3,17 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
   allCalendarDays,
-  calendarSelectionTotalCents,
+  calendarImpactQuote,
+  type CalendarMultiplier,
 } from "@/lib/calendar/pricing";
 
 type Language = "en" | "es";
 type Step = "calendar" | "supporter" | "review" | "complete";
+
+const multiplierLabels = {
+  en: { 1: "Support", 2: "Boost", 3: "Impact", 4: "Champion", 5: "Legacy" },
+  es: { 1: "Apoyo", 2: "Impulso", 3: "Impacto", 4: "Campeón", 5: "Legado" },
+} as const;
 
 const copy = {
   en: {
@@ -21,8 +27,13 @@ const copy = {
     sponsored: "Sponsored",
     selected: "Selected",
     choose: "Choose your day",
-    hint: "The day number is the sponsorship amount. Day 12 = $12. A full 31-day calendar totals $496.",
-    total: "Selected total",
+    hint: "The day number is the base sponsorship amount. Day 12 = $12. A full 31-day calendar totals $496.",
+    impactTitle: "Choose your impact",
+    impactHelp: "1x is the standard sponsorship. You can optionally increase your impact while claiming the same day.",
+    moreWays: "More ways to help",
+    baseValue: "Base calendar value",
+    addedImpact: "Additional impact",
+    total: "Sponsorship total",
     continue: "Continue",
     back: "Back",
     language: "Español",
@@ -39,7 +50,7 @@ const copy = {
     paymentHelp: "Secure Stripe checkout will open after the reservation is created.",
     reserve: "Reserve days & continue to secure checkout",
     complete: "Preview complete",
-    completeHelp: "The original AFC flow is now represented through calendar selection, supporter details, reservation review, and secure-checkout handoff. This branch still uses synthetic data and does not collect payment.",
+    completeHelp: "The original AFC calendar flow now includes Supporter Choice multipliers from 1x through 5x while preserving the base calendar value separately from additional impact.",
     secure: "Secure build",
     secureBody: "Synthetic Aspire South data only. No live donor data or payment credentials are used on this preview route.",
     required: "Please complete your name and email before continuing.",
@@ -56,8 +67,13 @@ const copy = {
     sponsored: "Patrocinado",
     selected: "Seleccionado",
     choose: "Elige tu día",
-    hint: "El número del día es la cantidad del patrocinio. Día 12 = $12. El calendario completo de 31 días suma $496.",
-    total: "Total seleccionado",
+    hint: "El número del día es la cantidad base del patrocinio. Día 12 = $12. El calendario completo suma $496.",
+    impactTitle: "Elige tu impacto",
+    impactHelp: "1x es el patrocinio estándar. Puedes aumentar tu impacto y seguir patrocinando el mismo día.",
+    moreWays: "Más formas de ayudar",
+    baseValue: "Valor base del calendario",
+    addedImpact: "Impacto adicional",
+    total: "Total del patrocinio",
     continue: "Continuar",
     back: "Atrás",
     language: "English",
@@ -74,7 +90,7 @@ const copy = {
     paymentHelp: "El pago seguro con Stripe se abrirá después de crear la reservación.",
     reserve: "Reservar días y continuar al pago seguro",
     complete: "Vista previa completa",
-    completeHelp: "El flujo original de AFC ahora está representado con selección del calendario, datos del patrocinador, revisión de la reservación y entrega al pago seguro. Esta rama todavía usa datos de prueba y no cobra pagos.",
+    completeHelp: "El flujo original del calendario AFC ahora incluye multiplicadores de 1x a 5x, conservando por separado el valor base del calendario y el impacto adicional.",
     secure: "Build seguro",
     secureBody: "Solo datos de prueba de Aspire South. Esta vista previa no utiliza datos reales de donantes ni credenciales de pago.",
     required: "Completa tu nombre y correo electrónico antes de continuar.",
@@ -88,12 +104,15 @@ export function AspireSouthCalendarPreview() {
   const [language, setLanguage] = useState<Language>("en");
   const [step, setStep] = useState<Step>("calendar");
   const [selected, setSelected] = useState<number[]>([]);
+  const [multiplier, setMultiplier] = useState<CalendarMultiplier>(1);
   const [supporter, setSupporter] = useState({ name: "", email: "", phone: "" });
   const [error, setError] = useState("");
   const t = copy[language];
+  const quote = useMemo(() => calendarImpactQuote(selected, multiplier), [selected, multiplier]);
 
-  const totalCents = useMemo(() => calendarSelectionTotalCents(selected), [selected]);
-  const total = (totalCents / 100).toFixed(0);
+  function money(cents: number) {
+    return "$" + (cents / 100).toFixed(0);
+  }
 
   function toggleDay(day: number) {
     if (sponsoredDays.has(day)) return;
@@ -112,6 +131,27 @@ export function AspireSouthCalendarPreview() {
       return;
     }
     setStep("review");
+  }
+
+  function multiplierButton(value: CalendarMultiplier) {
+    const active = multiplier === value;
+    return (
+      <button
+        key={value}
+        type="button"
+        onClick={() => setMultiplier(value)}
+        aria-pressed={active}
+        className={[
+          "min-h-16 rounded-card border p-3 text-left transition",
+          active
+            ? "border-brand-400 bg-brand-50 text-brand-900 ring-2 ring-brand-200"
+            : "border-line bg-surface text-ink hover:border-brand-300",
+        ].join(" ")}
+      >
+        <span className="block text-sm font-bold">{value}x · {multiplierLabels[language][value]}</span>
+        <span className="mt-1 block text-xs text-muted">{money(quote.baseCents * value)}</span>
+      </button>
+    );
   }
 
   return (
@@ -137,7 +177,6 @@ export function AspireSouthCalendarPreview() {
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t.title}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-100 sm:text-base">{t.subtitle}</p>
           </div>
-
           <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:p-8">
             <div>
               <div className="flex items-end justify-between gap-4">
@@ -160,16 +199,8 @@ export function AspireSouthCalendarPreview() {
 
         {step === "calendar" && (
           <section className="mt-6 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
-            <div>
-              <h2 className="text-xl font-bold text-ink">{t.choose}</h2>
-              <p className="mt-1 text-sm text-muted">{t.hint}</p>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-line px-3 py-1.5 text-ink-soft">{t.available}</span>
-              <span className="rounded-full bg-line px-3 py-1.5 text-muted">{t.sponsored}</span>
-              <span className="rounded-full bg-brand-100 px-3 py-1.5 font-semibold text-brand-800">{t.selected}</span>
-            </div>
+            <h2 className="text-xl font-bold text-ink">{t.choose}</h2>
+            <p className="mt-1 text-sm text-muted">{t.hint}</p>
 
             <div className="mt-6 grid grid-cols-4 gap-2 sm:grid-cols-7 sm:gap-3">
               {allCalendarDays().map((day) => {
@@ -201,16 +232,40 @@ export function AspireSouthCalendarPreview() {
               })}
             </div>
 
-            <div className="mt-6 flex flex-col gap-3 rounded-card border border-line bg-canvas p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.total}</p>
-                <p className="mt-1 text-2xl font-bold tabular text-ink">{"$" + total}</p>
-                {selected.length > 0 && (
-                  <p className="mt-1 text-xs text-muted">
-                    {selected.map((day) => t.day + " " + day).join(" · ")}
-                  </p>
-                )}
+            {selected.length > 0 && (
+              <div className="mt-6 rounded-card border border-line bg-canvas p-4">
+                <h3 className="text-base font-bold text-ink">{t.impactTitle}</h3>
+                <p className="mt-1 text-sm text-muted">{t.impactHelp}</p>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {([1, 2, 3] as CalendarMultiplier[]).map(multiplierButton)}
+                </div>
+
+                <details className="mt-3 rounded-control border border-line bg-surface px-3">
+                  <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink">{t.moreWays}</summary>
+                  <div className="grid gap-2 pb-3 sm:grid-cols-2">
+                    {([4, 5] as CalendarMultiplier[]).map(multiplierButton)}
+                  </div>
+                </details>
+
+                <div className="mt-4 grid gap-3 rounded-control border border-line bg-surface p-4 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.baseValue}</p>
+                    <p className="mt-1 text-lg font-bold tabular text-ink">{money(quote.baseCents)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.addedImpact}</p>
+                    <p className="mt-1 text-lg font-bold tabular text-ink">{money(quote.additionalImpactCents)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.total}</p>
+                    <p className="mt-1 text-2xl font-bold tabular text-brand-800">{money(quote.totalCents)}</p>
+                  </div>
+                </div>
               </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
                 disabled={selected.length === 0}
@@ -231,48 +286,22 @@ export function AspireSouthCalendarPreview() {
             <form className="mt-6 space-y-4" onSubmit={submitSupporter}>
               <label className="block text-sm font-medium text-ink">
                 {t.name}
-                <input
-                  value={supporter.name}
-                  onChange={(event) => setSupporter((current) => ({ ...current, name: event.target.value }))}
-                  className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3"
-                  autoComplete="name"
-                  maxLength={200}
-                  required
-                />
+                <input value={supporter.name} onChange={(event) => setSupporter((current) => ({ ...current, name: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="name" maxLength={200} required />
               </label>
               <label className="block text-sm font-medium text-ink">
                 {t.email}
-                <input
-                  type="email"
-                  value={supporter.email}
-                  onChange={(event) => setSupporter((current) => ({ ...current, email: event.target.value }))}
-                  className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3"
-                  autoComplete="email"
-                  maxLength={254}
-                  required
-                />
+                <input type="email" value={supporter.email} onChange={(event) => setSupporter((current) => ({ ...current, email: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="email" maxLength={254} required />
               </label>
               <label className="block text-sm font-medium text-ink">
                 {t.phone}
-                <input
-                  type="tel"
-                  value={supporter.phone}
-                  onChange={(event) => setSupporter((current) => ({ ...current, phone: event.target.value }))}
-                  className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3"
-                  autoComplete="tel"
-                  maxLength={50}
-                />
+                <input type="tel" value={supporter.phone} onChange={(event) => setSupporter((current) => ({ ...current, phone: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="tel" maxLength={50} />
               </label>
 
               {error && <p role="alert" className="rounded-control border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-                <button type="button" onClick={() => setStep("calendar")} className="min-h-11 rounded-control border border-line-strong px-4 text-sm font-semibold">
-                  {t.back}
-                </button>
-                <button type="submit" className="min-h-12 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white">
-                  {t.continue}
-                </button>
+                <button type="button" onClick={() => setStep("calendar")} className="min-h-11 rounded-control border border-line-strong px-4 text-sm font-semibold">{t.back}</button>
+                <button type="submit" className="min-h-12 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white">{t.continue}</button>
               </div>
             </form>
           </section>
@@ -285,7 +314,7 @@ export function AspireSouthCalendarPreview() {
               <div className="rounded-card border border-line bg-canvas p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.days}</p>
                 <p className="mt-2 font-semibold text-ink">{selected.map((day) => t.day + " " + day).join(" · ")}</p>
-                <p className="mt-3 text-3xl font-bold tabular text-ink">{"$" + total}</p>
+                <p className="mt-3 text-sm font-semibold text-brand-800">{multiplier}x · {multiplierLabels[language][multiplier]}</p>
               </div>
               <div className="rounded-card border border-line bg-canvas p-4">
                 <p className="font-semibold text-ink">{supporter.name}</p>
@@ -294,18 +323,20 @@ export function AspireSouthCalendarPreview() {
               </div>
             </div>
 
+            <dl className="mt-4 grid gap-3 rounded-card border border-line bg-surface p-4 sm:grid-cols-3">
+              <div><dt className="text-xs text-muted">{t.baseValue}</dt><dd className="mt-1 font-bold">{money(quote.baseCents)}</dd></div>
+              <div><dt className="text-xs text-muted">{t.addedImpact}</dt><dd className="mt-1 font-bold">{money(quote.additionalImpactCents)}</dd></div>
+              <div><dt className="text-xs text-muted">{t.total}</dt><dd className="mt-1 text-xl font-bold text-brand-800">{money(quote.totalCents)}</dd></div>
+            </dl>
+
             <div className="mt-5 rounded-card border border-brand-100 bg-brand-50/60 p-4">
               <p className="font-semibold text-brand-900">{t.payment}</p>
               <p className="mt-1 text-sm text-brand-900">{t.paymentHelp}</p>
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-              <button type="button" onClick={() => setStep("supporter")} className="min-h-11 rounded-control border border-line-strong px-4 text-sm font-semibold">
-                {t.back}
-              </button>
-              <button type="button" onClick={() => setStep("complete")} className="min-h-12 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white">
-                {t.reserve}
-              </button>
+              <button type="button" onClick={() => setStep("supporter")} className="min-h-11 rounded-control border border-line-strong px-4 text-sm font-semibold">{t.back}</button>
+              <button type="button" onClick={() => setStep("complete")} className="min-h-12 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white">{t.reserve}</button>
             </div>
           </section>
         )}
@@ -314,9 +345,7 @@ export function AspireSouthCalendarPreview() {
           <section className="mt-6 rounded-[1rem] border border-emerald-200 bg-emerald-50 p-5 shadow-card sm:p-8">
             <h2 className="text-2xl font-bold text-emerald-950">{t.complete}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-emerald-950">{t.completeHelp}</p>
-            <button type="button" onClick={() => setStep("review")} className="mt-5 min-h-11 rounded-control border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-950">
-              {t.back}
-            </button>
+            <button type="button" onClick={() => setStep("review")} className="mt-5 min-h-11 rounded-control border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-950">{t.back}</button>
           </section>
         )}
       </div>
