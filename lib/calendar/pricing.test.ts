@@ -3,6 +3,7 @@ import {
   CALENDAR_FULL_TOTAL_CENTS,
   allCalendarDays,
   calendarDayAmountCents,
+  calendarImpactQuote,
   calendarSelectionTotalCents,
 } from "./pricing";
 
@@ -16,6 +17,26 @@ describe("Sponsor-a-Day calendar pricing", () => {
 
   it("does not double-charge duplicate day selections", () => {
     expect(calendarSelectionTotalCents([5, 5, 12])).toBe(1700);
+  });
+
+  it("preserves supporter-choice multiplier semantics", () => {
+    expect(calendarImpactQuote([10], 1)).toEqual({
+      multiplier: 1,
+      label: "Support",
+      baseCents: 1000,
+      additionalImpactCents: 0,
+      totalCents: 1000,
+    });
+
+    expect(calendarImpactQuote([10], 5)).toEqual({
+      multiplier: 5,
+      label: "Legacy",
+      baseCents: 1000,
+      additionalImpactCents: 4000,
+      totalCents: 5000,
+    });
+
+    expect(calendarImpactQuote(allCalendarDays(), 5).totalCents).toBe(248000);
   });
 
   it("rejects invalid day values", () => {
