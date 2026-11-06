@@ -49,6 +49,7 @@ describe("calendar Stripe TEST checkout handoff", () => {
       `calendar-test-${reservation.id}`);
     const body = new URLSearchParams(options?.body as string);
     expect(body.get("line_items[0][price_data][unit_amount]")).toBe("5000");
+    expect(body.get("payment_method_types[0]")).toBe("card");
     expect(body.get("line_items[0][price_data][currency]")).toBe("usd");
     expect(body.get("metadata[reservation_id]")).toBe(reservation.id);
     expect(body.get("success_url")).toBe(
