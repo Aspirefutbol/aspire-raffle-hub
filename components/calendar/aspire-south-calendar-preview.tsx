@@ -47,10 +47,10 @@ const copy = {
     review: "Review sponsorship",
     days: "Days selected",
     payment: "Payment",
-    paymentHelp: "Secure Stripe checkout will open after the reservation is created.",
-    reserve: "Reserve days & continue to secure checkout",
+    paymentHelp: "This preview shows the future Stripe TEST checkout handoff. No days are reserved and no payment is collected.",
+    reserve: "Preview secure checkout handoff",
     complete: "Preview complete",
-    completeHelp: "The original AFC calendar flow now includes Supporter Choice multipliers from 1x through 5x while preserving the base calendar value separately from additional impact.",
+    completeHelp: "This was a demonstration with synthetic Aspire South data. No reservation was placed and no payment was collected. The 1x-5x calculation keeps the calendar base separate from additional impact.",
     secure: "Secure build",
     secureBody: "Synthetic Aspire South data only. No live donor data or payment credentials are used on this preview route.",
     required: "Please complete your name and email before continuing.",
@@ -87,10 +87,10 @@ const copy = {
     review: "Revisar patrocinio",
     days: "Días seleccionados",
     payment: "Pago",
-    paymentHelp: "El pago seguro con Stripe se abrirá después de crear la reservación.",
-    reserve: "Reservar días y continuar al pago seguro",
+    paymentHelp: "Esta vista previa muestra el futuro paso al pago de Stripe en modo PRUEBA. No reserva días ni cobra ningún pago.",
+    reserve: "Ver ejemplo del paso al pago seguro",
     complete: "Vista previa completa",
-    completeHelp: "El flujo original del calendario AFC ahora incluye multiplicadores de 1x a 5x, conservando por separado el valor base del calendario y el impacto adicional.",
+    completeHelp: "Esta fue una demostración con datos de prueba de Aspire South. No se reservaron días ni se cobró ningún pago. El cálculo de 1x a 5x separa el valor base y el impacto adicional.",
     secure: "Build seguro",
     secureBody: "Solo datos de prueba de Aspire South. Esta vista previa no utiliza datos reales de donantes ni credenciales de pago.",
     required: "Completa tu nombre y correo electrónico antes de continuar.",
@@ -209,6 +209,8 @@ export function AspireSouthCalendarPreview() {
                 return (
                   <button
                     key={day}
+                    data-testid={`calendar-day-${day}`}
+                    aria-label={`${t.day} ${day}, ${day}, ${isSponsored ? t.sponsored : isSelected ? t.selected : t.available}`}
                     type="button"
                     disabled={isSponsored}
                     onClick={() => toggleDay(day)}
