@@ -14,6 +14,13 @@ describe("canonicalizeNetlifyDeployUrl", () => {
     expect(location("https://6acc308bfc7dc0811fd5118d--aspire-raffle-hub-staging.netlify.app/")).toBe(`${SITE}/`);
   });
 
+  it("leaves the exact synthetic Aspire South preview on a deploy alias", () => {
+    expect(location("https://abc123--aspire-raffle-hub-staging.netlify.app/calendar/aspire-south")).toBeNull();
+    expect(location("https://abc123--aspire-raffle-hub-staging.netlify.app/calendar/aspire-south/checkout")).toBe(
+      "https://aspire-raffle-hub-staging.netlify.app/calendar/aspire-south/checkout",
+    );
+  });
+
   it("does not redirect the canonical hostname to itself", () => {
     expect(location(`${SITE}/auth/confirm?token_hash=test&type=magiclink`)).toBeNull();
     expect(location(`${SITE}/`)).toBeNull();
