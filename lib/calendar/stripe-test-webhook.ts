@@ -98,8 +98,8 @@ export function verifyStripeTestCalendarPayment(
   if (!session || typeof session.id !== "string" || !TEST_SESSION.test(session.id) ||
       session.mode !== "payment" || session.livemode !== false ||
       session.payment_status !== "paid" ||
-      !Number.isSafeInteger(session.amount_total) ||
       typeof session.amount_total !== "number" ||
+      !Number.isSafeInteger(session.amount_total) ||
       session.amount_total < 100 || session.amount_total > 248000 ||
       session.currency !== "usd" ||
       typeof session.client_reference_id !== "string" ||
