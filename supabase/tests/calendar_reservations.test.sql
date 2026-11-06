@@ -577,5 +577,49 @@ select is((calendar_private.read_inventory(
   '[10]'::jsonb, 'expired unstarted hold is excluded from unavailable inventory');
 reset role;
 
+-- A local clock expiry is NOT sufficient to free a Stripe checkout day.
+-- Unpaid CHECKOUT_PENDING remains exclusive until the trusted Stripe verifier
+-- and private release transaction have independently confirmed terminal expiry.
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+insert into pg_temp.calendar_test_results
+select 'pending_without_stripe_proof', calendar_private.reserve(
+  pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+  pg_temp.participant('player-a2'),
+  pg_temp.cid('reservation-key-still-pending'), array[15], 2,
+  'Pending Synthetic Supporter', 'pending@example.test');
+select is((calendar_private.attach_test_checkout(
+     (select (result->>'id')::uuid from pg_temp.calendar_test_results
+       where label='pending_without_stripe_proof'),
+     'cs_test_synthetic_still_pending',
+     clock_timestamp() + interval '45 minutes')->>'status'),
+  'CHECKOUT_PENDING', 'pending test session holds a second player day');
+reset role;
+
+-- This fixture simulates the local timeout *without* verifying Stripe expiry.
+update calendar_private.reservations
+  set expires_at = clock_timestamp() - interval '1 minute'
+  where id = (select (result->>'id')::uuid from pg_temp.calendar_test_results
+    where label='pending_without_stripe_proof');
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a2'))->'checkout_pending_days'),
+  '[15]'::jsonb, 'locally expired Stripe checkout is still shown as pending');
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a2'))->'unavailable_days'),
+  '[10, 15]'::jsonb, 'unverified Stripe timeout never frees pending inventory');
+select throws_ok($calendar_pending_stays_exclusive$
+  select calendar_private.reserve(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a2'),
+    pg_temp.cid('reservation-key-pending-collision'), array[15], 1,
+    'Cannot Claim', 'collision@example.test')
+$calendar_pending_stays_exclusive$, '23505', null,
+  'clock-only checkout timeout cannot double-sell a day');
+reset role;
+
 select * from finish();
 rollback;
