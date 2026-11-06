@@ -229,21 +229,21 @@ select is((calendar_private.attach_test_checkout(
 select throws_ok($$
   select calendar_private.attach_test_checkout(
     (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
-    'cs_test_wrong_checkout_2', clock_timestamp() + interval '45 minutes')$,
+    'cs_test_wrong_checkout_2', clock_timestamp() + interval '45 minutes')$$,
   '23514', null, 'cannot swap another checkout into a pending reservation');
 
 select throws_ok($$
   select calendar_private.reserve(
     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'), pg_temp.participant('player-a2'),
     pg_temp.cid('reservation-key-9'), array[10], 1,
-    'Collision', 'collision@example.test')$,
+    'Collision', 'collision@example.test')$$,
   '23505', null, 'checkout pending day cannot be claimed again');
 
 select pg_temp.as_user('b-admin');
 select throws_ok($$
   select calendar_private.attach_test_checkout(
     (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
-    'cs_test_cross_tenant', clock_timestamp() + interval '45 minutes')$,
+    'cs_test_cross_tenant', clock_timestamp() + interval '45 minutes')$$,
   '42501', null, 'another tenant cannot attach a session to Aspire South');
 
 reset role;
