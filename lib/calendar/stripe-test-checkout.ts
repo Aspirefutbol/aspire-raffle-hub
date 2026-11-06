@@ -21,6 +21,10 @@ type StripeCheckoutResponse = {
   url?: unknown;
   mode?: unknown;
   livemode?: unknown;
+  amount_total?: unknown;
+  currency?: unknown;
+  client_reference_id?: unknown;
+  expires_at?: unknown;
 };
 
 export type StripeTestCheckoutConfig = {
@@ -33,7 +37,7 @@ export type StripeTestCheckoutConfig = {
 export async function createStripeTestCalendarCheckout(
   reservation: CalendarReservationSnapshot,
   config: StripeTestCheckoutConfig,
-): Promise<{ id: string; url: string }> {
+): Promise<{ id: string; url: string; expiresAtEpochSeconds: number }> {
   if (!/^sk_test_[A-Za-z0-9_]+$/.test(config.secretKey)) {
     throw new Error("A Stripe TEST secret key is required; live keys are forbidden.");
   }
@@ -99,9 +103,17 @@ export async function createStripeTestCalendarCheckout(
       payload.livemode !== false) {
     throw new Error("Stripe returned a non-TEST or invalid Checkout session.");
   }
+  if (payload.amount_total !== quote.totalCents || payload.currency !== "usd" ||
+      payload.client_reference_id !== reservation.id ||
+      typeof payload.expires_at !== "number" ||
+      !Number.isSafeInteger(payload.expires_at) ||
+      payload.expires_at < now + 30 * 60 ||
+      payload.expires_at > now + 24 * 60 * 60) {
+    throw new Error("Stripe TEST session amount, reference or expiry did not reconcile.");
+  }
   const checkoutUrl = new URL(payload.url);
   if (checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com") {
     throw new Error("Stripe returned an untrusted Checkout URL.");
   }
-  return { id: payload.id, url: checkoutUrl.toString() };
+  return { id: payload.id, url: checkoutUrl.toString(), expiresAtEpochSeconds: payload.expires_at };
 }
