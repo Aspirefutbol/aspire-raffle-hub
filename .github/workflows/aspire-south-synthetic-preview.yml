@@ -66,21 +66,16 @@ jobs:
 
       - run: npm ci
 
-      - name: Load public Supabase key from Netlify runtime configuration
-        run: |
-          publishable_key="$(npx netlify-cli@27.12.0 env:get NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY --site "$NETLIFY_SITE_ID" | tail -n 1 | tr -d '\r')"
-          if [ -z "$publishable_key" ] || [ "${#publishable_key}" -lt 20 ]; then
-            echo "::error::Netlify did not provide a valid public Supabase publishable key."
-            exit 1
-          fi
-          echo "::add-mask::$publishable_key"
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$publishable_key" >> "$GITHUB_ENV"
 
       - name: Validate synthetic preview locally
         run: |
           npm run lint
           npm run typecheck
           npm test -- --run lib/calendar
+
+      # Netlify already owns the preview site's public Supabase configuration.
+      # Do not duplicate those values into GitHub; the deploy command loads the
+      # site's configured build/runtime environment.
 
       - name: Deploy non-production synthetic preview
         id: deploy
