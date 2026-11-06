@@ -207,3 +207,31 @@ A staging URL may be called "director ready" only when:
 - no client bundle contains privileged keys.
 - required security and automated checks pass.
 
+
+## Stripe TEST checkout safety contract (November 6 implementation)
+
+The isolated test integration now uses card-only Checkout while the settlement
+path handles synchronous `checkout.session.completed` events with
+`payment_status=paid`. Do not add delayed-payment methods until a reviewed
+`async_payment_succeeded` / `async_payment_failed` state machine is implemented.
+
+Trusted server orchestration must invoke
+`startAttachedStripeTestCalendarCheckout` with an authorized, locked
+`calendar_private.attach_test_checkout` callback. A TEST URL may only leave
+the server after the callback confirms the same reservation and session in
+`CHECKOUT_PENDING`. If attachment fails, the helper requests Stripe's
+`/expire` endpoint for the orphan and verifies the returned session is TEST,
+expired, unpaid, and linked to the exact reservation. If cleanup cannot be
+confirmed, it fails closed and requires manual investigation. It never releases
+a calendar date itself; only the separately verified private expiry transaction
+may do so.
+
+The reservation read and attach callback must come from a reviewed server
+boundary with adult authorization, tenant isolation, and least-privilege DB
+access. Neither this helper nor its tests grant browser access, deploy Stripe
+secrets, or satisfy the PR #15 seller-link approval gate.
+
+Before connecting a donor-facing checkout route, add integration tests for
+attachment failure, orphan cleanup failure, delayed webhook replay, and
+concurrent reservations using actual TEST-mode infrastructure. Never infer
+payment from success or cancellation redirects.
