@@ -235,3 +235,37 @@ Before connecting a donor-facing checkout route, add integration tests for
 attachment failure, orphan cleanup failure, delayed webhook replay, and
 concurrent reservations using actual TEST-mode infrastructure. Never infer
 payment from success or cancellation redirects.
+
+## Private paid-only progress read model (November 6)
+
+`calendar_private.read_paid_progress(org_id, campaign_id, participant_id)`
+is a protected, read-only database function for a future authorized
+parent/director dashboard. It checks an adult session, verifies the exact
+campaign-participant-tenant relationship and the existing
+`can_manage_seller_participant` permission. It has **no grant** to
+`anon`, `authenticated` or `service_role` through the Data API.
+
+It counts **only PAID reservations** (not provisional holds, abandoned
+Stripe sessions, expired holds or repeated Stripe event receipts). It returns
+sorted sponsored day numbers, sponsor count, base calendar cents, additional
+impact cents and total paid cents. It exposes no donor name, email, checkout
+session, or webhook identifiers. The pgTAP test suite proves 3x separation,
+player isolation, duplicate-event non-duplication, and denial of cross-tenant
+and mismatched campaign reads. This is not yet wired to a public route.
+
+## Director visual evidence before staging is available
+
+On a successful complete GitHub CI run, the E2E suite now uploads an
+`aspire-south-director-synthetic-preview` artifact containing four
+screenshots: desktop English base calendar, desktop English 5x selection,
+Spanish phone 5x selection, and Spanish phone review. These images use only
+fictional participant and supporter data. They are **visual review evidence**
+and not a functioning staging deployment or proof that reservation/Stripe
+checkout has been connected to the public page.
+
+Do not repoint the existing shared Netlify staging environment or run these
+unapproved calendar migrations against production merely to obtain a review
+URL. A separate branch-specific Netlify deploy path (or approved isolated
+project with synthetic/test-only environment) is still needed for a clickable
+preview. The current Netlify connector can inspect but does not expose a
+publishing action. PR #15 review remains independent.
