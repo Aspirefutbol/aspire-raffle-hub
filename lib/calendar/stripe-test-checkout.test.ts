@@ -4,6 +4,8 @@ import {
   type CalendarReservationSnapshot,
 } from "./stripe-test-checkout";
 
+const TEST_NOW = 1_800_000_000;
+
 const reservation: CalendarReservationSnapshot = {
   id: "d1a04e38-e473-40d0-a1a0-ffbcb686b15a",
   status: "HELD",
@@ -19,6 +21,10 @@ const stripeResult = {
   url: "https://checkout.stripe.com/c/pay/cs_test_synthetic_only",
   mode: "payment",
   livemode: false,
+  amount_total: 5000,
+  currency: "usd",
+  client_reference_id: reservation.id,
+  expires_at: TEST_NOW + 45 * 60,
 };
 
 function transport(payload: unknown = stripeResult, status = 200) {
@@ -32,10 +38,10 @@ describe("calendar Stripe TEST checkout handoff", () => {
     const result = await createStripeTestCalendarCheckout(reservation, {
       secretKey: "sk_test_synthetic_placeholder",
       siteOrigin: "https://aspire-south-staging.example.test",
-      nowEpochSeconds: 1800000000,
+      nowEpochSeconds: TEST_NOW,
       request,
     });
-    expect(result).toEqual({ id: stripeResult.id, url: stripeResult.url });
+    expect(result).toEqual({ id: stripeResult.id, url: stripeResult.url, expiresAtEpochSeconds: stripeResult.expires_at });
     const [requestUrl, options] = request.mock.calls[0]!;
     expect(requestUrl).toBe("https://api.stripe.com/v1/checkout/sessions");
     expect(options?.method).toBe("POST");
@@ -47,7 +53,7 @@ describe("calendar Stripe TEST checkout handoff", () => {
     expect(body.get("metadata[reservation_id]")).toBe(reservation.id);
     expect(body.get("success_url")).toBe(
       "https://aspire-south-staging.example.test/calendar/aspire-south?checkout=verifying");
-    expect(body.get("expires_at")).toBe(String(1800000000 + 45 * 60));
+    expect(body.get("expires_at")).toBe(String(TEST_NOW + 45 * 60));
   });
 
   it("rejects LIVE keys without making a request", async () => {
@@ -83,13 +89,28 @@ describe("calendar Stripe TEST checkout handoff", () => {
   });
 
   it("rejects non-test sessions and untrusted checkout redirects", async () => {
-    const config = { secretKey: "sk_test_fake", siteOrigin: "https://example.test" };
+    const config = { secretKey: "sk_test_fake", siteOrigin: "https://example.test", nowEpochSeconds: TEST_NOW };
     await expect(createStripeTestCalendarCheckout(reservation, {
       ...config, request: transport({ ...stripeResult, livemode: true }),
     })).rejects.toThrow(/non-TEST/);
     await expect(createStripeTestCalendarCheckout(reservation, {
       ...config, request: transport({ ...stripeResult, url: "https://evil.example.test/phish" }),
     })).rejects.toThrow(/untrusted Checkout URL/);
+  });
+
+  it("rejects mismatched amounts, missing Stripe reference, or implausible expiry", async () => {
+    const config = { secretKey: "sk_test_fake", siteOrigin: "https://example.test", nowEpochSeconds: TEST_NOW };
+    for (const corrupt of [
+      { amount_total: 1 },
+      { currency: "eur" },
+      { client_reference_id: "a-different-reservation" },
+      { expires_at: TEST_NOW + 60 },
+      { expires_at: TEST_NOW + 25 * 60 * 60 },
+    ]) {
+      await expect(createStripeTestCalendarCheckout(reservation, {
+        ...config, request: transport({ ...stripeResult, ...corrupt }),
+      })).rejects.toThrow(/did not reconcile/);
+    }
   });
 
   it("does not expose Stripe error response bodies or secrets", async () => {
