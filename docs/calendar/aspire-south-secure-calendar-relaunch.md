@@ -269,3 +269,26 @@ URL. A separate branch-specific Netlify deploy path (or approved isolated
 project with synthetic/test-only environment) is still needed for a clickable
 preview. The current Netlify connector can inspect but does not expose a
 publishing action. PR #15 review remains independent.
+
+## Private scoped inventory snapshot (November 6)
+
+`calendar_private.read_inventory(org_id, campaign_id, participant_id)` now
+supports a future adult-authenticated campaign dashboard with five numbered-day
+groups: paid, checkout pending, actively held, refunded, and unavailable.
+The function requires an authorized adult with live permission to manage that
+participant, verifies campaign/tenant relationships, excludes donor names,
+emails, and payment identifiers, and has **no Data API grants**. It is not a
+public availability endpoint and must not be exposed as one.
+
+Unstarted HELD reservations whose 15-minute window has passed are excluded
+from unavailable days; the next authorized reservation transaction reaps these
+holds under lock. CHECKOUT_PENDING inventory deliberately remains unavailable
+past its local expiry until a separate trusted Stripe TEST verification confirms
+the checkout is terminally expired and unpaid. Paid and refunded days stay
+claimed. The backing partial UNIQUE index remains authoritative for exclusive
+day ownership regardless of an availability snapshot becoming stale.
+
+The private pgTAP tests also check no API grants, adult/tenant isolation,
+per-player inventory, redaction of supporter/payment details, and expired
+unstarted holds. This work does not alter PR #15, create a public donor route,
+or connect live player data.
