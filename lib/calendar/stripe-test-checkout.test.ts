@@ -36,7 +36,7 @@ describe("calendar Stripe TEST checkout handoff", () => {
       request,
     });
     expect(result).toEqual({ id: stripeResult.id, url: stripeResult.url });
-    const [requestUrl, options] = request.mock.calls[0];
+    const [requestUrl, options] = request.mock.calls[0]!;
     expect(requestUrl).toBe("https://api.stripe.com/v1/checkout/sessions");
     expect(options?.method).toBe("POST");
     expect(new Headers(options?.headers).get("Idempotency-Key")).toBe(
