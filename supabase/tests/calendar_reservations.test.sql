@@ -509,5 +509,73 @@ $calendar_progress_wrong_campaign$, '42501', null,
 
 reset role;
 
+-- Private inventory read model: the parent/director sees which numbered
+-- calendar days can be selected, never another tenant's or donor's data.
+select ok(not has_function_privilege('anon',
+    'calendar_private.read_inventory(uuid,uuid,uuid)', 'EXECUTE'),
+  'anonymous browser cannot invoke the private calendar inventory function');
+select ok(not has_function_privilege('authenticated',
+    'calendar_private.read_inventory(uuid,uuid,uuid)', 'EXECUTE'),
+  'authenticated Data API role has no calendar inventory grant');
+select ok(not has_function_privilege('service_role',
+    'calendar_private.read_inventory(uuid,uuid,uuid)', 'EXECUTE'),
+  'Supabase service-role Data API cannot bypass private inventory scope');
+
+-- Test-only function access, reverted when the pgTAP transaction rolls back.
+grant execute on function calendar_private.read_inventory(uuid,uuid,uuid)
+  to authenticated;
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a'))->'paid_days'),
+  '[10]'::jsonb, 'only the settled Aspire South day is marked paid');
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a'))->'held_days'),
+  '[14]'::jsonb, 'active temporary reservations appear as held');
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a'))->'checkout_pending_days'),
+  '[]'::jsonb, 'verified expired unpaid checkout is no longer pending');
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a'))->'unavailable_days'),
+  '[10, 14]'::jsonb, 'paid and actively held days block new sponsorship');
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a2'))->'paid_days'),
+  '[10]'::jsonb, 'each player calendar has independent paid inventory');
+select ok(not (calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a')) ?| array[
+     'supporter_name','supporter_email','stripe_event_id',
+     'checkout_session_id','reservation_id']),
+  'calendar inventory response does not leak supporter PII or payment IDs');
+
+select pg_temp.as_user('b-admin');
+select throws_ok($calendar_inventory_cross_tenant$
+  select calendar_private.read_inventory(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a'))
+$calendar_inventory_cross_tenant$, '42501', null,
+  'another tenant cannot read Aspire South day availability');
+reset role;
+
+-- An elapsed HELD timer is not equivalent to an unverified Stripe expiry.
+-- The normal reserve transaction automatically expires this hold under lock.
+update calendar_private.reservations
+  set expires_at = clock_timestamp() - interval '1 minute'
+  where id = (select (result->>'id')::uuid from pg_temp.calendar_test_results
+    where label = 'reused_after_checkout_expiry');
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+select is((calendar_private.read_inventory(
+     pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+     pg_temp.participant('player-a'))->'unavailable_days'),
+  '[10]'::jsonb, 'expired unstarted hold is excluded from unavailable inventory');
+reset role;
+
 select * from finish();
 rollback;
