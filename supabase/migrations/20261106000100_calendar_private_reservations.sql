@@ -165,7 +165,7 @@ begin
   end if;
   if normalized_name is null or length(normalized_name) > 200
      or normalized_email is null or length(normalized_email) > 254
-     or normalized_email !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+ then
+     or normalized_email !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$' then
     raise exception 'Valid supporter name and email are required.' using errcode = '23514';
   end if;
 
