@@ -440,5 +440,74 @@ select is((select count(*) from calendar_private.reservation_events
       and event_type='EXPIRED'),
   1::bigint, 'expired pending checkout has exactly one immutable audit event');
 
+-- Paid progress is a private adult-scoped read model, not a donor/API grant.
+select ok(not has_function_privilege('anon',
+    'calendar_private.read_paid_progress(uuid,uuid,uuid)', 'EXECUTE'),
+  'anonymous visitors cannot read a player's private paid progress');
+select ok(not has_function_privilege('authenticated',
+    'calendar_private.read_paid_progress(uuid,uuid,uuid)', 'EXECUTE'),
+  'ordinary authenticated Data API has no paid-progress grant');
+select ok(not has_function_privilege('service_role',
+    'calendar_private.read_paid_progress(uuid,uuid,uuid)', 'EXECUTE'),
+  'Supabase service-role Data API cannot bypass private progress scope');
+
+-- Rollback-only privilege elevation for testing the internal, reviewed caller.
+grant execute on function calendar_private.read_paid_progress(uuid,uuid,uuid)
+  to authenticated;
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+
+select is((calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a'))->>'base_cents')::bigint,
+  1000::bigint, 'paid progress counts exactly the settled $10 calendar base');
+select is((calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a'))->>'additional_impact_cents')::bigint,
+  2000::bigint, 'paid progress keeps 3x $20 additional impact separate');
+select is((calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a'))->>'total_cents')::bigint,
+  3000::bigint, 'settled progress totals $30, excluding expired or held days');
+select is((calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a'))->>'paid_days')::jsonb,
+  '[10]'::jsonb, 'only actually paid day is shown as sponsored');
+select is((calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a'))->>'sponsor_count')::bigint,
+  1::bigint, 'multiple webhook deliveries do not double-count sponsors');
+select is((calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a2'))->>'additional_impact_cents')::bigint,
+  0::bigint, 'another player has separate zero additional-impact totals');
+select is((calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a2'))->>'total_cents')::bigint,
+  1000::bigint, 'different player progress is not mixed into Aspire South sibling');
+select ok(not (calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a')) ?| array['supporter_name','supporter_email',
+      'checkout_session_id', 'stripe_event_id']),
+  'paid-progress output excludes donor PII and payment session references');
+
+select pg_temp.as_user('b-admin');
+select throws_ok($calendar_progress_cross_tenant$
+  select calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'),
+    pg_temp.participant('player-a'))
+$calendar_progress_cross_tenant$, '42501', null,
+  'another organization director cannot read Aspire South financial progress');
+
+select pg_temp.as_user('a-admin');
+select throws_ok($calendar_progress_wrong_campaign$
+  select calendar_private.read_paid_progress(
+    pg_temp.cid('org-a'), pg_temp.cid('org-b'),
+    pg_temp.participant('player-a'))
+$calendar_progress_wrong_campaign$, '42501', null,
+  'even Aspire South director cannot read a mismatched campaign or tenant');
+
+reset role;
+
 select * from finish();
 rollback;
