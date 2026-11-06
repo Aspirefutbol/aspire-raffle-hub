@@ -43,6 +43,12 @@ function requestHostname(request: NextRequest): string {
 export function canonicalizeNetlifyDeployUrl(request: NextRequest, siteUrl?: string): NextResponse | null {
   if (!siteUrl) return null;
 
+  // The synthetic Aspire South director preview is deliberately public,
+  // contains fictional data only, and cannot reserve days or collect payment.
+  // Keep this exact route on the deploy alias so reviewers can inspect a
+  // non-production build without redirecting to the shared staging site.
+  if (request.nextUrl.pathname === "/calendar/aspire-south") return null;
+
   const canonical = new URL(siteUrl);
   const requestHost = requestHostname(request);
   const deployAliasSuffix = `--${canonical.hostname}`;
