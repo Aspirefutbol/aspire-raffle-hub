@@ -254,5 +254,66 @@ select is((select count(*) from calendar_private.reservations
     where status='PAID'),0::bigint,
   'Stripe TEST handoff alone never marks a sponsorship paid');
 
+-- Only trusted operator code can invoke the verified TEST settlement contract.
+-- Existing test fixture is synthetic and never calls Stripe.
+select ok(not has_function_privilege('authenticated',
+    'calendar_private.confirm_test_checkout_paid(uuid,text,text,bigint)', 'EXECUTE'),
+  'browser/authenticated role cannot mark a calendar payment PAID');
+select ok(not has_function_privilege('service_role',
+    'calendar_private.confirm_test_checkout_paid(uuid,text,text,bigint)', 'EXECUTE'),
+  'Supabase Data API service role cannot bypass TEST webhook verification');
+
+insert into pg_temp.calendar_test_results
+select 'paid', calendar_private.confirm_test_checkout_paid(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+  'cs_test_synthetic_checkout_1', 'evt_synthetic_paid_1', 1000);
+select is((select result->>'status' from pg_temp.calendar_test_results where label='paid'),
+  'PAID', 'trusted verified TEST payment settles pending reservation');
+select is((select (result->>'replayed')::boolean from pg_temp.calendar_test_results where label='paid'),
+  false, 'first verified payment creates one financial transition');
+select is((select state from calendar_private.reservation_days
+    where reservation_id=(select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling')),
+  'PAID', 'calendar inventory stays exclusively occupied after payment');
+select is((select count(*) from calendar_private.reservation_events where event_type='PAID'),1::bigint,
+  'payment adds one immutable PAID event with separate base and impact');
+select is((select base_cents from calendar_private.reservation_events where event_type='PAID'),1000::bigint,
+  'settled PAID event keeps true calendar base value');
+select is((select additional_impact_cents from calendar_private.reservation_events where event_type='PAID'),0::bigint,
+  'settled PAID event keeps additional impact separate');
+
+select is((calendar_private.confirm_test_checkout_paid(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+  'cs_test_synthetic_checkout_1', 'evt_synthetic_paid_1', 1000)->>'replayed')::boolean,
+  true, 'Stripe retry returns the original payment result safely');
+select is((calendar_private.confirm_test_checkout_paid(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+  'cs_test_synthetic_checkout_1', 'evt_synthetic_paid_2', 1000)->>'replayed')::boolean,
+  true, 'second verified event for the paid session does not double-credit');
+select is((select count(*) from calendar_private.reservation_events where event_type='PAID'),1::bigint,
+  'even two separate delivered events create only one PAID ledger transition');
+select is((select count(*) from calendar_private.stripe_test_payment_receipts),2::bigint,
+  'every distinct verified TEST event receives an immutable receipt');
+
+select throws_ok($paid_amount$
+  select calendar_private.confirm_test_checkout_paid(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+    'cs_test_synthetic_checkout_1', 'evt_synthetic_wrong_amount', 2000)
+$paid_amount$, '23514', null, 'forged Stripe event amount cannot settle sponsorship');
+
+select throws_ok($paid_session$
+  select calendar_private.confirm_test_checkout_paid(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+    'cs_test_another_checkout_1', 'evt_synthetic_wrong_session', 1000)
+$paid_session$, '23514', null, 'another checkout session cannot settle sponsorship');
+
+select throws_ok($paid_unattached$
+  select calendar_private.confirm_test_checkout_paid(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='reclaimed'),
+    'cs_test_synthetic_checkout_1', 'evt_synthetic_unattached', 3000)
+$paid_unattached$, '23514', null, 'HELD inventory cannot be paid without exact checkout attachment');
+
+select is((select count(*) from calendar_private.reservations where status='PAID'),1::bigint,
+  'failed/duplicate payments never create extra settled calendars');
+
 select * from finish();
 rollback;
