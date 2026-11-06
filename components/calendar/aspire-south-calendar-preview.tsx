@@ -6,6 +6,10 @@ import {
   calendarImpactQuote,
   type CalendarMultiplier,
 } from "@/lib/calendar/pricing";
+import {
+  aspireSouthSyntheticPreview,
+  syntheticCalendarProgress,
+} from "@/lib/calendar/synthetic-preview";
 
 type Language = "en" | "es";
 type Step = "calendar" | "supporter" | "review" | "complete";
@@ -98,7 +102,9 @@ const copy = {
   },
 } as const;
 
-const sponsoredDays = new Set([2, 5, 8, 11, 17, 23, 28]);
+const preview = aspireSouthSyntheticPreview;
+const progress = syntheticCalendarProgress(preview.paidDays, preview.goalCents);
+const sponsoredDays = progress.sponsoredDays;
 
 export function AspireSouthCalendarPreview() {
   const [language, setLanguage] = useState<Language>("en");
@@ -173,7 +179,7 @@ export function AspireSouthCalendarPreview() {
 
         <section className="mt-6 overflow-hidden rounded-[1rem] border border-line bg-surface shadow-card">
           <div className="border-b border-line bg-brand-900 px-5 py-6 text-white sm:px-8">
-            <p className="text-sm font-semibold text-brand-200">{t.player}: Mateo R. · {t.team}: Aspire South 2012</p>
+            <p className="text-sm font-semibold text-brand-200">{t.player}: {preview.participant.displayName} · {t.team}: {preview.participant.teamName}</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t.title}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-100 sm:text-base">{t.subtitle}</p>
           </div>
@@ -182,12 +188,12 @@ export function AspireSouthCalendarPreview() {
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</p>
-                  <p className="mt-1 text-2xl font-bold tabular text-ink">$184</p>
+                  <p className="mt-1 text-2xl font-bold tabular text-ink">{money(progress.raisedCents)}</p>
                 </div>
-                <p className="text-sm text-muted">{t.goal}: $500</p>
+                <p className="text-sm text-muted">{t.goal}: {money(preview.goalCents)}</p>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
-                <div className="h-full w-[37%] rounded-full bg-brand-600" />
+                <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress.percentOfGoal}%` }} />
               </div>
             </div>
             <div className="rounded-control border border-line bg-canvas px-4 py-3 text-sm text-ink-soft">
