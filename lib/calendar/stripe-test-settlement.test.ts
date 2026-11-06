@@ -52,7 +52,8 @@ describe("signed Stripe TEST calendar settlement orchestration", () => {
       replayed: false,
       totalCents: 5000,
     });
-    expect(confirm).toHaveBeenCalledExactlyOnceWith(
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(confirm).toHaveBeenCalledWith(
       RESERVATION, SESSION, EVENT_ID, 5000,
     );
   });
