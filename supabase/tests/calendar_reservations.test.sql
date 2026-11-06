@@ -443,7 +443,7 @@ select is((select count(*) from calendar_private.reservation_events
 -- Paid progress is a private adult-scoped read model, not a donor/API grant.
 select ok(not has_function_privilege('anon',
     'calendar_private.read_paid_progress(uuid,uuid,uuid)', 'EXECUTE'),
-  'anonymous visitors cannot read a player's private paid progress');
+  'anonymous visitors cannot read a player''s private paid progress');
 select ok(not has_function_privilege('authenticated',
     'calendar_private.read_paid_progress(uuid,uuid,uuid)', 'EXECUTE'),
   'ordinary authenticated Data API has no paid-progress grant');
