@@ -16,7 +16,7 @@ import { allCalendarDays, calendarSelectionTotalCents } from "./pricing";
 const uuid = z.string().uuid();
 const days = z.array(z.number().int().min(1).max(31)).max(31)
   .refine(values => new Set(values).size === values.length, "Duplicate calendar day.");
-const cents = z.number().int().safe().min(0).max(248000);
+const cents = z.number().int().min(0).max(248000);
 
 const paidProgress = z.strictObject({
   participant_id: uuid,
