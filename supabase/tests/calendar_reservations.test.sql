@@ -315,5 +315,31 @@ $paid_unattached$, '23514', null, 'HELD inventory cannot be paid without exact c
 select is((select count(*) from calendar_private.reservations where status='PAID'),1::bigint,
   'failed/duplicate payments never create extra settled calendars');
 
+-- A second synthetic supporter uses 3x: $10 base + $20 additional impact.
+-- Verify the paid ledger retains both amounts, not merely the overall charge.
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+select is((calendar_private.attach_test_checkout(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='reclaimed'),
+  'cs_test_synthetic_impact_3x', clock_timestamp() + interval '45 minutes')->>'status'),
+  'CHECKOUT_PENDING', '3x synthetic impact calendar receives a TEST checkout');
+reset role;
+select is((calendar_private.confirm_test_checkout_paid(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='reclaimed'),
+  'cs_test_synthetic_impact_3x', 'evt_synthetic_impact_3x', 3000)->>'status'),
+  'PAID', '3x TEST payment settles against the exact server-side quote');
+select is((select base_cents from calendar_private.reservation_events
+    where event_type='PAID' and reservation_id=
+      (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='reclaimed')),
+  1000::bigint, '3x settled sponsorship keeps $10 base calendar value');
+select is((select additional_impact_cents from calendar_private.reservation_events
+    where event_type='PAID' and reservation_id=
+      (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='reclaimed')),
+  2000::bigint, '3x settled sponsorship keeps $20 additional impact');
+select is((select total_cents from calendar_private.reservation_events
+    where event_type='PAID' and reservation_id=
+      (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='reclaimed')),
+  3000::bigint, '3x paid ledger totals $30 without duplicate day ownership');
+
 select * from finish();
 rollback;
