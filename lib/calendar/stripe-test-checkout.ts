@@ -72,6 +72,9 @@ export async function createStripeTestCalendarCheckout(
 
   const body = new URLSearchParams({
     mode: "payment",
+    // Card-only keeps the v1 settlement path synchronous. Delayed payment
+    // methods need a separately reviewed async-payment webhook state machine.
+    "payment_method_types[0]": "card",
     locale: "auto",
     "line_items[0][price_data][currency]": "usd",
     "line_items[0][price_data][unit_amount]": String(quote.totalCents),
