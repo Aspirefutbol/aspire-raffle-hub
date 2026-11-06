@@ -341,5 +341,104 @@ select is((select total_cents from calendar_private.reservation_events
       (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='reclaimed')),
   3000::bigint, '3x paid ledger totals $30 without duplicate day ownership');
 
+-- Expired Stripe TEST sessions must not hold a player's days forever.
+-- Production has no API role access; the trusted server must first obtain
+-- terminal expired/unpaid proof from Stripe before invoking the private RPC.
+select ok(not has_function_privilege('authenticated',
+    'calendar_private.expire_test_checkout(uuid,text,timestamptz)', 'EXECUTE'),
+  'browser cannot invoke the private TEST session expiry transaction');
+select ok(not has_function_privilege('service_role',
+    'calendar_private.expire_test_checkout(uuid,text,timestamptz)', 'EXECUTE'),
+  'Supabase Data API service role cannot force-release sponsored days');
+
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+insert into pg_temp.calendar_test_results
+select 'expiring', calendar_private.reserve(
+  pg_temp.cid('org-a'), pg_temp.cid('campaign-a'), pg_temp.participant('player-a'),
+  pg_temp.cid('reservation-key-expiring'), array[14], 2,
+  'Unpaid Supporter', 'unpaid@example.test');
+select is((calendar_private.attach_test_checkout(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='expiring'),
+  'cs_test_synthetic_expiring', clock_timestamp() + interval '45 minutes')->>'status'),
+  'CHECKOUT_PENDING', 'synthetic unpaid session starts checkout pending');
+reset role;
+
+select throws_ok($calendar_expiry_early$
+  select calendar_private.expire_test_checkout(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='expiring'),
+    'cs_test_synthetic_expiring',
+    (select expires_at from calendar_private.reservations
+      where id=(select (result->>'id')::uuid
+        from pg_temp.calendar_test_results where label='expiring')))
+$calendar_expiry_early$, '23514', null, 'unexpired TEST checkout cannot free a sponsored day');
+
+-- Simulate a terminally expired session and matching verified Stripe
+-- response. The external HTTP verification itself is covered in TS tests.
+update calendar_private.reservations
+  set expires_at=clock_timestamp()-interval '1 minute'
+  where id=(select (result->>'id')::uuid
+    from pg_temp.calendar_test_results where label='expiring');
+
+select is((calendar_private.expire_test_checkout(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='expiring'),
+  'cs_test_synthetic_expiring',
+  (select expires_at from calendar_private.reservations
+    where id=(select (result->>'id')::uuid
+      from pg_temp.calendar_test_results where label='expiring')))->>'status'),
+  'EXPIRED', 'matching terminal TEST expiry atomically releases checkout pending');
+select is((select state from calendar_private.reservation_days
+    where reservation_id=(select (result->>'id')::uuid
+      from pg_temp.calendar_test_results where label='expiring')),
+  'RELEASED', 'expired TEST checkout releases its exclusive day');
+select is((calendar_private.expire_test_checkout(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='expiring'),
+  'cs_test_synthetic_expiring',
+  (select expires_at from calendar_private.reservations
+    where id=(select (result->>'id')::uuid
+      from pg_temp.calendar_test_results where label='expiring')))->>'replayed')::boolean,
+  true, 'expiry retry is idempotent');
+
+select throws_ok($calendar_wrong_expiry$
+  select calendar_private.expire_test_checkout(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='expiring'),
+    'cs_test_synthetic_wrong',
+    (select expires_at from calendar_private.reservations
+      where id=(select (result->>'id')::uuid
+        from pg_temp.calendar_test_results where label='expiring')))
+$calendar_wrong_expiry$, '23514', null, 'wrong session cannot release sponsored inventory');
+
+select throws_ok($calendar_after_expiry$
+  select calendar_private.confirm_test_checkout_paid(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='expiring'),
+    'cs_test_synthetic_expiring', 'evt_synthetic_after_expiry', 2800)
+$calendar_after_expiry$, '23514', null, 'late settled event cannot pay an expired released reservation');
+
+select throws_ok($calendar_paid_cannot_expire$
+  select calendar_private.expire_test_checkout(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+    'cs_test_synthetic_checkout_1',
+    (select expires_at from calendar_private.reservations
+      where id=(select (result->>'id')::uuid
+        from pg_temp.calendar_test_results where label='sibling')))
+$calendar_paid_cannot_expire$, '23514', null, 'already paid checkout cannot be expired or released');
+
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+insert into pg_temp.calendar_test_results
+select 'reused_after_checkout_expiry', calendar_private.reserve(
+  pg_temp.cid('org-a'), pg_temp.cid('campaign-a'), pg_temp.participant('player-a'),
+  pg_temp.cid('reservation-key-reused-after-expiry'), array[14], 1,
+  'New Supporter', 'new@example.test');
+reset role;
+select is((select result->>'status' from pg_temp.calendar_test_results
+    where label='reused_after_checkout_expiry'),
+  'HELD', 'verified expired unpaid checkout frees the calendar day for a new sponsor');
+select is((select count(*) from calendar_private.reservation_events
+    where reservation_id=(select (result->>'id')::uuid
+      from pg_temp.calendar_test_results where label='expiring')
+      and event_type='EXPIRED'),
+  1::bigint, 'expired pending checkout has exactly one immutable audit event');
+
 select * from finish();
 rollback;
