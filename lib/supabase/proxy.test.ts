@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { canonicalizeNetlifyDeployUrl } from "./proxy";
+import { canonicalizeNetlifyDeployUrl, isPublicPath } from "./proxy";
 
 const SITE = "https://aspire-raffle-hub-staging.netlify.app";
 const location = (url: string, ...site: [string?]) =>
@@ -50,5 +50,24 @@ describe("canonicalizeNetlifyDeployUrl", () => {
     expect(location("https://main--raffle.aspirefutbol.com/login?next=%2F", "https://raffle.aspirefutbol.com")).toBe(
       "https://raffle.aspirefutbol.com/login?next=%2F",
     );
+  });
+});
+
+describe("synthetic calendar preview authentication boundary", () => {
+  it("allows exactly the public synthetic preview route without adult login", () => {
+    expect(isPublicPath("/calendar/aspire-south")).toBe(true);
+    expect(isPublicPath("/login")).toBe(true);
+    expect(isPublicPath("/s/approved-seller")).toBe(true);
+  });
+
+  it("does not expand access to reservations, checkout, admin, or lookalike paths", () => {
+    for (const path of [
+      "/calendar", "/calendar/aspire-south/", "/calendar/aspire-south/checkout",
+      "/calendar/aspire-south/reserve", "/calendar/aspire-south/admin",
+      "/calendar/aspire-south-other", "/calendar/private",
+      "/api/calendar/reservations", "/o/aspire-south", "/api/calendar/checkout",
+    ]) {
+      expect(isPublicPath(path), path).toBe(false);
+    }
   });
 });
