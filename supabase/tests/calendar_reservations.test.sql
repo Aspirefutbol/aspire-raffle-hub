@@ -198,5 +198,58 @@ select is((select count(*) from calendar_private.reservation_days
 select is((select count(*) from calendar_private.reservations where status='PAID'),0::bigint,
   'no test or browser reservation marked paid');
 
+-- Test-only elevation: the production schema/function grants remain revoked.
+select ok(not has_function_privilege('authenticated',
+    'calendar_private.attach_test_checkout(uuid,text,timestamptz)', 'EXECUTE'),
+  'new checkout association is not callable by the authenticated API role');
+grant execute on function calendar_private.attach_test_checkout(uuid,text,timestamptz)
+  to authenticated;
+
+set local role authenticated;
+select pg_temp.as_user('a-admin');
+insert into pg_temp.calendar_test_results
+select 'checkout', calendar_private.attach_test_checkout(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+  'cs_test_synthetic_checkout_1', clock_timestamp() + interval '45 minutes');
+
+select is((select result->>'status' from pg_temp.calendar_test_results where label='checkout'),
+  'CHECKOUT_PENDING', 'held day becomes checkout pending atomically');
+select is((select state from calendar_private.reservation_days
+  where reservation_id=(select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling')),
+  'CHECKOUT_PENDING', 'day inventory remains locked through Stripe TEST checkout');
+
+select is((calendar_private.attach_test_checkout(
+  (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+  'cs_test_synthetic_checkout_1', clock_timestamp() + interval '45 minutes')->>'replayed')::boolean,
+  true, 'same session attaches idempotently without second event');
+
+select throws_ok($
+  select calendar_private.attach_test_checkout(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+    'cs_test_wrong_checkout_2', clock_timestamp() + interval '45 minutes')$,
+  '23514', null, 'cannot swap another checkout into a pending reservation');
+
+select throws_ok($
+  select calendar_private.reserve(
+    pg_temp.cid('org-a'), pg_temp.cid('campaign-a'), pg_temp.participant('player-a2'),
+    pg_temp.cid('reservation-key-9'), array[10], 1,
+    'Collision', 'collision@example.test')$,
+  '23505', null, 'checkout pending day cannot be claimed again');
+
+select pg_temp.as_user('b-admin');
+select throws_ok($
+  select calendar_private.attach_test_checkout(
+    (select (result->>'id')::uuid from pg_temp.calendar_test_results where label='sibling'),
+    'cs_test_cross_tenant', clock_timestamp() + interval '45 minutes')$,
+  '42501', null, 'another tenant cannot attach a session to Aspire South');
+
+reset role;
+select is((select count(*) from calendar_private.reservation_events
+    where event_type='CHECKOUT_PENDING'),1::bigint,
+  'exactly one append-only checkout pending event');
+select is((select count(*) from calendar_private.reservations
+    where status='PAID'),0::bigint,
+  'Stripe TEST handoff alone never marks a sponsorship paid');
+
 select * from finish();
 rollback;
