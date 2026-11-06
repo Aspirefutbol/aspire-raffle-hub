@@ -94,6 +94,17 @@ jobs:
           npm run start > next.log 2>&1 &
           npx wait-on -t 60000 http://localhost:3000/login
           E2E_BASE_URL=http://localhost:3000 npm run test:e2e
+      # Read-only review evidence: Playwright visits the synthetic public
+      # route; no Stripe credentials, real participants, or migrations on a
+      # shared staging environment are needed for these four screenshots.
+      - name: Upload Aspire South synthetic director preview
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aspire-south-director-synthetic-preview
+          path: test-results/aspire-south-preview/
+          if-no-files-found: error
+          retention-days: 7
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
