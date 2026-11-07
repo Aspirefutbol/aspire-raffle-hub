@@ -1,0 +1,126 @@
+name: Aspire South Synthetic Preview
+
+# Safe preview lane for Draft PR #19. This intentionally does NOT connect to
+# or migrate the hosted Supabase staging database. It deploys only a synthetic
+# review build to a non-production Netlify draft URL.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/calendar-fundraiser-aspire-south]
+
+concurrency:
+  group: aspire-south-synthetic-preview
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/feat/calendar-fundraiser-aspire-south'
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 6da8219b-6bb1-4029-bd4a-a71e7d6eb4c1
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SITE_URL: https://synthetic-preview.invalid
+      SUPABASE_SECRET_KEY: synthetic-preview-not-a-real-secret
+    steps:
+      - name: Require preview configuration
+        run: |
+          missing=""
+          for v in NETLIFY_AUTH_TOKEN NETLIFY_SITE_ID NEXT_PUBLIC_SUPABASE_URL; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing synthetic preview configuration:$missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Wait for full CI on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | if .status == "completed" then .conclusion else "pending" end')
+            if [ "$result" = success ]; then exit 0; fi
+            if [ "$result" != pending ] && [ -n "$result" ] && [ "$result" != null ]; then
+              echo "::error::CI did not pass: $result"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::Timed out waiting for CI"
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+
+      - name: Validate synthetic preview locally
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test -- --run lib/calendar
+
+      # Netlify already owns the preview site's public Supabase configuration.
+      # Do not duplicate those values into GitHub; the deploy command loads the
+      # site's configured build/runtime environment.
+
+      - name: Deploy non-production synthetic preview
+        id: deploy
+        run: |
+          npx netlify-cli@27.12.0 deploy --build --site "$NETLIFY_SITE_ID"             --message "Aspire South synthetic preview ${GITHUB_SHA::7}" --json > /tmp/deploy.json
+          cat /tmp/deploy.json
+          deploy_url="$(node -e 'const f=require("fs");const j=JSON.parse(f.readFileSync("/tmp/deploy.json","utf8"));process.stdout.write(j.deploy_url||j.deploy_ssl_url||j.url||"")')"
+          if [ -z "$deploy_url" ]; then
+            echo "::error::Netlify did not return a preview URL."
+            exit 1
+          fi
+          echo "deploy_url=$deploy_url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-test only the synthetic Aspire South route
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deploy_url }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code="$(curl -sS -D /tmp/headers -o /tmp/page.html -w "%{http_code}" "$PREVIEW_URL/calendar/aspire-south" || true)"
+            if [ "$code" = "200" ] && grep -qi "Aspire South" /tmp/page.html; then
+              if ! grep -qiE '^x-robots-tag:.*noindex' /tmp/headers; then
+                echo "::error::Synthetic route must return an X-Robots-Tag noindex header."
+                exit 1
+              fi
+              if ! grep -qiE '^cache-control:.*no-store' /tmp/headers; then
+                echo "::error::Synthetic route must not be cached by intermediaries."
+                exit 1
+              fi
+              echo "Synthetic preview smoke check passed at $PREVIEW_URL/calendar/aspire-south"
+              exit 0
+            fi
+            echo "Attempt $attempt: preview not ready yet (HTTP $code)."
+            sleep 10
+          done
+          echo "::error::Synthetic preview smoke check failed."
+          exit 1
+
+      - name: Publish preview URL in job summary
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deploy_url }}
+        run: |
+          {
+            echo "## Aspire South synthetic preview"
+            echo ""
+            echo "Safe synthetic review only — no production data, no hosted DB migration, no live Stripe."
+            echo ""
+            echo "$PREVIEW_URL/calendar/aspire-south"
+          } >> "$GITHUB_STEP_SUMMARY"

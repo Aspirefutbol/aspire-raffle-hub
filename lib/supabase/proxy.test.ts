@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { canonicalizeNetlifyDeployUrl } from "./proxy";
+import { canonicalizeNetlifyDeployUrl, isPublicPath } from "./proxy";
 
 const SITE = "https://aspire-raffle-hub-staging.netlify.app";
 const location = (url: string, ...site: [string?]) =>
@@ -12,6 +12,13 @@ describe("canonicalizeNetlifyDeployUrl", () => {
       "https://aspire-raffle-hub-staging.netlify.app/auth/confirm?token_hash=test&type=magiclink&next=%2F",
     );
     expect(location("https://6acc308bfc7dc0811fd5118d--aspire-raffle-hub-staging.netlify.app/")).toBe(`${SITE}/`);
+  });
+
+  it("leaves the exact synthetic Aspire South preview on a deploy alias", () => {
+    expect(location("https://abc123--aspire-raffle-hub-staging.netlify.app/calendar/aspire-south")).toBeNull();
+    expect(location("https://abc123--aspire-raffle-hub-staging.netlify.app/calendar/aspire-south/checkout")).toBe(
+      "https://aspire-raffle-hub-staging.netlify.app/calendar/aspire-south/checkout",
+    );
   });
 
   it("does not redirect the canonical hostname to itself", () => {
@@ -50,5 +57,24 @@ describe("canonicalizeNetlifyDeployUrl", () => {
     expect(location("https://main--raffle.aspirefutbol.com/login?next=%2F", "https://raffle.aspirefutbol.com")).toBe(
       "https://raffle.aspirefutbol.com/login?next=%2F",
     );
+  });
+});
+
+describe("synthetic calendar preview authentication boundary", () => {
+  it("allows exactly the public synthetic preview route without adult login", () => {
+    expect(isPublicPath("/calendar/aspire-south")).toBe(true);
+    expect(isPublicPath("/login")).toBe(true);
+    expect(isPublicPath("/s/approved-seller")).toBe(true);
+  });
+
+  it("does not expand access to reservations, checkout, admin, or lookalike paths", () => {
+    for (const path of [
+      "/calendar", "/calendar/aspire-south/", "/calendar/aspire-south/checkout",
+      "/calendar/aspire-south/reserve", "/calendar/aspire-south/admin",
+      "/calendar/aspire-south-other", "/calendar/private",
+      "/api/calendar/reservations", "/o/aspire-south", "/api/calendar/checkout",
+    ]) {
+      expect(isPublicPath(path), path).toBe(false);
+    }
   });
 });
