@@ -292,3 +292,36 @@ The private pgTAP tests also check no API grants, adult/tenant isolation,
 per-player inventory, redaction of supporter/payment details, and expired
 unstarted holds. This work does not alter PR #15, create a public donor route,
 or connect live player data.
+
+## Positive sponsored-day visual treatment (November 7 synthetic branch)
+
+The isolated **fictional** Aspire South preview now renders paid fixture days with
+a positive green Sponsored/Patrocinado state, checkmark and retained base day
+price. A multiplier above 1× receives an additional impact badge (including
+4× Champion/Campeón and 5× Legacy/Legado), never a second claim on that day.
+No supporter name, email, receipt, payment reference or personal identifier
+is published in a sponsored tile.
+
+The progress header shows both financial progress against the configured
+campaign goal and the separate **distinct-day** count out of 31. Milestone
+copy is bilingual at 8, 16 and 24 paid days; the full completion treatment
+appears only at 31 distinct confirmed paid days. The preview has a clearly
+labeled **synthetic scenario switch** for director testing of a fully funded
+calendar. It resets unsent supporter information and selections; it performs
+no payment, reservation, webhook, or persistence operation.
+
+The server-only `parsePrivateCalendarReadModels` adapter now projects
+`sponsoredDayCount`, `dayCompletionPercent` and `calendarComplete` from
+private PAID days **only**. CHECKOUT_PENDING, HELD and REFUNDED inventory is
+never counted as sponsored. The protected SQL backing functions and grants
+have not changed. The public preview continues to use only fictional
+fixtures; it is *not* wired to the authenticated private progress model.
+
+Before launching this visual treatment for live donors, a security-reviewed
+server-to-public read adapter must derive exact paid-day multipliers from a
+trusted, tenant-authorized, verified-payment read (or omit multiplier badges).
+Never derive "paid" from a browser redirect, client input, localStorage or
+pending checkout record. Preserve exclusivity for completed/refunded days and
+protect donor identity in every public response. This draft is not a live
+checkout, does not authorize PR #15 sharing-link recovery, and must not be
+merged or deployed to production without separate director/security approval.
