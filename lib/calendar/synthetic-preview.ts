@@ -75,6 +75,17 @@ export function syntheticCalendarMilestone(sponsoredCount: number):
   return "start";
 }
 
+/** Remaining distinct PAID days to the next celebration; never count pending reservations. */
+export function syntheticCalendarNextMilestone(sponsoredCount: number):
+  { target: 8 | 16 | 24 | 31; remaining: number } | null {
+  // Also validates the count at the model boundary, including NaN/fractions.
+  const current = syntheticCalendarMilestone(sponsoredCount);
+  if (current === "complete") return null;
+  const target = ([8, 16, 24, 31] as const).find(value => sponsoredCount < value);
+  if (target === undefined) throw new Error("No next calendar milestone.");
+  return { target, remaining: target - sponsoredCount };
+}
+
 export function syntheticCalendarProgress(
   paidDays: readonly SyntheticPaidDay[],
   goalCents: number,

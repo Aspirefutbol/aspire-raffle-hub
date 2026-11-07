@@ -15,6 +15,7 @@ test("synthetic sponsored tiles celebrate verified-fixture payments, preserve pr
   await page.goto("/calendar/aspire-south");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("7 / 31 days sponsored");
   await expect(page.getByTestId("calendar-milestone")).toBeVisible();
+  await expect(page.getByTestId("calendar-next-milestone")).toContainText("8 sponsored days · 1 day to go");
 
   const paid = page.getByTestId("calendar-day-2");
   await expect(paid).toBeDisabled();
@@ -40,6 +41,8 @@ test("full synthetic calendar has a celebratory bilingual completion state and n
   await page.getByTestId("scenario-complete").click();
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("31 / 31 days sponsored");
   await expect(page.getByTestId("calendar-complete")).toContainText("Calendar Complete!");
+  await expect(page.getByTestId("calendar-sold-out")).toContainText("Every day has a sponsor");
+  await expect(page.getByTestId("calendar-next-milestone")).toHaveCount(0);
   await expect(page.getByRole("progressbar", { name: "days sponsored" })).toHaveAttribute("aria-valuenow", "31");
   await expect(page.getByText("Raised").locator("..")).toContainText("$614");
   await expect(page.getByTestId("calendar-day-31")).toBeDisabled();
@@ -47,6 +50,7 @@ test("full synthetic calendar has a celebratory bilingual completion state and n
 
   await page.getByRole("button", { name: "Español" }).click();
   await expect(page.getByTestId("calendar-complete")).toContainText("¡Calendario completo!");
+  await expect(page.getByTestId("calendar-sold-out")).toContainText("Todos los días tienen patrocinador");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("31 / 31 días patrocinados");
   await expect(page.getByTestId("calendar-day-2")).toContainText("$2");
   await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legado");
@@ -66,6 +70,10 @@ test("a preview checkout is not a payment and cannot convert selected days to sp
   await page.goto("/calendar/aspire-south");
   await page.getByTestId("calendar-day-31").click();
   await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByTestId("synthetic-contact-warning")).toContainText("use fictional contact details");
+  await expect(page.locator("form")).toHaveAttribute("autocomplete", "off");
+  await expect(page.getByLabel("Your name")).toHaveAttribute("autocomplete", "off");
+  await expect(page.getByLabel("Email")).toHaveAttribute("autocomplete", "off");
   await page.getByLabel("Your name").fill("Fictional Supporter");
   await page.getByLabel("Email").fill("fictional@example.test");
   await page.getByRole("button", { name: "Continue" }).click();
@@ -109,6 +117,10 @@ test("milestone director scenarios show paid-only progress at 8, 16 and 24 days 
     await expect(page.getByTestId("sponsored-day-progress")).toContainText(`${example.days} / 31 days sponsored`);
     await expect(page.getByRole("progressbar", { name: "days sponsored" })).toHaveAttribute("aria-valuenow", String(example.days));
     await expect(page.getByTestId("calendar-milestone")).toContainText(example.english);
+    const target = example.days === 8 ? 16 : example.days === 16 ? 24 : 31;
+    const remaining = target - example.days;
+    await expect(page.getByTestId("calendar-next-milestone"))
+      .toContainText(`${target} sponsored days · ${remaining} days to go`);
     await expect(page.getByTestId("calendar-milestone")).toHaveAttribute("role", "status");
     await expect(page.getByTestId("calendar-milestone")).toHaveAttribute("aria-live", "polite");
     await expect(page.getByTestId("calendar-milestone")).toHaveClass(/bg-emerald-50/);

@@ -5,6 +5,7 @@ import {
   syntheticCalendarAtCount,
   syntheticCalendarProgress,
   syntheticCalendarMilestone,
+  syntheticCalendarNextMilestone,
 } from "./synthetic-preview";
 
 describe("fictional Aspire South calendar preview model", () => {
@@ -85,6 +86,32 @@ describe("fictional Aspire South calendar preview model", () => {
     for (const count of [-1, 32, 2.5, NaN]) {
       expect(() => syntheticCalendarMilestone(count)).toThrow(RangeError);
     }
+  });
+
+  it("shows remaining distinct paid days to the next celebration (not extra impact)", () => {
+    const examples = [
+      [0, { target: 8, remaining: 8 }],
+      [7, { target: 8, remaining: 1 }],
+      [8, { target: 16, remaining: 8 }],
+      [15, { target: 16, remaining: 1 }],
+      [16, { target: 24, remaining: 8 }],
+      [23, { target: 24, remaining: 1 }],
+      [24, { target: 31, remaining: 7 }],
+      [30, { target: 31, remaining: 1 }],
+      [31, null],
+    ] as const;
+    for (const [count, expected] of examples) {
+      expect(syntheticCalendarNextMilestone(count)).toEqual(expected);
+    }
+    for (const invalid of [-1, 32, NaN, 7.5]) {
+      expect(() => syntheticCalendarNextMilestone(invalid)).toThrow(RangeError);
+    }
+    const initial = syntheticCalendarProgress(aspireSouthSyntheticPreview.paidDays, 50000);
+    expect(syntheticCalendarNextMilestone(initial.sponsoredCount)).toEqual({
+      target: 8, remaining: 1,
+    });
+    // Existing 4x and 5x badges create funding impact, not additional paid days.
+    expect(initial.additionalImpactCents).toBeGreaterThan(0);
   });
 
   it("never adds another primary sponsor for a higher multiplier", () => {

@@ -11,6 +11,7 @@ import {
   syntheticCalendarAtCount,
   syntheticCalendarProgress,
   syntheticCalendarMilestone,
+  syntheticCalendarNextMilestone,
 } from "@/lib/calendar/synthetic-preview";
 
 type Language = "en" | "es";
@@ -36,6 +37,10 @@ const copy = {
     selected: "Selected",
     daysFunded: "days sponsored",
     milestoneStart: "Every sponsored day moves this season forward.",
+    nextMilestone: (remaining: number, target: number) =>
+      `Next milestone: ${target} sponsored days · ${remaining} ${remaining === 1 ? "day" : "days"} to go`,
+    allDaysSponsored: "Every day has a sponsor. Thank you for completing this calendar!",
+    syntheticContactHelp: "Demo only: use fictional contact details. Nothing is saved or sent.",
     milestoneFirst: "First milestone reached — the calendar is gaining momentum!",
     milestoneHalf: "Halfway there — thank you for building this together!",
     milestoneFinal: "Final stretch — the calendar is nearly complete!",
@@ -63,7 +68,7 @@ const copy = {
     player: "Player",
     team: "Team",
     supporter: "Your information",
-    supporterHelp: "We use this only for your sponsorship confirmation and receipt.",
+    supporterHelp: "Use fictional details to preview a future confirmation. No receipt will be issued.",
     name: "Your name",
     email: "Email",
     phone: "Phone",
@@ -91,6 +96,10 @@ const copy = {
     selected: "Seleccionado",
     daysFunded: "días patrocinados",
     milestoneStart: "Cada día patrocinado impulsa esta temporada.",
+    nextMilestone: (remaining: number, target: number) =>
+      `Siguiente meta: ${target} días patrocinados · faltan ${remaining} ${remaining === 1 ? "día" : "días"}`,
+    allDaysSponsored: "Todos los días tienen patrocinador. ¡Gracias por completar este calendario!",
+    syntheticContactHelp: "Solo demostración: usa datos de contacto ficticios. No se guarda ni se envía nada.",
     milestoneFirst: "¡Primera meta alcanzada! El calendario está tomando impulso.",
     milestoneHalf: "¡Llegamos a la mitad! Gracias por construir esto juntos.",
     milestoneFinal: "¡Última etapa! El calendario está casi completo.",
@@ -118,7 +127,7 @@ const copy = {
     player: "Jugador",
     team: "Equipo",
     supporter: "Tu información",
-    supporterHelp: "La usamos solamente para la confirmación y el recibo de tu patrocinio.",
+    supporterHelp: "Usa datos ficticios para ver una confirmación de ejemplo. No se emitirá ningún recibo.",
     name: "Tu nombre",
     email: "Correo electrónico",
     phone: "Teléfono",
@@ -161,6 +170,7 @@ export function AspireSouthCalendarPreview() {
     complete: t.scenarioFull,
   };
   const sponsoredDays = progress.sponsoredDays;
+  const nextMilestone = syntheticCalendarNextMilestone(progress.sponsoredCount);
   const quote = useMemo(() => calendarImpactQuote(selected, multiplier), [selected, multiplier]);
   const milestone = {
     start: t.milestoneStart,
@@ -303,6 +313,11 @@ export function AspireSouthCalendarPreview() {
                   {milestone}
                 </p>
               )}
+              {nextMilestone && (
+                <p data-testid="calendar-next-milestone" className="mt-2 text-xs font-semibold text-emerald-900" aria-live="polite">
+                  {t.nextMilestone(nextMilestone.remaining, nextMilestone.target)}
+                </p>
+              )}
             </div>
             <div className="rounded-control border border-line bg-canvas px-4 py-3 text-sm text-ink-soft">
               <p className="font-semibold text-ink">{t.secure}</p>
@@ -329,6 +344,11 @@ export function AspireSouthCalendarPreview() {
           <section className="mt-6 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
             <h2 className="text-xl font-bold text-ink">{t.choose}</h2>
             <p className="mt-1 text-sm text-muted">{t.hint}</p>
+            {progress.isComplete && (
+              <p data-testid="calendar-sold-out" role="status" className="mt-4 rounded-card border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-950">
+                {t.allDaysSponsored}
+              </p>
+            )}
 
             <div className="mt-6 grid grid-cols-3 gap-2 min-[360px]:grid-cols-4 sm:grid-cols-7 sm:gap-3">
               {allCalendarDays().map((day) => {
@@ -424,19 +444,20 @@ export function AspireSouthCalendarPreview() {
           <section className="mt-6 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
             <h2 className="text-xl font-bold text-ink">{t.supporter}</h2>
             <p className="mt-1 text-sm text-muted">{t.supporterHelp}</p>
+            <p data-testid="synthetic-contact-warning" className="mt-3 rounded-control border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{t.syntheticContactHelp}</p>
 
-            <form className="mt-6 space-y-4" onSubmit={submitSupporter}>
+            <form className="mt-6 space-y-4" onSubmit={submitSupporter} autoComplete="off">
               <label className="block text-sm font-medium text-ink">
                 {t.name}
-                <input value={supporter.name} onChange={(event) => setSupporter((current) => ({ ...current, name: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="name" maxLength={200} required />
+                <input value={supporter.name} onChange={(event) => setSupporter((current) => ({ ...current, name: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="off" maxLength={200} required />
               </label>
               <label className="block text-sm font-medium text-ink">
                 {t.email}
-                <input type="email" value={supporter.email} onChange={(event) => setSupporter((current) => ({ ...current, email: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="email" maxLength={254} required />
+                <input type="email" value={supporter.email} onChange={(event) => setSupporter((current) => ({ ...current, email: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="off" maxLength={254} required />
               </label>
               <label className="block text-sm font-medium text-ink">
                 {t.phone}
-                <input type="tel" value={supporter.phone} onChange={(event) => setSupporter((current) => ({ ...current, phone: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="tel" maxLength={50} />
+                <input type="tel" value={supporter.phone} onChange={(event) => setSupporter((current) => ({ ...current, phone: event.target.value }))} className="mt-1 min-h-11 w-full rounded-control border border-line-strong bg-surface px-3" autoComplete="off" maxLength={50} />
               </label>
 
               {error && <p role="alert" className="rounded-control border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
