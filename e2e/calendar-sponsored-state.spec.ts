@@ -1,5 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+test("synthetic preview is excluded from search indexing and browser caching", async ({ page }) => {
+  const response = await page.goto("/calendar/aspire-south");
+  expect(response?.status()).toBe(200);
+  const headers = response!.headers();
+  expect(headers["x-robots-tag"]).toContain("noindex");
+  expect(headers["x-robots-tag"]).toContain("nofollow");
+  expect(headers["cache-control"]).toContain("no-store");
+  expect(headers["referrer-policy"]).toBe("no-referrer");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+});
+
 test("synthetic sponsored tiles celebrate verified-fixture payments, preserve prices, and redact donors", async ({ page }) => {
   await page.goto("/calendar/aspire-south");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("7 / 31 days sponsored");
