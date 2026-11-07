@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aspireSouthSyntheticPreview,
+  completeSyntheticCalendar,
   syntheticCalendarProgress,
 } from "./synthetic-preview";
 
@@ -16,6 +17,36 @@ describe("fictional Aspire South calendar preview model", () => {
     expect(progress.additionalImpactCents).toBe(9000);
     expect(progress.raisedCents).toBe(18400);
     expect(progress.percentOfGoal).toBeCloseTo(36.8);
+  });
+
+
+  it("shows completion only for all 31 distinct fictional verified-paid days", () => {
+    const complete = completeSyntheticCalendar(aspireSouthSyntheticPreview.paidDays);
+    expect(complete).toHaveLength(31);
+    const result = syntheticCalendarProgress(complete, aspireSouthSyntheticPreview.goalCents);
+    expect(result.sponsoredCount).toBe(31);
+    expect(result.isComplete).toBe(true);
+    expect(result.dayCompletionPercent).toBe(100);
+    expect(result.baseCents).toBe(49600);
+    expect(result.additionalImpactCents).toBe(9000);
+    expect(result.raisedCents).toBe(58600);
+    expect(result.paidMultiplierByDay.get(2)).toBe(4);
+    expect(result.paidMultiplierByDay.get(28)).toBe(4);
+    expect(result.paidMultiplierByDay.get(31)).toBe(1);
+  });
+
+  it("keeps held, selected and unpaid checkout days out of the paid-only day progress", () => {
+    const original = syntheticCalendarProgress(aspireSouthSyntheticPreview.paidDays, 50000);
+    expect(original.sponsoredCount).toBe(7);
+    expect(original.isComplete).toBe(false);
+    expect(original.dayCompletionPercent).toBeCloseTo((7 / 31) * 100);
+    expect(original.paidMultiplierByDay.has(10)).toBe(false);
+    expect(original.paidMultiplierByDay.get(2)).toBe(4);
+    // A user's selected days are not input to this paid-only read model.
+    const selected = [10, 31];
+    selected.push(12);
+    expect(original.sponsoredDays.size).toBe(7);
+    expect(original.raisedCents).toBe(18400);
   });
 
   it("never adds another primary sponsor for a higher multiplier", () => {
