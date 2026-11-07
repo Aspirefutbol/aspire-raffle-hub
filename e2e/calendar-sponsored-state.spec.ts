@@ -11,6 +11,7 @@ test("synthetic sponsored tiles celebrate verified-fixture payments, preserve pr
   await expect(paid).toHaveClass(/bg-emerald-50/);
   await expect(paid).toContainText("$2");
   await expect(page.getByTestId("day-impact-2")).toHaveText("4× · Champion");
+  await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legacy");
   await expect(page.getByTestId("calendar-day-5")).toBeDisabled();
   await expect(page.getByTestId("day-impact-5")).toHaveCount(0);
 
@@ -19,6 +20,7 @@ test("synthetic sponsored tiles celebrate verified-fixture payments, preserve pr
   await page.getByRole("button", { name: "Español" }).click();
   await expect(page.getByTestId("calendar-day-2")).toHaveAttribute("aria-label", /Día 2, \$2, Patrocinado, 4×/);
   await expect(page.getByTestId("day-impact-2")).toHaveText("4× · Campeón");
+  await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legado");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("7 / 31 días patrocinados");
 });
 
@@ -28,7 +30,7 @@ test("full synthetic calendar has a celebratory bilingual completion state and n
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("31 / 31 days sponsored");
   await expect(page.getByTestId("calendar-complete")).toContainText("Calendar Complete!");
   await expect(page.getByRole("progressbar", { name: "days sponsored" })).toHaveAttribute("aria-valuenow", "31");
-  await expect(page.getByText("Raised").locator("..")).toContainText("$586");
+  await expect(page.getByText("Raised").locator("..")).toContainText("$614");
   await expect(page.getByTestId("calendar-day-31")).toBeDisabled();
   await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
 
@@ -36,7 +38,7 @@ test("full synthetic calendar has a celebratory bilingual completion state and n
   await expect(page.getByTestId("calendar-complete")).toContainText("¡Calendario completo!");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("31 / 31 días patrocinados");
   await expect(page.getByTestId("calendar-day-2")).toContainText("$2");
-  await expect(page.getByTestId("day-impact-28")).toHaveText("4× · Campeón");
+  await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legado");
 
   // Director-only fixture switch changes a visual sample, not a paid record.
   await page.getByTestId("scenario-partial").click();
