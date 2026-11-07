@@ -96,8 +96,13 @@ jobs:
           for attempt in 1 2 3 4 5 6; do
             code="$(curl -sS -D /tmp/headers -o /tmp/page.html -w "%{http_code}" "$PREVIEW_URL/calendar/aspire-south" || true)"
             if [ "$code" = "200" ] && grep -qi "Aspire South" /tmp/page.html; then
-              if ! grep -qi 'x-robots-tag:.*noindex' /tmp/headers && ! grep -qi 'name="robots".*noindex' /tmp/page.html; then
-                echo "::warning::Synthetic route did not surface an obvious noindex marker in the smoke response."
+              if ! grep -qiE '^x-robots-tag:.*noindex' /tmp/headers; then
+                echo "::error::Synthetic route must return an X-Robots-Tag noindex header."
+                exit 1
+              fi
+              if ! grep -qiE '^cache-control:.*no-store' /tmp/headers; then
+                echo "::error::Synthetic route must not be cached by intermediaries."
+                exit 1
               fi
               echo "Synthetic preview smoke check passed at $PREVIEW_URL/calendar/aspire-south"
               exit 0
