@@ -52,7 +52,7 @@ export function syntheticCalendarAtCount(
   const additions: SyntheticPaidDay[] = allCalendarDays()
     .filter(day => !source.sponsoredDays.has(day))
     .slice(0, targetCount - source.sponsoredCount)
-    .map(day => ({ day, multiplier: 1 }));
+    .map((day): SyntheticPaidDay => ({ day, multiplier: 1 }));
   return [...fixture, ...additions].sort((a, b) => a.day - b.day);
 }
 
