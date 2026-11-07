@@ -10,6 +10,7 @@ import {
   aspireSouthSyntheticPreview,
   completeSyntheticCalendar,
   syntheticCalendarProgress,
+  syntheticCalendarMilestone,
 } from "@/lib/calendar/synthetic-preview";
 
 type Language = "en" | "es";
@@ -148,13 +149,13 @@ export function AspireSouthCalendarPreview() {
   );
   const sponsoredDays = progress.sponsoredDays;
   const quote = useMemo(() => calendarImpactQuote(selected, multiplier), [selected, multiplier]);
-  const milestone = progress.sponsoredCount >= 24
-    ? t.milestoneFinal
-    : progress.sponsoredCount >= 16
-      ? t.milestoneHalf
-      : progress.sponsoredCount >= 8
-        ? t.milestoneFirst
-        : t.milestoneStart;
+  const milestone = {
+    start: t.milestoneStart,
+    first: t.milestoneFirst,
+    half: t.milestoneHalf,
+    final: t.milestoneFinal,
+    complete: t.completionMessage,
+  }[syntheticCalendarMilestone(progress.sponsoredCount)];
 
   function showScenario(next: "partial" | "complete") {
     setScenario(next);
