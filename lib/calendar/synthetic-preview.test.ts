@@ -14,9 +14,9 @@ describe("fictional Aspire South calendar preview model", () => {
     expect(aspireSouthSyntheticPreview.tenantSlug).toBe("aspire-south-synthetic");
     expect(progress.sponsoredDays).toEqual(new Set([2, 5, 8, 11, 17, 23, 28]));
     expect(progress.baseCents).toBe(9400);
-    expect(progress.additionalImpactCents).toBe(9000);
-    expect(progress.raisedCents).toBe(18400);
-    expect(progress.percentOfGoal).toBeCloseTo(36.8);
+    expect(progress.additionalImpactCents).toBe(11800);
+    expect(progress.raisedCents).toBe(21200);
+    expect(progress.percentOfGoal).toBeCloseTo(42.4);
   });
 
 
@@ -28,10 +28,10 @@ describe("fictional Aspire South calendar preview model", () => {
     expect(result.isComplete).toBe(true);
     expect(result.dayCompletionPercent).toBe(100);
     expect(result.baseCents).toBe(49600);
-    expect(result.additionalImpactCents).toBe(9000);
-    expect(result.raisedCents).toBe(58600);
+    expect(result.additionalImpactCents).toBe(11800);
+    expect(result.raisedCents).toBe(61400);
     expect(result.paidMultiplierByDay.get(2)).toBe(4);
-    expect(result.paidMultiplierByDay.get(28)).toBe(4);
+    expect(result.paidMultiplierByDay.get(28)).toBe(5);
     expect(result.paidMultiplierByDay.get(31)).toBe(1);
   });
 
@@ -46,7 +46,7 @@ describe("fictional Aspire South calendar preview model", () => {
     const selected = [10, 31];
     selected.push(12);
     expect(original.sponsoredDays.size).toBe(7);
-    expect(original.raisedCents).toBe(18400);
+    expect(original.raisedCents).toBe(21200);
   });
 
   it("never adds another primary sponsor for a higher multiplier", () => {
