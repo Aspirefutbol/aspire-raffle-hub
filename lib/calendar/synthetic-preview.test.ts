@@ -3,6 +3,7 @@ import {
   aspireSouthSyntheticPreview,
   completeSyntheticCalendar,
   syntheticCalendarProgress,
+  syntheticCalendarMilestone,
 } from "./synthetic-preview";
 
 describe("fictional Aspire South calendar preview model", () => {
@@ -47,6 +48,19 @@ describe("fictional Aspire South calendar preview model", () => {
     selected.push(12);
     expect(original.sponsoredDays.size).toBe(7);
     expect(original.raisedCents).toBe(21200);
+  });
+
+  it("uses distinct PAID-day thresholds for progress milestones only", () => {
+    const cases: Array<[number, string]> = [
+      [0, "start"], [7, "start"], [8, "first"], [15, "first"],
+      [16, "half"], [23, "half"], [24, "final"], [30, "final"], [31, "complete"],
+    ];
+    for (const [paidCount, milestone] of cases) {
+      expect(syntheticCalendarMilestone(paidCount)).toBe(milestone);
+    }
+    for (const count of [-1, 32, 2.5, NaN]) {
+      expect(() => syntheticCalendarMilestone(count)).toThrow(RangeError);
+    }
   });
 
   it("never adds another primary sponsor for a higher multiplier", () => {
