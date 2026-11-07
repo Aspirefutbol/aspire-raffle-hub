@@ -8,6 +8,7 @@ import {
 } from "@/lib/calendar/pricing";
 import {
   aspireSouthSyntheticPreview,
+  completeSyntheticCalendar,
   syntheticCalendarProgress,
 } from "@/lib/calendar/synthetic-preview";
 
@@ -30,6 +31,18 @@ const copy = {
     available: "Available",
     sponsored: "Sponsored",
     selected: "Selected",
+    daysFunded: "days sponsored",
+    milestoneStart: "Every sponsored day moves this season forward.",
+    milestoneFirst: "First milestone reached — the calendar is gaining momentum!",
+    milestoneHalf: "Halfway there — thank you for building this together!",
+    milestoneFinal: "Final stretch — the calendar is nearly complete!",
+    calendarComplete: "Calendar Complete!",
+    completionMessage: "All 31 days are sponsored. Thank you for showing up for this player!",
+    impactBadge: "Extra Impact",
+    scenario: "Synthetic preview scenario",
+    scenarioPartial: "In progress",
+    scenarioFull: "Complete calendar",
+    scenarioHelp: "Fictional paid-day examples only. Switching views does not reserve days or process payments.",
     choose: "Choose your day",
     hint: "The day number is the base sponsorship amount. Day 12 = $12. A full 31-day calendar totals $496.",
     impactTitle: "Choose your impact",
@@ -70,6 +83,18 @@ const copy = {
     available: "Disponible",
     sponsored: "Patrocinado",
     selected: "Seleccionado",
+    daysFunded: "días patrocinados",
+    milestoneStart: "Cada día patrocinado impulsa esta temporada.",
+    milestoneFirst: "¡Primera meta alcanzada! El calendario está tomando impulso.",
+    milestoneHalf: "¡Llegamos a la mitad! Gracias por construir esto juntos.",
+    milestoneFinal: "¡Última etapa! El calendario está casi completo.",
+    calendarComplete: "¡Calendario completo!",
+    completionMessage: "Los 31 días están patrocinados. ¡Gracias por apoyar a este jugador!",
+    impactBadge: "Impacto extra",
+    scenario: "Escenario de vista previa ficticia",
+    scenarioPartial: "En progreso",
+    scenarioFull: "Calendario completo",
+    scenarioHelp: "Ejemplos ficticios de días pagados. Cambiar la vista no reserva días ni procesa pagos.",
     choose: "Elige tu día",
     hint: "El número del día es la cantidad base del patrocinio. Día 12 = $12. El calendario completo suma $496.",
     impactTitle: "Elige tu impacto",
@@ -103,18 +128,44 @@ const copy = {
 } as const;
 
 const preview = aspireSouthSyntheticPreview;
-const progress = syntheticCalendarProgress(preview.paidDays, preview.goalCents);
-const sponsoredDays = progress.sponsoredDays;
+const completePreviewDays = completeSyntheticCalendar(preview.paidDays);
 
 export function AspireSouthCalendarPreview() {
   const [language, setLanguage] = useState<Language>("en");
+  const [scenario, setScenario] = useState<"partial" | "complete">("partial");
   const [step, setStep] = useState<Step>("calendar");
   const [selected, setSelected] = useState<number[]>([]);
   const [multiplier, setMultiplier] = useState<CalendarMultiplier>(1);
   const [supporter, setSupporter] = useState({ name: "", email: "", phone: "" });
   const [error, setError] = useState("");
   const t = copy[language];
+  const progress = useMemo(
+    () => syntheticCalendarProgress(
+      scenario === "complete" ? completePreviewDays : preview.paidDays,
+      preview.goalCents,
+    ),
+    [scenario],
+  );
+  const sponsoredDays = progress.sponsoredDays;
   const quote = useMemo(() => calendarImpactQuote(selected, multiplier), [selected, multiplier]);
+  const milestone = progress.sponsoredCount >= 24
+    ? t.milestoneFinal
+    : progress.sponsoredCount >= 16
+      ? t.milestoneHalf
+      : progress.sponsoredCount >= 8
+        ? t.milestoneFirst
+        : t.milestoneStart;
+
+  function showScenario(next: "partial" | "complete") {
+    setScenario(next);
+    // The preview is never a checkout or payment system. Reset unsent fields
+    // when changing fictional paid-day examples, so no stale selection is shown.
+    setSelected([]);
+    setMultiplier(1);
+    setSupporter({ name: "", email: "", phone: "" });
+    setError("");
+    setStep("calendar");
+  }
 
   function money(cents: number) {
     return "$" + (cents / 100).toFixed(0);
@@ -192,13 +243,60 @@ export function AspireSouthCalendarPreview() {
                 </div>
                 <p className="text-sm text-muted">{t.goal}: {money(preview.goalCents)}</p>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-line">
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full bg-line"
+                role="progressbar"
+                aria-label={t.raised}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress.percentOfGoal)}
+              >
                 <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress.percentOfGoal}%` }} />
               </div>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p data-testid="sponsored-day-progress" className="text-sm font-semibold text-ink">
+                  {progress.sponsoredCount} / 31 {t.daysFunded}
+                </p>
+                <p className="text-xs text-muted">{Math.round(progress.dayCompletionPercent)}%</p>
+              </div>
+              <div
+                className="mt-2 h-2 overflow-hidden rounded-full bg-line"
+                role="progressbar"
+                aria-label={t.daysFunded}
+                aria-valuemin={0}
+                aria-valuemax={31}
+                aria-valuenow={progress.sponsoredCount}
+              >
+                <div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${progress.dayCompletionPercent}%` }} />
+              </div>
+              {progress.isComplete ? (
+                <div data-testid="calendar-complete" role="status" className="mt-4 rounded-card border border-emerald-300 bg-emerald-50 px-4 py-3 text-emerald-950">
+                  <p className="font-bold">✓ {t.calendarComplete}</p>
+                  <p className="mt-1 text-sm">{t.completionMessage}</p>
+                </div>
+              ) : (
+                <p data-testid="calendar-milestone" className="mt-3 text-sm text-ink-soft">{milestone}</p>
+              )}
             </div>
             <div className="rounded-control border border-line bg-canvas px-4 py-3 text-sm text-ink-soft">
               <p className="font-semibold text-ink">{t.secure}</p>
               <p className="mt-1 max-w-xs text-xs leading-5">{t.secureBody}</p>
+              <div className="mt-3 border-t border-line pt-3">
+                <p className="text-xs font-semibold text-ink">{t.scenario}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" data-testid="scenario-partial" aria-pressed={scenario === "partial"}
+                    onClick={() => showScenario("partial")}
+                    className={`min-h-11 rounded-control border px-3 text-xs font-semibold ${scenario === "partial" ? "border-brand-500 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink"}`}>
+                    {t.scenarioPartial}
+                  </button>
+                  <button type="button" data-testid="scenario-complete" aria-pressed={scenario === "complete"}
+                    onClick={() => showScenario("complete")}
+                    className={`min-h-11 rounded-control border px-3 text-xs font-semibold ${scenario === "complete" ? "border-brand-500 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink"}`}>
+                    {t.scenarioFull}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-muted">{t.scenarioHelp}</p>
+              </div>
             </div>
           </div>
         </section>
@@ -208,15 +306,21 @@ export function AspireSouthCalendarPreview() {
             <h2 className="text-xl font-bold text-ink">{t.choose}</h2>
             <p className="mt-1 text-sm text-muted">{t.hint}</p>
 
-            <div className="mt-6 grid grid-cols-4 gap-2 sm:grid-cols-7 sm:gap-3">
+            <div className="mt-6 grid grid-cols-3 gap-2 min-[360px]:grid-cols-4 sm:grid-cols-7 sm:gap-3">
               {allCalendarDays().map((day) => {
                 const isSponsored = sponsoredDays.has(day);
+                const paidMultiplier = progress.paidMultiplierByDay.get(day);
+                const impactLabel = isSponsored && paidMultiplier && paidMultiplier > 1
+                  ? paidMultiplier >= 4
+                    ? `${paidMultiplier}× · ${multiplierLabels[language][paidMultiplier]}`
+                    : `${paidMultiplier}× · ${t.impactBadge}`
+                  : null;
                 const isSelected = selected.includes(day);
                 return (
                   <button
                     key={day}
                     data-testid={`calendar-day-${day}`}
-                    aria-label={`${t.day} ${day}, ${day}, ${isSponsored ? t.sponsored : isSelected ? t.selected : t.available}`}
+                    aria-label={`${t.day} ${day}, ${day}, ${isSponsored ? t.sponsored : isSelected ? t.selected : t.available}${impactLabel ? `, ${impactLabel}` : ""}`}
                     type="button"
                     disabled={isSponsored}
                     onClick={() => toggleDay(day)}
@@ -224,17 +328,23 @@ export function AspireSouthCalendarPreview() {
                     className={[
                       "min-h-20 rounded-card border p-2 text-left transition sm:min-h-24",
                       isSponsored
-                        ? "cursor-not-allowed border-line bg-canvas text-muted opacity-60"
+                        ? "cursor-not-allowed border-emerald-300 bg-emerald-50 text-emerald-950"
                         : isSelected
                           ? "border-brand-400 bg-brand-50 text-brand-900 ring-2 ring-brand-200"
                           : "border-line bg-surface text-ink hover:border-brand-300 hover:bg-brand-50/40",
                     ].join(" ")}
                   >
-                    <span className="block text-xs font-medium">
+                    <span className="block break-words text-[10px] font-semibold leading-4 sm:text-xs">
+                      {isSponsored && <span aria-hidden="true">✓ </span>}
                       {isSponsored ? t.sponsored : isSelected ? t.selected : t.available}
                     </span>
                     <span className="mt-2 block text-2xl font-bold tabular">{day}</span>
                     <span className="block text-xs">{"$" + day}</span>
+                    {impactLabel && (
+                      <span data-testid={`day-impact-${day}`} className="mt-1 block break-words rounded border border-amber-300 bg-amber-50 px-1 py-0.5 text-[10px] font-bold leading-3 text-amber-950">
+                        {impactLabel}
+                      </span>
+                    )}
                   </button>
                 );
               })}
