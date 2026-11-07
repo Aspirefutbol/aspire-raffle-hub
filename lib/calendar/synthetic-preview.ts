@@ -22,7 +22,7 @@ export const aspireSouthSyntheticPreview = {
     { day: 11, multiplier: 1 },
     { day: 17, multiplier: 1 },
     { day: 23, multiplier: 1 },
-    { day: 28, multiplier: 4 },
+    { day: 28, multiplier: 5 },
   ],
 } as const;
 
