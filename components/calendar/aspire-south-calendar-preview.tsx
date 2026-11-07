@@ -289,7 +289,19 @@ export function AspireSouthCalendarPreview() {
                   <p className="mt-1 text-sm">{t.completionMessage}</p>
                 </div>
               ) : (
-                <p data-testid="calendar-milestone" className="mt-3 text-sm text-ink-soft">{milestone}</p>
+                <p
+                  data-testid="calendar-milestone"
+                  role="status"
+                  aria-live="polite"
+                  className={["mt-4 rounded-card border px-4 py-3 text-sm font-medium",
+                    progress.sponsoredCount >= 8
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+                      : "border-line bg-canvas text-ink-soft",
+                  ].join(" ")}
+                >
+                  {progress.sponsoredCount >= 8 && <span aria-hidden="true">✓ </span>}
+                  {milestone}
+                </p>
               )}
             </div>
             <div className="rounded-control border border-line bg-canvas px-4 py-3 text-sm text-ink-soft">
