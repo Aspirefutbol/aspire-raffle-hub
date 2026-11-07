@@ -113,6 +113,11 @@ export function parsePrivateCalendarReadModels(
     campaignId: scope.campaignId,
     participantId: scope.participantId,
     sponsorCount: progress.sponsor_count,
+    // Distinct verified-PAID days are the only source of sponsored progress.
+    // HELD, CHECKOUT_PENDING and REFUNDED days never count as sponsored.
+    sponsoredDayCount: paidSet.size,
+    calendarComplete: paidSet.size === 31,
+    dayCompletionPercent: (paidSet.size / 31) * 100,
     paidDays: [...paidSet].sort((a, b) => a - b),
     baseCents: progress.base_cents,
     additionalImpactCents: progress.additional_impact_cents,
