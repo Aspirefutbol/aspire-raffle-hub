@@ -321,7 +321,7 @@ export function AspireSouthCalendarPreview() {
                   <button
                     key={day}
                     data-testid={`calendar-day-${day}`}
-                    aria-label={`${t.day} ${day}, ${day}, ${isSponsored ? t.sponsored : isSelected ? t.selected : t.available}${impactLabel ? `, ${impactLabel}` : ""}`}
+                    aria-label={`${t.day} ${day}, ${money(day * 100)}, ${isSponsored ? t.sponsored : isSelected ? t.selected : t.available}${impactLabel ? `, ${impactLabel}` : ""}`}
                     type="button"
                     disabled={isSponsored}
                     onClick={() => toggleDay(day)}
