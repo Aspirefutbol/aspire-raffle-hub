@@ -40,6 +40,9 @@ describe("private calendar read models — server-only reconciliation", () => {
     expect(result.totalCents).toBe(18400);
     expect(result.paidDays).toEqual(paidDays);
     expect(result.availableCount).toBe(21);
+    expect(result.sponsoredDayCount).toBe(7);
+    expect(result.calendarComplete).toBe(false);
+    expect(result.dayCompletionPercent).toBeCloseTo((7 / 31) * 100);
     expect(result.dayStates.find(x => x.day === 2)?.state).toBe("PAID");
     expect(result.dayStates.find(x => x.day === 4)?.state).toBe("CHECKOUT_PENDING");
     expect(result.dayStates.find(x => x.day === 7)?.state).toBe("HELD");
@@ -96,6 +99,54 @@ describe("private calendar read models — server-only reconciliation", () => {
     }
   });
 
+
+  it("celebrates completion only when all 31 days are verified PAID", () => {
+    const { progress, inventory } = fixtures();
+    const fullDays = Array.from({ length: 31 }, (_, idx) => idx + 1);
+    const full = parsePrivateCalendarReadModels(scope, {
+      ...progress,
+      paid_days: fullDays,
+      sponsor_count: 31,
+      base_cents: 49600,
+      additional_impact_cents: 9000,
+      total_cents: 58600,
+    }, {
+      ...inventory,
+      paid_days: fullDays,
+      checkout_pending_days: [],
+      held_days: [],
+      refunded_days: [],
+      unavailable_days: fullDays,
+    });
+    expect(full.sponsoredDayCount).toBe(31);
+    expect(full.calendarComplete).toBe(true);
+    expect(full.dayCompletionPercent).toBe(100);
+    expect(full.availableCount).toBe(0);
+    expect(full.baseCents).toBe(49600);
+    expect(full.additionalImpactCents).toBe(9000);
+
+    // An unpaid, pending, held or refunded final day cannot trigger completion.
+    const paid30 = fullDays.slice(0, 30);
+    const pending = parsePrivateCalendarReadModels(scope, {
+      ...progress,
+      paid_days: paid30,
+      sponsor_count: 30,
+      base_cents: 46500,
+      additional_impact_cents: 0,
+      total_cents: 46500,
+    }, {
+      ...inventory,
+      paid_days: paid30,
+      checkout_pending_days: [31],
+      held_days: [],
+      refunded_days: [],
+      unavailable_days: fullDays,
+    });
+    expect(pending.sponsoredDayCount).toBe(30);
+    expect(pending.calendarComplete).toBe(false);
+    expect(pending.dayStates[30].state).toBe("CHECKOUT_PENDING");
+  });
+
   it("refuses unexpected donor/Stripe fields in either private response", () => {
     const { progress, inventory } = fixtures();
     expect(() => parsePrivateCalendarReadModels(
@@ -128,6 +179,8 @@ describe("private calendar read models — server-only reconciliation", () => {
       },
     );
     expect(result.availableCount).toBe(31);
+    expect(result.sponsoredDayCount).toBe(0);
+    expect(result.calendarComplete).toBe(false);
     expect(result.totalCents).toBe(0);
     expect(result.dayStates.every(day => day.state === "AVAILABLE")).toBe(true);
   });
