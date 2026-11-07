@@ -274,8 +274,13 @@ export function AspireSouthCalendarPreview() {
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(progress.percentOfGoal)}
+                aria-valuetext={`${money(progress.raisedCents)} / ${money(preview.goalCents)}`}
               >
                 <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress.percentOfGoal}%` }} />
+              </div>
+              <div data-testid="paid-impact-breakdown" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted">
+                <p>{t.baseValue}: <strong className="font-semibold text-ink">{money(progress.baseCents)}</strong></p>
+                <p>{t.addedImpact}: <strong className="font-semibold text-ink">{money(progress.additionalImpactCents)}</strong></p>
               </div>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <p data-testid="sponsored-day-progress" className="text-sm font-semibold text-ink">
@@ -290,6 +295,7 @@ export function AspireSouthCalendarPreview() {
                 aria-valuemin={0}
                 aria-valuemax={31}
                 aria-valuenow={progress.sponsoredCount}
+                aria-valuetext={`${progress.sponsoredCount} / 31 ${t.daysFunded}`}
               >
                 <div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${progress.dayCompletionPercent}%` }} />
               </div>

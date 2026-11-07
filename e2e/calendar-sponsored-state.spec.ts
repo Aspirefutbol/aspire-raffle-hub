@@ -14,6 +14,14 @@ test("synthetic preview is excluded from search indexing and browser caching", a
 test("synthetic sponsored tiles celebrate verified-fixture payments, preserve prices, and redact donors", async ({ page }) => {
   await page.goto("/calendar/aspire-south");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("7 / 31 days sponsored");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Base calendar value: $94");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Additional impact: $118");
+  await expect(page.getByRole("progressbar", { name: "Raised" }))
+    .toHaveAttribute("aria-valuetext", "$212 / $500");
+  await expect(page.getByRole("progressbar", { name: "days sponsored" }))
+    .toHaveAttribute("aria-valuetext", "7 / 31 days sponsored");
   await expect(page.getByTestId("calendar-milestone")).toBeVisible();
   await expect(page.getByTestId("calendar-next-milestone")).toContainText("8 sponsored days · 1 day to go");
 
@@ -34,6 +42,14 @@ test("synthetic sponsored tiles celebrate verified-fixture payments, preserve pr
   await expect(page.getByTestId("day-impact-2")).toHaveText("4× · Campeón");
   await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legado");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("7 / 31 días patrocinados");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Valor base del calendario: $94");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Impacto adicional: $118");
+  await expect(page.getByRole("progressbar", { name: "Recaudado" }))
+    .toHaveAttribute("aria-valuetext", "$212 / $500");
+  await expect(page.getByRole("progressbar", { name: "días patrocinados" }))
+    .toHaveAttribute("aria-valuetext", "7 / 31 días patrocinados");
 });
 
 test("full synthetic calendar has a celebratory bilingual completion state and no selectable days", async ({ page }) => {
@@ -45,6 +61,14 @@ test("full synthetic calendar has a celebratory bilingual completion state and n
   await expect(page.getByTestId("calendar-next-milestone")).toHaveCount(0);
   await expect(page.getByRole("progressbar", { name: "days sponsored" })).toHaveAttribute("aria-valuenow", "31");
   await expect(page.getByText("Raised").locator("..")).toContainText("$614");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Base calendar value: $496");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Additional impact: $118");
+  await expect(page.getByRole("progressbar", { name: "Raised" }))
+    .toHaveAttribute("aria-valuetext", "$614 / $500");
+  await expect(page.getByRole("progressbar", { name: "days sponsored" }))
+    .toHaveAttribute("aria-valuetext", "31 / 31 days sponsored");
   await expect(page.getByTestId("calendar-day-31")).toBeDisabled();
   await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
 
@@ -52,6 +76,12 @@ test("full synthetic calendar has a celebratory bilingual completion state and n
   await expect(page.getByTestId("calendar-complete")).toContainText("¡Calendario completo!");
   await expect(page.getByTestId("calendar-sold-out")).toContainText("Todos los días tienen patrocinador");
   await expect(page.getByTestId("sponsored-day-progress")).toContainText("31 / 31 días patrocinados");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Valor base del calendario: $496");
+  await expect(page.getByTestId("paid-impact-breakdown"))
+    .toContainText("Impacto adicional: $118");
+  await expect(page.getByRole("progressbar", { name: "Recaudado" }))
+    .toHaveAttribute("aria-valuetext", "$614 / $500");
   await expect(page.getByTestId("calendar-day-2")).toContainText("$2");
   await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legado");
 
