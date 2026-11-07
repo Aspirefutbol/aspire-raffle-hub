@@ -48,6 +48,16 @@ describe("Stripe TEST calendar webhook proof", () => {
     expect(() => verifyStripeTestCalendarPayment(body, sign(body, NOW, "whsec_fake_synthetic_secret"), SECRET, NOW)).toThrow(/signature/);
   });
 
+  it("fails closed on empty or oversized signed webhook bodies", () => {
+    const huge = JSON.stringify({ ...event, padding: "x".repeat(128 * 1024) });
+    expect(() => verifyStripeTestCalendarPayment(huge, sign(huge), SECRET, NOW))
+      .toThrow(/payload size/);
+    expect(() => verifyStripeTestCalendarPayment(Buffer.from(huge), sign(huge), SECRET, NOW))
+      .toThrow(/payload size/);
+    expect(() => verifyStripeTestCalendarPayment("", sign(""), SECRET, NOW))
+      .toThrow(/payload size/);
+  });
+
   it("accepts Stripe key rotation with multiple v1 signatures", () => {
     const body = JSON.stringify(event);
     const correct = sign(body);
