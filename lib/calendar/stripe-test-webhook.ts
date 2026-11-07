@@ -39,6 +39,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const TEST_SESSION = /^cs_test_[A-Za-z0-9_]{3,248}$/;
 const EVENT_ID = /^evt_[A-Za-z0-9_]{3,248}$/;
 const WEBHOOK_TOLERANCE_SECONDS = 300;
+// Keep a malformed or oversized signed event from consuming unbounded resources.
+// This guard is defense in depth; the future route must also limit HTTP body size.
+const MAX_WEBHOOK_BYTES = 128 * 1024;
 
 export function verifyStripeTestCalendarPayment(
   rawBody: string | Uint8Array,
@@ -54,6 +57,11 @@ export function verifyStripeTestCalendarPayment(
   }
   if (typeof signatureHeader !== "string" || signatureHeader.length > 4096) {
     throw new Error("Invalid Stripe signature.");
+  }
+
+  const bodyLength = typeof rawBody === "string" ? Buffer.byteLength(rawBody, "utf8") : rawBody.byteLength;
+  if (bodyLength === 0 || bodyLength > MAX_WEBHOOK_BYTES) {
+    throw new Error("Invalid Stripe webhook payload size.");
   }
 
   let timestamp: number | null = null;
