@@ -109,6 +109,9 @@ test("milestone director scenarios show paid-only progress at 8, 16 and 24 days 
     await expect(page.getByTestId("sponsored-day-progress")).toContainText(`${example.days} / 31 days sponsored`);
     await expect(page.getByRole("progressbar", { name: "days sponsored" })).toHaveAttribute("aria-valuenow", String(example.days));
     await expect(page.getByTestId("calendar-milestone")).toContainText(example.english);
+    await expect(page.getByTestId("calendar-milestone")).toHaveAttribute("role", "status");
+    await expect(page.getByTestId("calendar-milestone")).toHaveAttribute("aria-live", "polite");
+    await expect(page.getByTestId("calendar-milestone")).toHaveClass(/bg-emerald-50/);
     await expect(page.getByTestId("calendar-complete")).toHaveCount(0);
     await expect(page.getByTestId("calendar-day-2")).toBeDisabled();
     await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legacy");
