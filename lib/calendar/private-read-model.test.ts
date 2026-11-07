@@ -144,7 +144,7 @@ describe("private calendar read models — server-only reconciliation", () => {
     });
     expect(pending.sponsoredDayCount).toBe(30);
     expect(pending.calendarComplete).toBe(false);
-    expect(pending.dayStates[30].state).toBe("CHECKOUT_PENDING");
+    expect(pending.dayStates.find(day => day.day === 31)?.state).toBe("CHECKOUT_PENDING");
   });
 
   it("refuses unexpected donor/Stripe fields in either private response", () => {
