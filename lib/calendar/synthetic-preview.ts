@@ -40,6 +40,19 @@ export function completeSyntheticCalendar(
   return allCalendarDays().map(day => ({ day, multiplier: existing.get(day) ?? 1 }));
 }
 
+/** Deterministic milestones; a purchase attempt is never a paid milestone. */
+export function syntheticCalendarMilestone(sponsoredCount: number):
+  "start" | "first" | "half" | "final" | "complete" {
+  if (!Number.isSafeInteger(sponsoredCount) || sponsoredCount < 0 || sponsoredCount > 31) {
+    throw new RangeError("A calendar must contain 0 to 31 sponsored days.");
+  }
+  if (sponsoredCount === 31) return "complete";
+  if (sponsoredCount >= 24) return "final";
+  if (sponsoredCount >= 16) return "half";
+  if (sponsoredCount >= 8) return "first";
+  return "start";
+}
+
 export function syntheticCalendarProgress(
   paidDays: readonly SyntheticPaidDay[],
   goalCents: number,
