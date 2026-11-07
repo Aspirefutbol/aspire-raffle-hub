@@ -95,3 +95,45 @@ test("sponsored and completed layouts remain usable on small phones and iPads", 
     await page.getByTestId("scenario-partial").click();
   }
 });
+
+test("milestone director scenarios show paid-only progress at 8, 16 and 24 days in EN/ES", async ({ page }) => {
+  await page.goto("/calendar/aspire-south");
+  const examples = [
+    { scenario: "first", days: 8, english: "First milestone reached", spanish: "Primera meta alcanzada" },
+    { scenario: "half", days: 16, english: "Halfway there", spanish: "Llegamos a la mitad" },
+    { scenario: "final", days: 24, english: "Final stretch", spanish: "Última etapa" },
+  ] as const;
+
+  for (const example of examples) {
+    await page.getByTestId(`scenario-${example.scenario}`).click();
+    await expect(page.getByTestId("sponsored-day-progress")).toContainText(`${example.days} / 31 days sponsored`);
+    await expect(page.getByRole("progressbar", { name: "days sponsored" })).toHaveAttribute("aria-valuenow", String(example.days));
+    await expect(page.getByTestId("calendar-milestone")).toContainText(example.english);
+    await expect(page.getByTestId("calendar-complete")).toHaveCount(0);
+    await expect(page.getByTestId("calendar-day-2")).toBeDisabled();
+    await expect(page.getByTestId("day-impact-28")).toHaveText("5× · Legacy");
+    await page.getByRole("button", { name: "Español" }).click();
+    await expect(page.getByTestId("sponsored-day-progress")).toContainText(`${example.days} / 31 días patrocinados`);
+    await expect(page.getByTestId("calendar-milestone")).toContainText(example.spanish);
+    await page.getByRole("button", { name: "English" }).click();
+  }
+
+  await page.getByTestId("scenario-partial").click();
+  await page.getByTestId("calendar-day-31").click();
+  await expect(page.getByTestId("calendar-day-31")).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("scenario-first").click();
+  await expect(page.getByTestId("calendar-day-31")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await expect(page.locator("body")).not.toContainText(/supporter@example|cs_test_|sk_test_/i);
+});
+
+test("director milestone switcher stays within 320px phone and iPad viewports", async ({ page }) => {
+  await page.goto("/calendar/aspire-south");
+  for (const width of [320, 390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 780 });
+    for (const scenario of ["first", "half", "final", "complete"] as const) {
+      await page.getByTestId(`scenario-${scenario}`).click();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+  }
+});

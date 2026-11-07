@@ -325,3 +325,20 @@ pending checkout record. Preserve exclusivity for completed/refunded days and
 protect donor identity in every public response. This draft is not a live
 checkout, does not authorize PR #15 sharing-link recovery, and must not be
 merged or deployed to production without separate director/security approval.
+
+## Synthetic milestone review samples (November 7)
+
+The isolated **fictional** director preview now lets a reviewer inspect
+intermediate paid-day milestones at **8, 16, 24 and 31 days**, as well as
+the original 7-day in-progress fixture. Existing 4x/5x multiplier examples
+are preserved across every sample; newly illustrated days use 1x and retain
+the original day-number prices. The display switches between paid-day
+snapshots only: it never records a sale, collects payment or changes an
+actual reservation. Switching scenarios resets selections and unsent supporter
+fields to prevent a stale simulated checkout.
+
+The scenario labels and milestone celebrations are first-class English and
+Spanish strings. Unit and browser regression tests verify the exact distinct
+paid-day counts, accounting, donor redaction, progress percentages, scenario
+reset and phone/iPad fit. This is review tooling, **not** an authorization to
+wire these fixtures into real donor pages or to bypass the PR #15 release gate.

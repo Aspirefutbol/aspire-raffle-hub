@@ -8,13 +8,15 @@ import {
 } from "@/lib/calendar/pricing";
 import {
   aspireSouthSyntheticPreview,
-  completeSyntheticCalendar,
+  syntheticCalendarAtCount,
   syntheticCalendarProgress,
   syntheticCalendarMilestone,
 } from "@/lib/calendar/synthetic-preview";
 
 type Language = "en" | "es";
 type Step = "calendar" | "supporter" | "review" | "complete";
+type PreviewScenario = "partial" | "first" | "half" | "final" | "complete";
+const previewCounts = { first: 8, half: 16, final: 24, complete: 31 } as const;
 
 const multiplierLabels = {
   en: { 1: "Support", 2: "Boost", 3: "Impact", 4: "Champion", 5: "Legacy" },
@@ -42,6 +44,9 @@ const copy = {
     impactBadge: "Extra Impact",
     scenario: "Synthetic preview scenario",
     scenarioPartial: "In progress",
+    scenarioFirst: "8 days",
+    scenarioHalf: "16 days",
+    scenarioFinal: "24 days",
     scenarioFull: "Complete calendar",
     scenarioHelp: "Fictional paid-day examples only. Switching views does not reserve days or process payments.",
     choose: "Choose your day",
@@ -94,6 +99,9 @@ const copy = {
     impactBadge: "Impacto extra",
     scenario: "Escenario de vista previa ficticia",
     scenarioPartial: "En progreso",
+    scenarioFirst: "8 días",
+    scenarioHalf: "16 días",
+    scenarioFinal: "24 días",
     scenarioFull: "Calendario completo",
     scenarioHelp: "Ejemplos ficticios de días pagados. Cambiar la vista no reserva días ni procesa pagos.",
     choose: "Elige tu día",
@@ -129,24 +137,29 @@ const copy = {
 } as const;
 
 const preview = aspireSouthSyntheticPreview;
-const completePreviewDays = completeSyntheticCalendar(preview.paidDays);
 
 export function AspireSouthCalendarPreview() {
   const [language, setLanguage] = useState<Language>("en");
-  const [scenario, setScenario] = useState<"partial" | "complete">("partial");
+  const [scenario, setScenario] = useState<PreviewScenario>("partial");
   const [step, setStep] = useState<Step>("calendar");
   const [selected, setSelected] = useState<number[]>([]);
   const [multiplier, setMultiplier] = useState<CalendarMultiplier>(1);
   const [supporter, setSupporter] = useState({ name: "", email: "", phone: "" });
   const [error, setError] = useState("");
   const t = copy[language];
-  const progress = useMemo(
-    () => syntheticCalendarProgress(
-      scenario === "complete" ? completePreviewDays : preview.paidDays,
-      preview.goalCents,
-    ),
-    [scenario],
-  );
+  const progress = useMemo(() => {
+    const fictionalPaidDays = scenario === "partial"
+      ? preview.paidDays
+      : syntheticCalendarAtCount(preview.paidDays, previewCounts[scenario]);
+    return syntheticCalendarProgress(fictionalPaidDays, preview.goalCents);
+  }, [scenario]);
+  const scenarioLabels = {
+    partial: t.scenarioPartial,
+    first: t.scenarioFirst,
+    half: t.scenarioHalf,
+    final: t.scenarioFinal,
+    complete: t.scenarioFull,
+  };
   const sponsoredDays = progress.sponsoredDays;
   const quote = useMemo(() => calendarImpactQuote(selected, multiplier), [selected, multiplier]);
   const milestone = {
@@ -157,7 +170,7 @@ export function AspireSouthCalendarPreview() {
     complete: t.completionMessage,
   }[syntheticCalendarMilestone(progress.sponsoredCount)];
 
-  function showScenario(next: "partial" | "complete") {
+  function showScenario(next: PreviewScenario) {
     setScenario(next);
     // The preview is never a checkout or payment system. Reset unsent fields
     // when changing fictional paid-day examples, so no stale selection is shown.
@@ -285,16 +298,14 @@ export function AspireSouthCalendarPreview() {
               <div className="mt-3 border-t border-line pt-3">
                 <p className="text-xs font-semibold text-ink">{t.scenario}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" data-testid="scenario-partial" aria-pressed={scenario === "partial"}
-                    onClick={() => showScenario("partial")}
-                    className={`min-h-11 rounded-control border px-3 text-xs font-semibold ${scenario === "partial" ? "border-brand-500 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink"}`}>
-                    {t.scenarioPartial}
-                  </button>
-                  <button type="button" data-testid="scenario-complete" aria-pressed={scenario === "complete"}
-                    onClick={() => showScenario("complete")}
-                    className={`min-h-11 rounded-control border px-3 text-xs font-semibold ${scenario === "complete" ? "border-brand-500 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink"}`}>
-                    {t.scenarioFull}
-                  </button>
+                  {(["partial", "first", "half", "final", "complete"] as const).map(option => (
+                    <button key={option} type="button" data-testid={`scenario-${option}`}
+                      aria-pressed={scenario === option}
+                      onClick={() => showScenario(option)}
+                      className={`min-h-11 rounded-control border px-3 text-xs font-semibold ${scenario === option ? "border-brand-500 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink"}`}>
+                      {scenarioLabels[option]}
+                    </button>
+                  ))}
                 </div>
                 <p className="mt-2 text-xs leading-5 text-muted">{t.scenarioHelp}</p>
               </div>

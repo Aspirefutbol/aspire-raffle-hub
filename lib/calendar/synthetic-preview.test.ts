@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aspireSouthSyntheticPreview,
   completeSyntheticCalendar,
+  syntheticCalendarAtCount,
   syntheticCalendarProgress,
   syntheticCalendarMilestone,
 } from "./synthetic-preview";
@@ -48,6 +49,29 @@ describe("fictional Aspire South calendar preview model", () => {
     selected.push(12);
     expect(original.sponsoredDays.size).toBe(7);
     expect(original.raisedCents).toBe(21200);
+  });
+
+  it("builds director milestone examples with exactly 8, 16, 24 and 31 paid days", () => {
+    const original = aspireSouthSyntheticPreview.paidDays;
+    for (const count of [8, 16, 24, 31]) {
+      const scenario = syntheticCalendarAtCount(original, count);
+      const result = syntheticCalendarProgress(scenario, aspireSouthSyntheticPreview.goalCents);
+      expect(result.sponsoredCount).toBe(count);
+      expect(result.paidMultiplierByDay.get(2)).toBe(4);
+      expect(result.paidMultiplierByDay.get(28)).toBe(5);
+      expect(result.additionalImpactCents).toBe(11800);
+      expect(result.isComplete).toBe(count === 31);
+      expect(result.dayCompletionPercent).toBeCloseTo((count / 31) * 100);
+      expect(result.raisedCents).toBe(result.baseCents + result.additionalImpactCents);
+    }
+    const originalAgain = syntheticCalendarProgress(original, aspireSouthSyntheticPreview.goalCents);
+    expect(originalAgain.sponsoredCount).toBe(7);
+    for (const count of [0, 6, 32, 8.1, NaN]) {
+      expect(() => syntheticCalendarAtCount(original, count)).toThrow(RangeError);
+    }
+    expect(() => syntheticCalendarAtCount([
+      { day: 2, multiplier: 1 }, { day: 2, multiplier: 3 },
+    ], 8)).toThrow(/one primary sponsor/);
   });
 
   it("uses distinct PAID-day thresholds for progress milestones only", () => {

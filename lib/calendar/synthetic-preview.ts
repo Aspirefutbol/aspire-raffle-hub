@@ -33,11 +33,33 @@ export type SyntheticPaidDay = { day: number; multiplier: CalendarMultiplier };
  * This never changes or settles a real reservation; all paid status still
  * originates exclusively from these static synthetic preview fixtures.
  */
+/**
+ * Build one of the director's visual milestone examples from synthetic PAID
+ * fixtures. Existing multipliers survive, and extra days are always 1x.
+ * Never use this helper to manufacture a real payment state.
+ */
+export function syntheticCalendarAtCount(
+  fixture: readonly SyntheticPaidDay[],
+  targetCount: number,
+): SyntheticPaidDay[] {
+  if (!Number.isSafeInteger(targetCount) || targetCount < 0 || targetCount > 31) {
+    throw new RangeError("Calendar scenario must request 0 to 31 paid days.");
+  }
+  const source = syntheticCalendarProgress(fixture, 100);
+  if (targetCount < source.sponsoredCount) {
+    throw new RangeError("Calendar scenario cannot discard paid fixture days.");
+  }
+  const additions: SyntheticPaidDay[] = allCalendarDays()
+    .filter(day => !source.sponsoredDays.has(day))
+    .slice(0, targetCount - source.sponsoredCount)
+    .map(day => ({ day, multiplier: 1 }));
+  return [...fixture, ...additions].sort((a, b) => a.day - b.day);
+}
+
 export function completeSyntheticCalendar(
   fixture: readonly SyntheticPaidDay[],
 ): SyntheticPaidDay[] {
-  const existing = new Map(fixture.map(({ day, multiplier }) => [day, multiplier]));
-  return allCalendarDays().map(day => ({ day, multiplier: existing.get(day) ?? 1 }));
+  return syntheticCalendarAtCount(fixture, 31);
 }
 
 /** Deterministic milestones; a purchase attempt is never a paid milestone. */
