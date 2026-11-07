@@ -15,6 +15,17 @@ test("capture Aspire South donor journey for director review (synthetic only)", 
   await expect(page.getByRole("heading", { name: "Sponsor a Day" })).toBeVisible();
   await page.screenshot({ path: `${folder}/01-desktop-en-calendar.png`, fullPage: true });
 
+  await page.getByTestId("scenario-complete").click();
+  await expect(page.getByTestId("calendar-complete")).toBeVisible();
+  await page.screenshot({ path: `${folder}/01b-desktop-en-sponsored-complete.png`, fullPage: true });
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.getByRole("button", { name: "Español" }).click();
+  await expect(page.getByTestId("calendar-complete")).toContainText("¡Calendario completo!");
+  await page.screenshot({ path: `${folder}/01c-phone-es-sponsored-complete.png`, fullPage: true });
+  await page.getByTestId("scenario-partial").click();
+  await page.getByRole("button", { name: "English" }).click();
+  await page.setViewportSize({ width: 1280, height: 800 });
+
   await page.getByTestId("calendar-day-10").click();
   await page.getByText("More ways to help").click();
   await page.getByRole("button", { name: /5x · Legacy/ }).click();
