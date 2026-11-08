@@ -121,20 +121,27 @@ test("seller sharing: private family link, signed-out request retry, QR, offline
   const qr=tools.getByRole("img",{name:"QR code for your supporter request page"});
   const png=PNG.sync.read(Buffer.from((await qr.getAttribute("src"))!.split(",")[1]!,"base64"));
   expect(jsQR(new Uint8ClampedArray(png.data),png.width,png.height)?.data).toBe(url);
-  await page.setViewportSize({width:360,height:780});
-  await expect(tools.getByRole("img")).toBeVisible();
-  const primaryShare=await tools.getByRole("button",{name:"Copy invitation to share",exact:true}).boundingBox();
-  expect(primaryShare!.height).toBeGreaterThanOrEqual(44);
-  await tools.getByTestId("share-options").locator("summary").click();
-  await expect(tools.getByRole("button",{name:"Copy link",exact:true})).not.toBeVisible();
-  const shareDisclosure=await tools.getByTestId("share-options").locator("summary").boundingBox();
-  expect(shareDisclosure!.height).toBeGreaterThanOrEqual(44);
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await tools.getByTestId("share-options").locator("summary").click();
-  await expect(tools.getByRole("img")).toBeVisible();
-  for (const name of ["Text / SMS","Email","WhatsApp"]) expect((await tools.getByRole("link",{name,exact:true}).boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.screenshot({path:testInfo.outputPath("sharing-family-360.png"),fullPage:true});
+  // Parent sharing must remain tappable without sideways scrolling on common
+  // small-phone widths. This browser check does not replace real-device QA.
+  for (const width of [320,360,390]) {
+    await page.setViewportSize({width,height:780});
+    await expect(tools.getByRole("img")).toBeVisible();
+    const primaryShare=await tools.getByRole("button",{name:"Copy invitation to share",exact:true}).boundingBox();
+    expect(primaryShare!.height).toBeGreaterThanOrEqual(44);
+    const shareDisclosure=tools.getByTestId("share-options").locator("summary");
+    await shareDisclosure.click();
+    await expect(tools.getByRole("button",{name:"Copy link",exact:true})).not.toBeVisible();
+    expect((await shareDisclosure.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect((await tools.getByText("Link settings",{exact:true}).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await shareDisclosure.click();
+    await expect(tools.getByRole("img")).toBeVisible();
+    for (const name of ["Text / SMS","Email","WhatsApp"]) {
+      expect((await tools.getByRole("link",{name,exact:true}).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    if (width===360) await page.screenshot({path:testInfo.outputPath("sharing-family-360.png"),fullPage:true});
+  }
   await page.setViewportSize({width:1280,height:900});
   const publicContext=await browser.newContext({viewport:{width:360,height:780}}), supporter=await publicContext.newPage();
   const response=await supporter.goto(url);
