@@ -216,5 +216,31 @@ async function main() {
  const chains=requireData(await rpc(admin.client,'verify_campaign_ledgers',{p_campaign_id:f.campaignId}),'Chains');
  assert.ok(chains.every(x=>x.ok));
  console.log('PASS revoke/submit race: no post-revocation access; no sales, issuance or money events.');
+
+ // F1 CONCURRENCY CHARACTERIZATION ONLY: a participant-scoped Disable carries
+ // no expected link ID. Create and Disable are serialized by the campaign lock,
+ // but their arrival order determines whether the freshly created URL survives.
+ // Never treat a revoked:true response as proof that Disable is safe to retry.
+ const concurrentLinkResults=await simultaneous(f,[
+   ()=>rpc(family.client,'manage_seller_link',args),
+   ()=>rpc(family.client,'manage_seller_link',{...args,p_revoke:true}),
+ ]);
+ const concurrentCreate=requireData(concurrentLinkResults[0],'Concurrent link Create');
+ const concurrentDisable=requireData(concurrentLinkResults[1],'Concurrent link Disable');
+ assert.match(concurrentCreate.token,/^[a-f0-9]{64}$/);
+ assert.equal(concurrentDisable.revoked,true);
+ const liveLinks=Number(await sql(`select count(*) from public.campaign_seller_links
+   where participant_id=${uuid(f.participantId)} and revoked_at is null;`));
+ assert.ok(liveLinks===0 || liveLinks===1,'Only zero or one active seller link can remain.');
+ const createdStillValid=requireData(await rpc(publicClient,'public_seller_page',
+   {p_token:concurrentCreate.token}),'Concurrent created-link lookup')!==null;
+ assert.equal(createdStillValid,liveLinks===1,
+   'The newly created link is usable iff Create serialized after Disable.');
+ assert.equal(requireData(await rpc(publicClient,'public_seller_page',
+   {p_token:token}),'Previously revoked link lookup'),null);
+ const postLinkRaceChains=requireData(await rpc(admin.client,'verify_campaign_ledgers',
+   {p_campaign_id:f.campaignId}),'Post link-race audit');
+ assert.ok(postLinkRaceChains.every(x=>x.ok));
+ console.log('PASS concurrent Create/Disable: campaign-lock order controls link validity; previously revoked URL stays invalid; audit chains intact.');
 }
 main().catch(()=>{console.error('Sharing concurrency failed; inspect local fixture state.');process.exitCode=1;});
