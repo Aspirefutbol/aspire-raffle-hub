@@ -274,10 +274,18 @@ export function compareCalendarIntents(
 export const CALENDAR_OUTBOX_STATES = ["PENDING", "SENDING", "SENT", "DELIVERY_UNCERTAIN", "DEAD_LETTER"] as const;
 export type CalendarOutboxState = (typeof CALENDAR_OUTBOX_STATES)[number];
 
-/** SENT and DEAD_LETTER are terminal. DELIVERY_UNCERTAIN exits only by recorded manual resolution. */
+/**
+ * SENT and DEAD_LETTER are terminal. DELIVERY_UNCERTAIN exits only by manual
+ * resolution. The contract RECORDS the reviewer id it is given; it does NOT
+ * authorize that reviewer. A durable adapter must derive the reviewer from
+ * the authenticated session (never a caller-supplied string) and check a
+ * specific review permission for that organization before resolving.
+ */
 export const CALENDAR_OUTBOX_TERMINAL_STATES: readonly CalendarOutboxState[] = ["SENT", "DEAD_LETTER"];
 export const CALENDAR_OUTBOX_TRANSITIONS: Readonly<Record<CalendarOutboxState, readonly CalendarOutboxState[]>> = {
-  PENDING: ["SENDING"],
+  // PENDING -> DELIVERY_UNCERTAIN happens at CLAIM time when a retry after an
+  // unknown outcome is no longer safe (window elapsed or provider changed).
+  PENDING: ["SENDING", "DELIVERY_UNCERTAIN"],
   SENDING: ["SENT", "PENDING", "DELIVERY_UNCERTAIN", "DEAD_LETTER"],
   DELIVERY_UNCERTAIN: ["SENT", "PENDING", "DEAD_LETTER"],
   SENT: [],
@@ -298,7 +306,13 @@ export type CalendarOutboxPolicy = Readonly<{
    * Never assume indefinite deduplication. No provider is selected here.
    */
   providerIdempotencyWindowMs: number;
-  /** A retry must be scheduled at least this long before the window closes. */
+  /**
+   * Safety margin before the window closes. Checked twice: when a retry is
+   * scheduled (nextAttemptAt + margin) and again when it is claimed
+   * (now + leaseMs + margin), so a late worker cannot send outside the window.
+   * The window is anchored to the FIRST attempt of the epoch; repeated
+   * timeouts never extend it.
+   */
   idempotencySafetyMarginMs: number;
 }>;
 
@@ -353,6 +367,10 @@ export type CalendarOutboxRecord = Readonly<{
   epoch: number;
   epochStartedAt: number | null;
   epochAttempts: number;
+  /** True once any attempt in this epoch ended UNKNOWN (the message may have been accepted). */
+  epochUnknownOutcome: boolean;
+  /** Provider account bound to the epoch; a retry after an unknown outcome must use the same one. */
+  epochProviderAccountId: string | null;
   totalAttempts: number;
   history: readonly CalendarAttemptRecord[];
   resolutions: readonly Readonly<{ at: number; reviewerId: string; resolution: CalendarManualResolution["resolution"] }>[];
@@ -362,7 +380,7 @@ export type CalendarOutboxRecord = Readonly<{
 }>;
 
 export type CalendarOutboxEvent =
-  | { type: "claim"; workerId: string; leaseId: string; now: number }
+  | { type: "claim"; workerId: string; leaseId: string; providerAccountId: string; now: number }
   | { type: "ack"; leaseId: string; outcome: CalendarDeliveryOutcome; now: number }
   | { type: "lease_expired"; now: number }
   | ({ type: "manual_resolution"; reviewerId: string; now: number } & CalendarManualResolution);
@@ -370,7 +388,7 @@ export type CalendarOutboxEvent =
 export function newCalendarOutboxRecord(intent: CalendarDonorConfirmationIntent, now: number): CalendarOutboxRecord {
   return Object.freeze({
     intent, state: "PENDING", createdAt: now, updatedAt: now, nextAttemptAt: now, lease: null,
-    epoch: 1, epochStartedAt: null, epochAttempts: 0, totalAttempts: 0, history: [], resolutions: [],
+    epoch: 1, epochStartedAt: null, epochAttempts: 0, epochUnknownOutcome: false, epochProviderAccountId: null, totalAttempts: 0, history: [], resolutions: [],
     providerMessageId: null, sentAt: null, holdReason: null,
   });
 }
@@ -389,7 +407,7 @@ function move(record: CalendarOutboxRecord, next: Partial<CalendarOutboxRecord> 
 
 function afterUnknown(record: CalendarOutboxRecord, now: number, policy: CalendarOutboxPolicy, outcome: string) {
   const history = closeAttempt(record, now, outcome);
-  const base = { lease: null, history };
+  const base = { lease: null, history, epochUnknownOutcome: true };
   const hold = (holdReason: string) => move(record, { ...base, state: "DELIVERY_UNCERTAIN", nextAttemptAt: null, holdReason }, now);
   if (policy.providerIdempotencyWindowMs === 0) return hold("no_provider_idempotency");
   if (record.epochAttempts >= policy.maxAttempts) return hold("unknown_outcome_attempts_exhausted");
@@ -413,8 +431,18 @@ export function applyCalendarOutboxTransition(
   switch (event.type) {
     case "claim": {
       if (record.state !== "PENDING" || record.nextAttemptAt === null || record.nextAttemptAt > now ||
-          !SAFE_ID.test(event.workerId) || !SAFE_ID.test(event.leaseId)) {
+          !SAFE_ID.test(event.workerId) || !SAFE_ID.test(event.leaseId) || !SAFE_ID.test(event.providerAccountId)) {
         throw new CalendarOutboxError("INVALID_TRANSITION");
+      }
+      // Claim-time recheck: scheduling-time checks are not enough, because a
+      // worker may claim long after nextAttemptAt.
+      if (record.epochUnknownOutcome) {
+        const hold = (holdReason: string) => move(record, { state: "DELIVERY_UNCERTAIN", nextAttemptAt: null, holdReason }, now);
+        const windowCloses = (record.epochStartedAt ?? now) + policy.providerIdempotencyWindowMs;
+        if (policy.providerIdempotencyWindowMs === 0 || now + policy.leaseMs + policy.idempotencySafetyMarginMs > windowCloses) {
+          return hold("idempotency_window_elapsed_before_retry");
+        }
+        if (record.epochProviderAccountId !== event.providerAccountId) return hold("provider_changed_after_unknown_outcome");
       }
       const epochAttempts = record.epochAttempts + 1;
       return move(record, {
@@ -423,6 +451,7 @@ export function applyCalendarOutboxTransition(
         lease: Object.freeze({ leaseId: event.leaseId, workerId: event.workerId, expiresAt: now + policy.leaseMs }),
         epochStartedAt: record.epochStartedAt ?? now,
         epochAttempts,
+        epochProviderAccountId: event.providerAccountId,
         totalAttempts: record.totalAttempts + 1,
         history: [...record.history, Object.freeze({
           epoch: record.epoch, attempt: epochAttempts, workerId: event.workerId, leaseId: event.leaseId,
@@ -485,6 +514,7 @@ export function applyCalendarOutboxTransition(
           return move(record, {
             state: "PENDING", resolutions, holdReason: null, nextAttemptAt: now,
             epoch: record.epoch + 1, epochStartedAt: null, epochAttempts: 0,
+            epochUnknownOutcome: false, epochProviderAccountId: null,
           }, now);
         case "abandon":
           return move(record, { state: "DEAD_LETTER", resolutions, holdReason: "abandoned_after_review" }, now);
@@ -527,16 +557,26 @@ export type CalendarOutboxStatus = Readonly<{
  *    template_superseded -> `already_queued`; conflict -> PAYLOAD_CONFLICT, no write.
  *    Returns only after commit.
  * 2. claimNext: atomic claim (e.g. FOR UPDATE SKIP LOCKED) of one eligible PENDING
- *    row, issuing a fresh unguessable lease id. Never claims SENDING rows.
+ *    row, issuing a fresh unguessable lease id, re-checking the idempotency
+ *    window and provider binding at claim time (rows that fail move to
+ *    DELIVERY_UNCERTAIN and are not returned). Never claims SENDING rows.
+ *    The delivery payload is always the STORED intent, never re-rendered.
  * 3. acknowledge: compare-and-set on (key, state=SENDING, leaseId); otherwise STALE_LEASE.
  * 4. expireLeases: moves SENDING rows past their lease through `lease_expired`
  *    (unknown outcome); never directly back to "not sent".
- * 5. resolveUncertain: DELIVERY_UNCERTAIN only, with a recorded reviewer.
+ * 5. resolveUncertain: DELIVERY_UNCERTAIN only. The adapter must AUTHORIZE the
+ *    reviewer (session-derived identity + review permission for the org);
+ *    the reviewer id parameter here is only what gets recorded.
  * Errors carry only CalendarOutboxError codes.
  */
 export interface CalendarNotificationOutbox {
   enqueueOnce(intent: CalendarDonorConfirmationIntent, options?: { now?: number }): Promise<CalendarEnqueueResult>;
-  claimNext(input: { workerId: string; now: number }): Promise<CalendarDeliveryClaim | null>;
+  /**
+   * `providerAccountId` identifies the provider and sending account the worker
+   * will use. After an unknown outcome, only the same account may retry in
+   * that epoch; delivery payload always comes from the stored intent.
+   */
+  claimNext(input: { workerId: string; providerAccountId: string; now: number }): Promise<CalendarDeliveryClaim | null>;
   acknowledge(input: { key: string; leaseId: string; outcome: CalendarDeliveryOutcome; now: number }): Promise<CalendarOutboxStatus>;
   expireLeases(input: { now: number }): Promise<{ requeued: number; uncertain: number }>;
   resolveUncertain(input: { key: string; reviewerId: string; now: number } & CalendarManualResolution): Promise<CalendarOutboxStatus>;
@@ -670,15 +710,18 @@ export function createInMemoryCalendarOutboxForTests(
       rows.set(checked.key, newCalendarOutboxRecord(Object.freeze(checked), enqueueOptions?.now ?? Date.now()));
       return { key: checked.key, status: "queued" };
     },
-    async claimNext({ workerId, now }) {
+    async claimNext({ workerId, providerAccountId, now }) {
       await tick();
       const eligible = [...rows.values()]
         .filter(r => r.state === "PENDING" && r.nextAttemptAt !== null && r.nextAttemptAt <= now)
         .sort((a, b) => (a.nextAttemptAt! - b.nextAttemptAt!) || (a.createdAt - b.createdAt) || a.intent.key.localeCompare(b.intent.key));
-      const row = eligible[0];
-      if (!row) return null;
-      const next = applyCalendarOutboxTransition(row, { type: "claim", workerId, leaseId: newLeaseId(), now }, policy);
-      rows.set(row.intent.key, next);
+      let next: CalendarOutboxRecord | undefined;
+      for (const row of eligible) {
+        const candidate = applyCalendarOutboxTransition(row, { type: "claim", workerId, leaseId: newLeaseId(), providerAccountId, now }, policy);
+        rows.set(row.intent.key, candidate);
+        if (candidate.state === "SENDING") { next = candidate; break; }
+      }
+      if (!next) return null;
       const { intent, lease } = next;
       return Object.freeze({
         key: intent.key, leaseId: lease!.leaseId, leaseExpiresAt: lease!.expiresAt, epoch: next.epoch,

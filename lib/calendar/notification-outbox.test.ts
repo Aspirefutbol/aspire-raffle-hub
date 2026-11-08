@@ -102,8 +102,23 @@ describe("notification key and template versions", () => {
     expect(await box.enqueueOnce(reworded, { now: T0 })).toEqual({ key: original.key, status: "already_queued" });
     expect(box.size()).toBe(1);
     expect(box.record(original.key)!.intent.subject).toBe(original.subject);
-    const claim = await box.claimNext({ workerId: "w1", now: T0 });
+    const claim = await box.claimNext({ workerId: "w1", providerAccountId: "acct-test-1", now: T0 });
     expect(claim!.delivery.subject).toBe(original.subject);
+    expect(box.record(original.key)!.intent.templateVersion).toBe(CALENDAR_DONOR_CONFIRMATION_TEMPLATE_VERSION);
+    expect(box.record(original.key)!.intent.contentDigest).toBe(original.contentDigest);
+    // Retries deliver the STORED payload, never the newer template.
+    const scheduled = await box.acknowledge({ key: original.key, leaseId: claim!.leaseId, outcome: { type: "rejected_retryable" }, now: T0 + 1 });
+    await box.enqueueOnce(reworded, { now: T0 + 2 });
+    const retry = await box.claimNext({ workerId: "w2", providerAccountId: "acct-test-1", now: scheduled.nextAttemptAt! });
+    expect(retry!.delivery).toEqual(claim!.delivery);
+    expect(retry!.delivery.subject).not.toBe("New wording");
+    // Business-fact changes still conflict even when combined with a newer template.
+    for (const change of [{ recipient: "other@example.test" }, { language: "es" }, { participantId: OTHER_PLAYER },
+      { days: [11], baseCents: 1100, additionalImpactCents: 4400, totalCents: 5500 },
+      { multiplier: 4, additionalImpactCents: 3000, totalCents: 4000 }]) {
+      const changed = prepareCalendarDonorConfirmationIntent(paid(R1, change), { ...expectedFor(), ...("participantId" in change ? { participantId: OTHER_PLAYER } : {}) });
+      await expectSafeRejection(box.enqueueOnce(withTemplate(changed, "calendar-donor-confirmation/2027-01-01.1", "New wording"), { now: T0 }), "PAYLOAD_CONFLICT");
+    }
   });
 
   it("rejects changed content under the SAME template version as a conflict", async () => {
@@ -196,8 +211,8 @@ describe("claims, leases and acknowledgements", () => {
   it("grants one claim to overlapping workers and nothing before nextAttemptAt", async () => {
     const box = outbox();
     await box.enqueueOnce(intentFor(), { now: T0 });
-    expect(await box.claimNext({ workerId: "early", now: T0 - 1 })).toBeNull();
-    const claims = await Promise.all(Array.from({ length: 10 }, (_, i) => box.claimNext({ workerId: `w${i}`, now: T0 })));
+    expect(await box.claimNext({ workerId: "early", providerAccountId: "acct-test-1", now: T0 - 1 })).toBeNull();
+    const claims = await Promise.all(Array.from({ length: 10 }, (_, i) => box.claimNext({ workerId: `w${i}`, providerAccountId: "acct-test-1", now: T0 })));
     const granted = claims.filter(Boolean);
     expect(granted).toHaveLength(1);
     expect(granted[0]).toMatchObject({ attempt: 1, epoch: 1, leaseExpiresAt: T0 + policy.leaseMs });
@@ -209,11 +224,11 @@ describe("claims, leases and acknowledgements", () => {
     const box = outbox();
     const key = intentFor().key;
     await box.enqueueOnce(intentFor(), { now: T0 });
-    const a = (await box.claimNext({ workerId: "worker-a", now: T0 }))!;
+    const a = (await box.claimNext({ workerId: "worker-a", providerAccountId: "acct-test-1", now: T0 }))!;
     expect(await box.expireLeases({ now: T0 + policy.leaseMs })).toEqual({ requeued: 1, uncertain: 0 });
     const status = (await box.status(key))!;
     expect(status).toMatchObject({ state: "PENDING", nextAttemptAt: T0 + policy.leaseMs + 30_000 });
-    const b = (await box.claimNext({ workerId: "worker-b", now: status.nextAttemptAt! }))!;
+    const b = (await box.claimNext({ workerId: "worker-b", providerAccountId: "acct-test-1", now: status.nextAttemptAt! }))!;
     expect(b.leaseId).not.toBe(a.leaseId);
     expect(b.providerIdempotencyKey).toBe(a.providerIdempotencyKey);
     await expectSafeRejection(box.acknowledge({ key, leaseId: a.leaseId, outcome: { type: "accepted", providerMessageId: "msg_a" }, now: status.nextAttemptAt! + 1 }), "STALE_LEASE");
@@ -226,7 +241,7 @@ describe("claims, leases and acknowledgements", () => {
     const box = outbox();
     const key = intentFor().key;
     await box.enqueueOnce(intentFor(), { now: T0 });
-    const claim = (await box.claimNext({ workerId: "w", now: T0 }))!;
+    const claim = (await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: T0 }))!;
     const late = T0 + policy.leaseMs + 5;
     expect((await box.acknowledge({ key, leaseId: claim.leaseId, outcome: { type: "accepted", providerMessageId: "msg_1" }, now: late })).state).toBe("SENT");
     expect(await box.expireLeases({ now: late + 1 })).toEqual({ requeued: 0, uncertain: 0 });
@@ -236,17 +251,17 @@ describe("claims, leases and acknowledgements", () => {
     const box = outbox();
     const key = intentFor().key;
     await box.enqueueOnce(intentFor(), { now: T0 });
-    const claim = (await box.claimNext({ workerId: "w", now: T0 }))!;
+    const claim = (await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: T0 }))!;
     await box.acknowledge({ key, leaseId: claim.leaseId, outcome: { type: "accepted", providerMessageId: "msg_1" }, now: T0 + 10 });
     expect(box.record(key)).toMatchObject({ state: "SENT", sentAt: T0 + 10, providerMessageId: "msg_1" });
-    expect(await box.claimNext({ workerId: "w", now: T0 + HOUR })).toBeNull();
+    expect(await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: T0 + HOUR })).toBeNull();
     await expectSafeRejection(box.resolveUncertain({ key, reviewerId: "ops", now: T0 + 20, resolution: "abandon" }), "INVALID_TRANSITION");
   });
 });
 
 describe("retries, exhaustion and uncertain delivery", () => {
   async function claimAndAck(box: ReturnType<typeof outbox>, now: number, outcome: Parameters<ReturnType<typeof outbox>["acknowledge"]>[0]["outcome"]) {
-    const claim = (await box.claimNext({ workerId: "w", now }))!;
+    const claim = (await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now }))!;
     expect(claim).not.toBeNull();
     return box.acknowledge({ key: claim.key, leaseId: claim.leaseId, outcome, now: now + 1 });
   }
@@ -260,13 +275,13 @@ describe("retries, exhaustion and uncertain delivery", () => {
       const status = await claimAndAck(box, now, { type: "rejected_retryable", code: "rate_limited" });
       expect(status.state).toBe("PENDING");
       delays.push(status.nextAttemptAt! - (now + 1));
-      expect(await box.claimNext({ workerId: "w", now: status.nextAttemptAt! - 1 })).toBeNull();
+      expect(await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: status.nextAttemptAt! - 1 })).toBeNull();
       now = status.nextAttemptAt!;
     }
     expect(delays).toEqual([30_000, 60_000, 120_000]);
     const final = await claimAndAck(box, now, { type: "rejected_retryable" });
     expect(final).toMatchObject({ state: "DEAD_LETTER", holdReason: "retry_exhausted", epochAttempts: policy.maxAttempts });
-    expect(await box.claimNext({ workerId: "w", now: now + HOUR })).toBeNull();
+    expect(await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: now + HOUR })).toBeNull();
   });
 
   it("dead-letters permanent rejection and keeps only an allowlisted code, not provider text", async () => {
@@ -283,10 +298,10 @@ describe("retries, exhaustion and uncertain delivery", () => {
     await box.enqueueOnce(intentFor(), { now: T0 });
     expect(await claimAndAck(box, T0, { type: "unknown", code: "timeout" })).toMatchObject({ state: "DELIVERY_UNCERTAIN", holdReason: "no_provider_idempotency" });
     await box.enqueueOnce(intentFor(R2), { now: T0 });
-    await box.claimNext({ workerId: "w", now: T0 });
+    await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: T0 });
     expect(await box.expireLeases({ now: T0 + policy.leaseMs })).toEqual({ requeued: 0, uncertain: 1 });
     expect((await box.status(calendarDonorConfirmationKey(ORG, R2)))!.state).toBe("DELIVERY_UNCERTAIN");
-    expect(await box.claimNext({ workerId: "w", now: T0 + 48 * HOUR })).toBeNull();
+    expect(await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: T0 + 48 * HOUR })).toBeNull();
     expect((await box.status(key))!.state).toBe("DELIVERY_UNCERTAIN");
   });
 
@@ -295,11 +310,71 @@ describe("retries, exhaustion and uncertain delivery", () => {
     const key = intentFor().key;
     await box.enqueueOnce(intentFor(), { now: T0 });
     expect((await claimAndAck(box, T0, { type: "unknown" })).state).toBe("PENDING");
-    // Next attempt near the end of the 24h window: retry would land inside the safety margin.
-    const lateClaimAt = T0 + 23 * HOUR - 20_000;
-    const status = await claimAndAck(box, lateClaimAt, { type: "unknown" });
+    // Last claim that is still safe (now + lease + margin == window close).
+    const lastSafeClaim = T0 + 24 * HOUR - HOUR - policy.leaseMs;
+    // Its retry would be scheduled (60s backoff) inside the safety margin -> held at SCHEDULING time.
+    const status = await claimAndAck(box, lastSafeClaim, { type: "unknown" });
     expect(status).toMatchObject({ state: "DELIVERY_UNCERTAIN", holdReason: "unknown_outcome_outside_idempotency_window" });
     expect(box.record(key)!.epochStartedAt).toBe(T0);
+  });
+
+  it("rechecks the window at CLAIM time when a worker picks up a safely scheduled retry too late", async () => {
+    const box = outbox({ maxAttempts: 10 });
+    const key = intentFor().key;
+    await box.enqueueOnce(intentFor(), { now: T0 });
+    const scheduled = await claimAndAck(box, T0, { type: "unknown", code: "timeout" });
+    expect(scheduled).toMatchObject({ state: "PENDING", nextAttemptAt: T0 + 1 + 30_000 });
+    // The retry was safe when scheduled, but no worker runs until 23.5h later.
+    const late = T0 + 23 * HOUR + 30 * 60_000;
+    expect(await box.claimNext({ workerId: "late-worker", providerAccountId: "acct-test-1", now: late })).toBeNull();
+    expect(await box.status(key)).toMatchObject({ state: "DELIVERY_UNCERTAIN", holdReason: "idempotency_window_elapsed_before_retry" });
+    expect(box.record(key)!.totalAttempts).toBe(1);
+    // A late claim still serves other, safe work instead of returning nothing.
+    await box.enqueueOnce(intentFor(R2), { now: late });
+    expect((await box.claimNext({ workerId: "late-worker", providerAccountId: "acct-test-1", now: late }))!.key).toBe(calendarDonorConfirmationKey(ORG, R2));
+  });
+
+  it("does not let a claim after definitive rejections only be blocked by the window", async () => {
+    const box = outbox({ maxAttempts: 10 });
+    await box.enqueueOnce(intentFor(), { now: T0 });
+    await claimAndAck(box, T0, { type: "rejected_retryable" });
+    expect(await box.claimNext({ workerId: "w", providerAccountId: "acct-other", now: T0 + 48 * HOUR })).not.toBeNull();
+  });
+
+  it("never extends the safe window through repeated timeouts", async () => {
+    const box = outbox({ maxAttempts: 10, retryBaseMs: HOUR, retryCapMs: 8 * HOUR });
+    const key = intentFor().key;
+    await box.enqueueOnce(intentFor(), { now: T0 });
+    let now = T0;
+    const claimTimes: number[] = [];
+    for (;;) {
+      const claim = await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now });
+      if (!claim) break;
+      claimTimes.push(now);
+      const status = await box.acknowledge({ key, leaseId: claim.leaseId, outcome: { type: "unknown", code: "timeout" }, now: now + 1 });
+      if (status.state !== "PENDING") break;
+      now = status.nextAttemptAt!;
+    }
+    expect(box.record(key)!.epochStartedAt).toBe(T0);
+    expect(box.record(key)!.state).toBe("DELIVERY_UNCERTAIN");
+    // Backoff 1h,2h,4h,8h(cap): attempts at T0, +1h, +3h, +7h, +15h; +23h would breach the 24h-1h margin.
+    expect(claimTimes.map(t => Math.round((t - T0) / HOUR))).toEqual([0, 1, 3, 7, 15]);
+    expect(Math.max(...claimTimes) + policy.leaseMs + HOUR).toBeLessThanOrEqual(T0 + 24 * HOUR);
+  });
+
+  it("keeps provider account, payload and idempotency key fixed across retries after an unknown outcome", async () => {
+    const box = outbox({ maxAttempts: 10 });
+    const key = intentFor().key;
+    await box.enqueueOnce(intentFor(), { now: T0 });
+    const first = (await box.claimNext({ workerId: "w1", providerAccountId: "acct-test-1", now: T0 }))!;
+    const scheduled = await box.acknowledge({ key, leaseId: first.leaseId, outcome: { type: "unknown" }, now: T0 + 1 });
+    const second = (await box.claimNext({ workerId: "w2", providerAccountId: "acct-test-1", now: scheduled.nextAttemptAt! }))!;
+    expect(second.delivery).toEqual(first.delivery);
+    expect(second.providerIdempotencyKey).toBe(first.providerIdempotencyKey);
+    const again = await box.acknowledge({ key, leaseId: second.leaseId, outcome: { type: "unknown" }, now: scheduled.nextAttemptAt! + 1 });
+    // A different provider/account cannot honor the first account's idempotency key.
+    expect(await box.claimNext({ workerId: "w3", providerAccountId: "acct-test-2", now: again.nextAttemptAt! })).toBeNull();
+    expect(await box.status(key)).toMatchObject({ state: "DELIVERY_UNCERTAIN", holdReason: "provider_changed_after_unknown_outcome" });
   });
 
   it("holds for review, not dead-letter, when attempts run out on an unknown outcome", async () => {
@@ -312,12 +387,12 @@ describe("retries, exhaustion and uncertain delivery", () => {
     const box = outbox({ providerIdempotencyWindowMs: 0 });
     const key = intentFor().key;
     await box.enqueueOnce(intentFor(), { now: T0 });
-    const first = (await box.claimNext({ workerId: "w", now: T0 }))!;
+    const first = (await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: T0 }))!;
     await box.acknowledge({ key, leaseId: first.leaseId, outcome: { type: "unknown" }, now: T0 + 1 });
     await expectSafeRejection(box.resolveUncertain({ key, reviewerId: "bad reviewer id with spaces", now: T0 + 2, resolution: "abandon" }), "INVALID_TRANSITION");
     const rearmed = await box.resolveUncertain({ key, reviewerId: "ops-reviewer", now: T0 + 3, resolution: "provider_confirmed_not_accepted" });
     expect(rearmed).toMatchObject({ state: "PENDING", epoch: 2, epochAttempts: 0, totalAttempts: 1 });
-    const second = (await box.claimNext({ workerId: "w", now: T0 + 3 }))!;
+    const second = (await box.claimNext({ workerId: "w", providerAccountId: "acct-test-1", now: T0 + 3 }))!;
     expect(second.providerIdempotencyKey).not.toBe(first.providerIdempotencyKey);
     expect(second.providerIdempotencyKey).toBe(calendarProviderIdempotencyKey(key, 2));
     expect(second.providerIdempotencyKey).not.toContain(R1);
@@ -331,7 +406,7 @@ describe("retries, exhaustion and uncertain delivery", () => {
     for (const terminal of CALENDAR_OUTBOX_TERMINAL_STATES) expect(CALENDAR_OUTBOX_TRANSITIONS[terminal]).toEqual([]);
     const base = newCalendarOutboxRecord(intentFor(), T0);
     const events = [
-      { type: "claim", workerId: "w", leaseId: "l", now: T0 },
+      { type: "claim", workerId: "w", leaseId: "l", providerAccountId: "acct-test-1", now: T0 },
       { type: "ack", leaseId: "l", outcome: { type: "accepted", providerMessageId: "m" }, now: T0 },
       { type: "lease_expired", now: T0 + HOUR },
       { type: "manual_resolution", reviewerId: "r", resolution: "abandon", now: T0 },
