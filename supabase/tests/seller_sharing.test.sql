@@ -333,6 +333,50 @@ select is(public.public_seller_page((select value->>'token' from pg_temp.test_va
   null::jsonb,'second guardian URL unavailable after admin emergency revoke');
 select is((select count(*) from public.campaign_seller_links where participant_id=pg_temp.participant('main','a1') and revoked_at is null),
   0::bigint,'admin revocation leaves no active guardian link for this participant');
+
+-- F1 BASELINE CHARACTERIZATION ONLY, not a promise that Disable is safe to
+-- repeat. The RPC has participant scope, no expected link ID/version, and
+-- answers revoked:true even if an earlier call already revoked every link.
+select pg_temp.as_user('family-a');
+select is(public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)->>'revoked',
+  'true','F1: redundant disable reports revoked true although there is no active link');
+insert into pg_temp.test_values values('f1-created-after-noop',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1')));
+select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='f1-created-after-noop')) is not null,
+  'F1: a valid new link may be created after an earlier no-op disable');
+select is(public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true)->>'revoked',
+  'true','F1: delayed or repeated participant-scoped disable also reports success');
+select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='f1-created-after-noop')),
+  null::jsonb,'F1: later disable can revoke a link created after an earlier disable');
+
+-- F2 BASELINE CHARACTERIZATION ONLY. Give a linked guardian an additional
+-- ORGANIZATION_ADMIN role in the synthetic fixture; the family UI gate can
+-- admit this actor, while SQL's p_revoke branch may revoke every co-guardian.
+-- This is a documented hazard, NOT the intended ordinary self-only behavior.
+insert into pg_temp.test_values values('f2-family-link',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1')));
+select pg_temp.as_user('shared-family');
+insert into pg_temp.test_values values('f2-other-guardian-link',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1')));
+select ok(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='f2-family-link')) is not null
+  and public.public_seller_page((select value->>'token' from pg_temp.test_values where label='f2-other-guardian-link')) is not null,
+  'F2: two valid independent guardian URLs exist before dual-role revoke');
+reset role;
+select pg_temp.as_db_admin();
+insert into public.organization_member_roles(organization_id,member_id,role_key)
+values(pg_temp.id('org-a'),pg_temp.id('member-shared-family'),'ORGANIZATION_ADMIN');
+set local role authenticated;
+select pg_temp.as_user('shared-family');
+insert into pg_temp.test_values values('f2-dual-role-revoke',
+  public.manage_seller_link(pg_temp.id('org-a'),pg_temp.participant('main','a1'),true));
+select is((select value->>'revoked' from pg_temp.test_values where label='f2-dual-role-revoke'),
+  'true','F2: admin plus guardian receives revoke acknowledgement (known hazard)');
+select ok(not ((select value from pg_temp.test_values where label='f2-dual-role-revoke') ? 'token'),
+  'F2: emergency acknowledgement does not contain a bearer token');
+select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='f2-family-link')),
+  null::jsonb,'F2: dual-role guardian revoke invalidates OTHER guardians link (known hazard)');
+select is(public.public_seller_page((select value->>'token' from pg_temp.test_values where label='f2-other-guardian-link')),
+  null::jsonb,'F2: dual-role guardian revoke also invalidates own link');
 reset role;
 select pg_temp.as_db_admin();
 insert into public.campaign_seller_links(organization_id,campaign_id,participant_id,seller_user_id,opaque_token_hash,expires_at)
