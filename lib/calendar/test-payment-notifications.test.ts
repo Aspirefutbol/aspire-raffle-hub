@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { settleAndQueueCalendarTestConfirmation, type CalendarTestEmailIntent } from "./test-payment-notifications";
+import { createInMemoryCalendarOutboxForTests } from "./notification-outbox";
 
 const NOW = 1_800_000_000;
 const SECRET = "whsec_synthetic_settlement_signing_secret";
@@ -95,5 +96,43 @@ describe("calendar TEST confirmation queue boundary", () => {
     await run(deps);
     expect(deps.enqueueOnce.mock.calls[0]![0].subject).toMatch(/^\[PRUEBA\]/);
     expect(deps.enqueueOnce.mock.calls[0]![0].text).toContain("Días patrocinados: 10");
+  });
+
+  it("keeps the exact reservation-scoped key", async () => {
+    const deps = dependencies();
+    await run(deps);
+    expect(deps.enqueueOnce.mock.calls[0]![0].key).toBe(`calendar:test:${scope.organizationId}:${reservationId}:donor-confirmation:v1`);
+  });
+  describe("with the test-only reference outbox", () => {
+    const policy = { maxAttempts: 3, leaseMs: 60_000, retryBaseMs: 30_000, retryCapMs: 600_000,
+      providerIdempotencyWindowMs: 86_400_000, idempotencySafetyMarginMs: 3_600_000 };
+    function withOutbox() {
+      const box = createInMemoryCalendarOutboxForTests(policy);
+      const deps = { ...dependencies(), enqueueOnce: vi.fn(box.enqueueOnce) };
+      return { box, deps };
+    }
+    it("queues once, returns already_queued on replay, and repairs after an enqueue crash", async () => {
+      const { box, deps } = withOutbox();
+      const real = deps.enqueueOnce.getMockImplementation()!;
+      deps.enqueueOnce.mockImplementationOnce(async () => { throw new Error("crash before commit"); });
+      await expect(run(deps)).rejects.toThrow(/was not queued/);
+      expect(box.size()).toBe(0);
+      deps.enqueueOnce.mockImplementation(real);
+      deps.confirm.mockResolvedValue({ reservation_id: reservationId, status: "PAID", replayed: true, total_cents: 5000 });
+      expect(await run(deps)).toMatchObject({ notification: "queued", replayed: true });
+      expect(await run(deps, signed("evt_synthetic_notification_another"))).toMatchObject({ notification: "already_queued" });
+      expect(box.size()).toBe(1);
+    });
+    it("fails safely when a replay sees a changed recipient, keeping the original intent", async () => {
+      const { box, deps } = withOutbox();
+      await run(deps);
+      deps.confirm.mockResolvedValue({ reservation_id: reservationId, status: "PAID", replayed: true, total_cents: 5000 });
+      deps.loadPaidSnapshot.mockResolvedValue({ ...snapshot, recipient: "changed@example.test" });
+      const error = await run(deps).then(() => null, (e: unknown) => e);
+      expect(String(error)).toMatch(/was not queued/);
+      expect(String(error)).not.toContain("example.test");
+      expect(box.size()).toBe(1);
+      expect([...[`calendar:test:${scope.organizationId}:${reservationId}:donor-confirmation:v1`]].map(k => box.record(k)!.intent.recipient)).toEqual([snapshot.recipient]);
+    });
   });
 });
