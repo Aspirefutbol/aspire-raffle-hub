@@ -23,3 +23,32 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Before pushing: `npm run check`, `npx supabase test db`, and `npm run test:e2e` against a seeded local stack (see `docs/deployment.md`).
 - Schema change → new migration → `npx supabase db reset` → `npm run db:types` → `npx supabase test db`.
 - Phase 1 deliberately has no tickets, sales, payments or checkout (Texas CREA offline-payment model).
+
+## Claude ↔ Codex handoff protocol
+
+This protocol applies to all work in this repository. It supplements—not overrides—the Next.js and Raffle Hub safeguards above.
+
+### Ownership and routing
+
+- Use **one owner per task and one isolated working branch**. Never let Claude and Codex concurrently modify the same branch or unreviewed files.
+- Create a GitHub issue using **Codex / Claude handoff** for every cross-agent transfer; the issue is the durable source of truth, not a private chat or sandbox.
+- Apply `needs-codex` when action or independent review is requested from Codex; apply `needs-claude` when action or corrections are requested from Claude. Remove the former label when replacing it with the latter (and vice versa); never leave both as ambiguous ownership unless the issue explicitly names separate scoped workstreams.
+- The receiving agent must acknowledge scope and verify the **remote branch, exact base/head SHA, and current test evidence** before writing code. Stale green CI on another SHA is not acceptance.
+
+### Required handoff packet
+
+Record in the issue: objective and acceptance criteria; current owner and next owner; repository and branch; exact base/head/tree SHA; PR links; files/commits/patches/bundles available to the receiver; completed work and explicit non-goals; commands run with pass/fail/skip counts; CI run URLs tied to the tested SHA; deployment URL and SHA if applicable; blockers, risks, pending approvals, and the single next action. Attach or link a **complete** patch, clean source archive and full logs when private sandbox artifacts would otherwise be inaccessible. Never claim the receiving agent can access another agent's local workspace.
+
+### Execution and approval gates
+
+1. **Inspect** the issue, `AGENTS.md`, relevant architecture/security docs, branch history, and requested files. Confirm branch drift and permissions. Stop on unexpected drift; don't silently rebase.
+2. **Work in isolation**. No unapproved pushes to `main`, `feat/phase-1-fundraising-slice`, or `feat/calendar-fundraiser-aspire-south`; prefer a draft PR into the approved target. Use synthetic data only unless separately approved.
+3. **Validate** the changed head with applicable lint, types, unit tests, build, migrations-from-scratch, pgTAP/RLS, concurrency and E2E. State exactly what did not run and why. For PR CI distinguish head SHA from GitHub's tested merge SHA/tree.
+4. **Hand back** evidence in the issue and transfer the routing label. On failure, provide logs and artifacts rather than broadening scope or making security-sensitive fixes without approval.
+5. **Wait for director/security approval** before merging, deploying, migrating a hosted database, changing auth/RLS/webhook identities or secrets, enabling live Stripe/email, introducing real donor/child data, or incurring spending. A passing test does not itself authorize these actions.
+
+### Aspire South boundaries
+
+- Keep Draft PR #19 separate from PR #15's personal-link/security decisions. Batch 1's notification outbox contract is not a deployed sending system.
+- Batch 2 SQL, worker/provider identities, public personal links, sender/DNS settings, live payments, real donor emails, and hosted migrations require distinct explicit approval.
+- A synthetic preview deployment is different from a production deployment. Record whether either was triggered or explicitly prohibited.
