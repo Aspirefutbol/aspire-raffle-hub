@@ -1,49 +1,70 @@
 ---
 name: "Codex / Claude handoff"
-about: "Route a bounded, evidence-backed engineering investigation, implementation, or review between Codex and Claude."
+about: "Transfer a bounded Raffle or Aspire South task with one owner, exact evidence and explicit approval boundaries."
 title: "[Handoff] "
 labels: ["needs-codex"]
 assignees: []
 ---
 
-<!-- ROUTING: New issues start needs-codex. For a Claude handoff, after posting a complete handoff comment REMOVE needs-codex and ADD needs-claude. Keep one routing label active. Label presence does not authorize merges, promotions or security changes. -->
+> **Routing:** This is the canonical issue for this task. It starts with `needs-codex`. Post the full handoff comment before replacing that label with `needs-claude` (or the reverse); keep exactly one routing label. Use separate linked issues for parallel owners/scopes. Labels do not grant approval to merge, promote, deploy or change security/business rules.
 
-## Owner and requested outcome
-- From (Claude / Codex / director):
-- To (Codex / Claude): **Codex**
-- Routing label: `needs-codex`
-- Objective and bounded acceptance criteria:
-- Explicitly prohibited scope (production, secrets, payments, auth/RLS, etc.):
+## Owner, goal and boundaries
+
+- From → To (one next owner):
+- Routing label:
+- Objective and acceptance criteria:
+- Requested action: [ ] investigate  [ ] implement  [ ] independent review  [ ] CI triage  [ ] handback
+- Completed work and explicit non-goals:
+- Prohibited actions (merges, deploys, production, hosted SQL, secrets, real data, spending, etc.):
 
 ## Exact repository context
+
 - Repository: `Aspirefutbol/aspire-raffle-hub`
-- Related issue(s) and PR(s):
-- Base branch + **full SHA** (verify live):
-- Isolated work branch + **full SHA**:
-- Work state: local-only / pushed / draft / CI-validated / reviewed / promoted / staged (select only verified states)
-- Change owner and overlapping branches/PRs:
+- Project/scope and canonical issue URL:
+- Related draft PRs / separate workstream issues:
+- Target/base branch and full SHA (verify live):
+- Isolated work branch and full HEAD SHA:
+- Source tree SHA:
+- Work state (only verified states: local-only / pushed / draft / CI-validated / reviewed / promoted / staged / deployed):
+- Active writer, overlapping branches/PRs, dependencies and conflicts:
 
-## Changes / evidence being handed off
-- Exact changed files and diff summary:
-- Patch/bundle location, checksums and commit dependencies (if not pushed):
-- Commands executed, environment and synthetic fixtures:
-- CI run IDs, exact-head SHA, passed/failed/skipped results, retries:
-- Database reset/migrations, pgTAP/RLS, concurrency and audit evidence:
-- Lint/types/unit/build/browser and 320/360/390px accessibility evidence:
-- Hosted QA login/public privacy smoke + Netlify READY deployment ID (only if verified):
-- Known limitations, reproduction steps and meaningful failures:
+## Files, artifacts and validation
 
-## Security, privacy, and approval gate
+- Exact changed files and diff:
+- Accessible complete patch (or equivalent bundle) AND clean source archive when private sandbox artifacts are inaccessible; original patch SHA/checksum and dependency order:
+- Full sanitized report/log links:
+- Local commands, environment, synthetic fixtures, PASS/FAIL/SKIP counts and first attempt/retries:
+- Fresh DB reset/migrations, pgTAP/RLS/security, concurrency and audit evidence:
+- Lint/types/unit/build, browser/E2E and 320/360/390px accessibility evidence:
+- CI run IDs/URLs, exact head SHA, GitHub-tested merge SHA/tree, jobs and final conclusions:
+- Baseline evidence versus candidate evidence:
+- Authorized hosted QA login/public-privacy smoke, URL, deployment ID/source SHA and matching published READY state:
+- Preview/staging/production classification; automatic preview observed, explicit deployment, or deployment prohibited:
+- Not independently inspected, not run, not applicable or unverified (with reasons):
+- Known failures, reproduction steps and meaningful retry history:
+
+## Risks and approval boundaries
+
 - Threats, regressions and risk classification:
-- Director approval status:
+- Director approval status and exact approved action/source link:
 - Independent security-review status:
-- Data used: **synthetic only**; no credentials or real family/payment data
-- No destructive retry, silent seller-link rotation, weakened assertions, production Supabase, production deployment or PR #2 merge without separate authorization
+- Pending approvals and stop conditions:
+- Data: synthetic only unless separately authorized; no credentials, raw seller tokens, service-role keys, real donor/child/family/supporter data or billing details in this issue or artifacts.
+- Preserve Raffle gates: public REQUEST-only pages, offline cash/check, guardian isolation, immutable ledgers, physical drawing, no production Supabase for tests, and no PR #2 merge without specific approval.
+- Preserve South gates: PR #19 separate from PR #15; Batch 1 outbox is not deployed sending; Batch 2 SQL, identities, personal links, sender/DNS, live payments/emails and hosted migrations need distinct approval.
+- No uncertain destructive retry, silent seller-link rotation or weakened assertions.
 
-## Next agent: specific work and return conditions
-- Requested investigation / patch / review:
-- Tests that must pass with exact-head evidence:
-- Stop conditions / approval needed:
-- Expected handback format: comment with exact SHAs, changed files, test evidence, unresolved risks and next owner
+## Receiving owner checklist and handback
 
-<!-- HANDOFF PROCEDURE: Post a completed comment with the sections above; only then switch needs-codex <-> needs-claude. Never leave both labels active for the same next owner. See AGENTS.md and CLAUDE.md. -->
+- [ ] Read `AGENTS.md`, relevant docs and this issue's latest comments; read `docs/PROJECT_STATE.md` if present on the selected branch.
+- [ ] Confirm repository permissions, acknowledge scope, check active writers/overlaps and independently verify remote base/head/tree and accessible artifacts before editing.
+- [ ] Stop on unexpected drift; do not silently rebase, retarget a PR or combine application branches.
+- [ ] Work on an isolated branch with synthetic data; keep PR draft and preserve all approval gates.
+- [ ] Validate the changed head and preserve full evidence, including merge SHA/tree for PR CI and anything not run.
+- [ ] Post the full handback here, name the next owner and one action, then switch the single routing label. Record a blocker if routing fails.
+
+**One immediate next action:**
+
+**Expected handback / required checks:**
+
+**Receiving-owner acknowledgement and date:**
