@@ -504,10 +504,16 @@ select calendar_private.enqueue_donor_confirmation(pg_temp.intent(pg_temp.r(l)))
                     'review','restart','abandon','purge']) l;
 
 insert into t(label, v) values ('c-retry', pg_temp.claim_only(pg_temp.r('retry')));
-select ok((calendar_private.acknowledge_donor_confirmation(pg_temp.okey(pg_temp.r('retry')),
-  (select (v->>'leaseId')::uuid from t where label = 'c-retry'), 'rejected_retryable', null, 'rate_limited')->>'nextAttemptAt')::timestamptz
-  between clock_timestamp() + interval '29 seconds' and clock_timestamp() + interval '31 seconds',
-  'first retryable rejection backs off 30 seconds');
+-- Call the acknowledgement exactly once and assert on the stored result. (A BETWEEN around
+-- the call would evaluate it twice, and the lease fence would rightly reject the second call.)
+insert into t(label, v) values ('a-retry', calendar_private.acknowledge_donor_confirmation(pg_temp.okey(pg_temp.r('retry')),
+  (select (v->>'leaseId')::uuid from t where label = 'c-retry'), 'rejected_retryable', null, 'rate_limited'));
+select is((select v->>'state' from t where label = 'a-retry'), 'PENDING', 'a retryable rejection returns the row to PENDING');
+select is((pg_temp.outbox(pg_temp.r('retry'))).next_attempt_at - (pg_temp.outbox(pg_temp.r('retry'))).updated_at,
+  interval '30 seconds', 'first retryable rejection backs off exactly 30 seconds (same database clock reading)');
+select is(pg_temp.sqlstate_of(format($$select calendar_private.acknowledge_donor_confirmation(%L, %L::uuid, 'rejected_retryable')$$,
+  pg_temp.okey(pg_temp.r('retry')), (select v->>'leaseId' from t where label = 'c-retry'))), '23514',
+  'lease fencing: re-using an acknowledged lease is refused (STALE_LEASE)');
 create function pg_temp.exhaust(p_res uuid) returns text language plpgsql as $$
 declare c jsonb; s jsonb; i int := 0;
 begin
