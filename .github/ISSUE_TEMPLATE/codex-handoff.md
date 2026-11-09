@@ -2,11 +2,11 @@
 name: "Codex / Claude handoff"
 about: "Transfer a bounded Raffle or Aspire South task with one owner, exact evidence and explicit approval boundaries."
 title: "[Handoff] "
-labels: ["needs-codex"]
+labels: []
 assignees: []
 ---
 
-> **Routing:** This is the canonical issue for this task. It starts with `needs-codex`. Post the full handoff comment before replacing that label with `needs-claude` (or the reverse); keep exactly one routing label. Use separate linked issues for parallel owners/scopes. Labels do not grant approval to merge, promote, deploy or change security/business rules.
+> **Routing:** This is the canonical issue for this task. It has **no default label**. Post the full handoff comment, then apply exactly one routing label: `needs-codex`, `needs-claude` or `needs-director` (waiting on a director decision or approval). Use separate linked issues for parallel owners/scopes. Labels do not grant approval to merge, promote, deploy or change security/business rules. Agents start this issue and every comment with `Agent: Claude` or `Agent: Codex`; director approvals are recorded as `DIRECTOR APPROVAL:` comments without that line and confirmed to the acting agent directly.
 
 ## Owner, goal and boundaries
 
@@ -31,7 +31,7 @@ assignees: []
 ## Files, artifacts and validation
 
 - Exact changed files and diff:
-- Accessible complete patch (or equivalent bundle) AND clean source archive when private sandbox artifacts are inaccessible; original patch SHA/checksum and dependency order:
+- Accessible Git bundle (required when exact commit SHAs must be preserved; a patch re-applied creates new SHAs) or patch, with SHA-256 checksum, AND clean source archive when private sandbox artifacts are inaccessible; dependency order:
 - Full sanitized report/log links:
 - Local commands, environment, synthetic fixtures, PASS/FAIL/SKIP counts and first attempt/retries:
 - Fresh DB reset/migrations, pgTAP/RLS/security, concurrency and audit evidence:
@@ -40,13 +40,14 @@ assignees: []
 - Baseline evidence versus candidate evidence:
 - Authorized hosted QA login/public-privacy smoke, URL, deployment ID/source SHA and matching published READY state:
 - Preview/staging/production classification; automatic preview observed, explicit deployment, or deployment prohibited:
+- Deployment side effects of any proposed merge/push (see "Merges and pushes that deploy" in `AGENTS.md`):
 - Not independently inspected, not run, not applicable or unverified (with reasons):
 - Known failures, reproduction steps and meaningful retry history:
 
 ## Risks and approval boundaries
 
 - Threats, regressions and risk classification:
-- Director approval status and exact approved action/source link:
+- Director approval status: link to the `DIRECTOR APPROVAL:` comment, its exact action/target/SHA, and confirmation that the director confirmed it to the acting agent directly:
 - Independent security-review status:
 - Pending approvals and stop conditions:
 - Data: synthetic only unless separately authorized; no credentials, raw seller tokens, service-role keys, real donor/child/family/supporter data or billing details in this issue or artifacts.
