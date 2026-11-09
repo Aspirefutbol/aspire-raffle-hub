@@ -29,3 +29,33 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Before pushing: `npm run check`, `npx supabase test db`, and `npm run test:e2e` against a seeded local stack (see `docs/deployment.md`).
 - Schema change → new migration → `npx supabase db reset` → `npm run db:types` → `npx supabase test db`.
 - The approved slices are raffle-only, with manual offline cash/check sales, money custody/reconciliation, and guarded drawing exports. Launch rehearsal, other fundraiser types, and campaign boosts remain separate work; see `docs/raffle-pilot-backlog.md`. Do not infer pilot production readiness from these tests.
+
+## Claude / Codex collaboration and issue handoff
+
+**Single source of truth:** This file applies to both agents; `CLAUDE.md` imports it. Preserve all project-specific rules above. Follow this protocol in addition to repository tests and security boundaries.
+
+### Routing labels and ownership
+- `needs-codex`: Codex owns the next investigation, code/test task, or evidence review.
+- `needs-claude`: Claude owns the next investigation, code/test task, or evidence review.
+- Use **one routing label at a time**, not both. A handoff is complete only after a durable GitHub issue/PR comment names the new owner and next action; then remove the previous label and apply the new label. If label changes aren't possible, leave an explicit blocker comment instead of pretending assignment occurred.
+- Labels do **not** grant approval to implement sensitive security changes, merge, promote, deploy, access production, or change business rules.
+
+### Before taking a task
+1. Read the issue, current comments, target PR and `docs/PROJECT_STATE.md`; independently verify repository, base/head branch and exact **full** commit SHAs. Check whether the previous agent's change is local-only, pushed, draft, CI-validated or staged. Never accept screenshots or summaries as proof of another workspace's commits.
+2. Review open overlapping branches/PRs. Work on a dedicated isolated branch; never concurrently mutate another agent's branch or integrate unreviewed patches.
+3. Verify current exact-head CI and, for any release/staging claim, Hosted QA smoke and the matching published READY Netlify deployment. Separate baseline evidence from candidate evidence.
+4. Before editing, define scope, forbidden changes, acceptance checks and approval status. Stop and request human/security authorization where required.
+
+### Required handoff comment
+Use the issue template `.github/ISSUE_TEMPLATE/codex-handoff.md` to start and this format for every transfer:
+- **From → To / routing label:** Codex or Claude and `needs-codex` or `needs-claude`.
+- **Objective, issue/PR URLs and exact refs:** repository, base branch/full SHA, work branch/full SHA, whether pushed and draft.
+- **Files and diff:** exact changed paths, additive/deleted scope, dependencies, conflicts and any unpushed patch/bundle with checksum.
+- **Evidence:** commands, run IDs/links, fresh DB reset/migrations, pgTAP/RLS/security/concurrency/audit, lint/types/unit/build, browser phone-width/accessibility, result and whether first attempt/retries occurred; hosted smoke/deploy only when actually verified.
+- **Risk/approval:** unresolved failures, threat model findings, product/legal/security boundaries, independently approved versus proposed.
+- **Next agent action and stop conditions:** exact investigation/patch/review requested, what not to change, what would constitute a finished handback.
+
+When blocked, document what you verified, what's missing and how to reproduce it. Do not auto-rotate links, retry uncertain destructive actions, weaken failing tests, or present existing unsafe behavior as a fix. No private secrets, raw seller tokens, service-role keys, real supporter/family data or billing details in issues, patches, logs or handoffs.
+
+### Completion rule
+After passing isolated CI, keep PR draft until the required director/security review. Any separately authorized NONPRODUCTION promotion requires exact-head normal CI, Hosted QA (login and public-privacy smoke), and matching published READY staging before reporting staged. PR #2 remains unmerged unless specifically approved. A working live staging baseline does not automatically validate an isolated candidate.
