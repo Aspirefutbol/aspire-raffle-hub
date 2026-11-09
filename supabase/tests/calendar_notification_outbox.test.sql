@@ -856,6 +856,19 @@ select ok(not (calendar_private.read_donor_confirmation_status(pg_temp.okey(pg_t
   ?| array['recipient', 'subject', 'text', 'html']), 'status is donor-free');
 select is(calendar_private.read_donor_confirmation_status('calendar:test:none'), null, 'unknown status is null');
 select lives_ok($$select calendar_private.outbox_require_read_committed()$$, 'X2: READ COMMITTED check passes here');
+-- Identifier bounds (CI fix): PostgreSQL regex repetition is limited to 255, so the
+-- 1..256 bound is enforced with length(); the accepted set must equal Batch 1 SAFE_ID.
+select lives_ok(format($$select calendar_private.claim_donor_confirmation(%L, 'acct-test-1')$$, repeat('w', 256)),
+  'a 256-character worker id is accepted (Batch 1 SAFE_ID upper bound)');
+select throws_ok(format($$select calendar_private.claim_donor_confirmation(%L, 'acct-test-1')$$, repeat('w', 257)),
+  '23514', 'INVALID_TRANSITION', 'a 257-character worker id is rejected');
+select throws_ok($$select calendar_private.claim_donor_confirmation('', 'acct-test-1')$$,
+  '23514', 'INVALID_TRANSITION', 'an empty worker id is rejected');
+select throws_ok($$select calendar_private.claim_donor_confirmation('bad id', 'acct-test-1')$$,
+  '23514', 'INVALID_TRANSITION', 'a worker id outside the allowed characters is rejected');
+select is(pg_temp.sqlstate_of(format($$insert into calendar_private.notification_events (key, organization_id, event_type, epoch, worker_id)
+  values (%L, %L::uuid, 'CLAIMED', 1, %L)$$, pg_temp.okey(pg_temp.r('restart')), pg_temp.cid('org-a'), repeat('w', 257))), '23514',
+  'the table CHECK also enforces the 256-character bound');
 
 select * from finish();
 rollback;

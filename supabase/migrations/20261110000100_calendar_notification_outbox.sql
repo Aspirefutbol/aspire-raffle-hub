@@ -103,17 +103,17 @@ create table calendar_private.notification_outbox (
     check (state in ('PENDING', 'SENDING', 'SENT', 'DELIVERY_UNCERTAIN', 'DEAD_LETTER')),
   next_attempt_at timestamptz,
   lease_id uuid unique,
-  lease_worker_id text check (lease_worker_id is null or lease_worker_id ~ '^[A-Za-z0-9._:@<>+-]{1,256}$'),
+  lease_worker_id text check (lease_worker_id is null or (length(lease_worker_id) between 1 and 256 and lease_worker_id ~ '^[A-Za-z0-9._:@<>+-]+$')),
   lease_expires_at timestamptz,
   epoch integer not null default 1 check (epoch >= 1),
   epoch_started_at timestamptz,
   epoch_attempts smallint not null default 0 check (epoch_attempts >= 0),
   epoch_unknown_outcome boolean not null default false,
   epoch_provider_account text
-    check (epoch_provider_account is null or epoch_provider_account ~ '^[A-Za-z0-9._:@<>+-]{1,256}$'),
+    check (epoch_provider_account is null or (length(epoch_provider_account) between 1 and 256 and epoch_provider_account ~ '^[A-Za-z0-9._:@<>+-]+$')),
   total_attempts integer not null default 0,
   provider_message_id text
-    check (provider_message_id is null or provider_message_id ~ '^[A-Za-z0-9._:@<>+-]{1,256}$'),
+    check (provider_message_id is null or (length(provider_message_id) between 1 and 256 and provider_message_id ~ '^[A-Za-z0-9._:@<>+-]+$')),
   sent_at timestamptz,
   sent_after_refund boolean not null default false,
   hold_reason text check (hold_reason is null or hold_reason in (
@@ -163,8 +163,8 @@ create table calendar_private.notification_events (
   epoch integer not null,
   attempt smallint,
   lease_id uuid,
-  worker_id text check (worker_id is null or worker_id ~ '^[A-Za-z0-9._:@<>+-]{1,256}$'),
-  provider_account text check (provider_account is null or provider_account ~ '^[A-Za-z0-9._:@<>+-]{1,256}$'),
+  worker_id text check (worker_id is null or (length(worker_id) between 1 and 256 and worker_id ~ '^[A-Za-z0-9._:@<>+-]+$')),
+  provider_account text check (provider_account is null or (length(provider_account) between 1 and 256 and provider_account ~ '^[A-Za-z0-9._:@<>+-]+$')),
   code text check (code is null or code ~ '^[a-z0-9_.-]{1,64}$'),
   reviewer_user_id uuid,
   resolution text check (resolution is null or resolution in
@@ -655,8 +655,8 @@ declare
   i integer := 0;
 begin
   perform calendar_private.outbox_require_read_committed();
-  if p_worker_id is null or p_worker_id !~ '^[A-Za-z0-9._:@<>+-]{1,256}$'
-     or p_provider_account is null or p_provider_account !~ '^[A-Za-z0-9._:@<>+-]{1,256}$' then
+  if p_worker_id is null or length(p_worker_id) not between 1 and 256 or p_worker_id !~ '^[A-Za-z0-9._:@<>+-]+$'
+     or p_provider_account is null or length(p_provider_account) not between 1 and 256 or p_provider_account !~ '^[A-Za-z0-9._:@<>+-]+$' then
     raise exception 'INVALID_TRANSITION' using errcode = '23514';
   end if;
   select * into strict pol from calendar_private.notification_policy;
@@ -747,7 +747,7 @@ begin
   select status into v_status from calendar_private.reservations where id = o.reservation_id;  -- unlocked
 
   if p_outcome = 'accepted' then
-    if p_provider_message_id is null or p_provider_message_id !~ '^[A-Za-z0-9._:@<>+-]{1,256}$' then
+    if p_provider_message_id is null or length(p_provider_message_id) not between 1 and 256 or p_provider_message_id !~ '^[A-Za-z0-9._:@<>+-]+$' then
       raise exception 'INVALID_TRANSITION' using errcode = '23514';
     end if;
     update calendar_private.notification_outbox set
@@ -848,7 +848,7 @@ begin
   if p_resolution = 'provider_confirmed_accepted' then
     if p_reason_code is distinct from 'provider_reports_accepted'
        or p_evidence_kind not in ('provider_api_lookup', 'provider_dashboard', 'provider_support_case')
-       or p_provider_message_id is null or p_provider_message_id !~ '^[A-Za-z0-9._:@<>+-]{1,256}$' then
+       or p_provider_message_id is null or length(p_provider_message_id) not between 1 and 256 or p_provider_message_id !~ '^[A-Za-z0-9._:@<>+-]+$' then
       raise exception 'EVIDENCE_REQUIRED' using errcode = '23514';
     end if;
     update calendar_private.notification_outbox set
