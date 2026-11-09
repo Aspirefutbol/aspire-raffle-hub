@@ -41,3 +41,14 @@ Locally, the dependency-free content module passed strict TypeScript compilation
 - **Reference adapter.** `createInMemoryCalendarOutboxForTests` is test-only, refuses `NODE_ENV=production`, and is not imported by application code (asserted by a test).
 
 Still required: the durable Postgres outbox (Batch 2, not approved), a worker, provider/sender/domain, TEST-recipient allowlist, bounce/complaint handling, and database/browser/device gates.
+
+## Batch 2A — durable outbox in Postgres (isolated, CI-only; not integrated)
+
+Implements proposal revision 2.2 (`docs/calendar/batch2a-outbox-proposal-rev2.2.md` @ `25c6dbb`), independently reviewed on issue #30, plus the director's decisions there: Vault required with no fallback (K1), and reviewer appointers separated from reviewers (D2e). Migration `20261110000100_calendar_notification_outbox.sql`.
+
+- **Scope.** Seven `calendar_private` tables and 29 functions. **No grants** to `anon`, `authenticated` or `service_role`; RLS on with no policies. No worker, provider, sender, route, Stripe change or hosted migration. Identities (D1), the reviewer call path and allowlist/appointment management are Batch 2B.
+- **Integrity.** The database rebuilds facts from the locked PAID reservation, recomputes both Batch 1 digests itself (golden vectors pin TS↔SQL byte identity), and re-verifies the stored payload before releasing it to a worker.
+- **Privacy.** Conflicts are detected with per-row salted, Vault-keyed HMAC fingerprints, which survive the 30-day payload purge. Key format: canonical Base64 of exactly 32 bytes. A missing or invalid key fails closed. Outbox rows are never deleted.
+- **Refunds and locking.** One lock order (reservation → outbox row → audit lock). Claim, acknowledge and expiry never lock reservations. Refunds before or during sending are held for review or flagged `sent_after_refund`. Future refund/wrapper code is gated on rules N1–N4.
+- **Reviewers.** Explicit per-organization, expiring designations; MFA (`aal2`) and two different reviewers for an epoch restart are fixed in code; no platform-admin bypass; appointers can never be reviewers (enforced at write time and check time). Every decision writes an append-only event and a 1:1-linked, hash-chained `audit_events` row.
+- **Tests.** `supabase/tests/calendar_notification_outbox.test.sql` (pgTAP), `lib/calendar/notification-digest-vectors.test.ts` (Node golden vectors), `lib/calendar/notification-outbox.db.test.ts` (real multi-session concurrency on the local CI database; "no deadlock observed" is evidence, not proof).
