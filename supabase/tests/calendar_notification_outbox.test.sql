@@ -476,13 +476,28 @@ select is((pg_temp.outbox(pg_temp.r('main'))).sent_after_refund, false, 'normal 
 -- ===========================================================================
 -- 6. State machine: retryable, permanent, unknown, lease expiry (window 0 default)
 -- ===========================================================================
-create function pg_temp.claim_only(p_res uuid, p_account text default 'acct-test-1') returns jsonb language plpgsql as $$
+-- Claims exactly the row under test. If the claim returns nothing or another row, fail
+-- loudly with the row's state so CI logs show why (diagnostic only; no behaviour change).
+create function pg_temp.claim_only(p_res uuid, p_account text default 'acct-test-1',
+  p_expect_claim boolean default true) returns jsonb language plpgsql as $$
+declare c jsonb; o calendar_private.notification_outbox;
 begin
   update calendar_private.notification_outbox set next_attempt_at = clock_timestamp() + interval '1 day'
     where state = 'PENDING' and reservation_id <> p_res;
   update calendar_private.notification_outbox set next_attempt_at = clock_timestamp() - interval '1 second'
     where state = 'PENDING' and reservation_id = p_res;
-  return calendar_private.claim_donor_confirmation('worker-t', p_account);
+  c := calendar_private.claim_donor_confirmation('worker-t', p_account);
+  if p_expect_claim and (c is null or c->>'key' is distinct from pg_temp.okey(p_res)) then
+    select * into o from calendar_private.notification_outbox where reservation_id = p_res;
+    raise exception 'claim_only: expected % got %; row state=% hold=% next=% now=% allowlisted=% reservation=% due_pending=%',
+      pg_temp.okey(p_res), c->>'key', o.state, o.hold_reason, o.next_attempt_at, clock_timestamp(),
+      exists (select 1 from calendar_private.test_recipient_allowlist a
+              where a.organization_id = o.organization_id and a.recipient = o.recipient),
+      (select status from calendar_private.reservations where id = p_res),
+      (select count(*) from calendar_private.notification_outbox
+        where state = 'PENDING' and next_attempt_at <= clock_timestamp());
+  end if;
+  return c;
 end $$;
 select calendar_private.enqueue_donor_confirmation(pg_temp.intent(pg_temp.r(l)))
   from unnest(array['retry','perm','unknown','lease','race-ok','race-rt','race-un','window',
@@ -555,7 +570,7 @@ insert into t(label, v) values ('c-window', pg_temp.claim_only(pg_temp.r('window
 select is(calendar_private.acknowledge_donor_confirmation(pg_temp.okey(pg_temp.r('window')),
   (select (v->>'leaseId')::uuid from t where label = 'c-window'), 'unknown')->>'state', 'PENDING',
   'non-zero window: an unknown outcome is retried while the window covers it');
-select is(pg_temp.claim_only(pg_temp.r('window'), 'acct-OTHER'), null,
+select is(pg_temp.claim_only(pg_temp.r('window'), 'acct-OTHER', false), null,
   'a different provider account cannot retry after an unknown outcome');
 select is((pg_temp.outbox(pg_temp.r('window'))).hold_reason, 'provider_changed_after_unknown_outcome',
   'provider change is held');
