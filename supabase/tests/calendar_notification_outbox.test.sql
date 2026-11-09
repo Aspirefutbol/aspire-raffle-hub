@@ -637,7 +637,11 @@ select throws_ok(pg_temp.abandon_sql(pg_temp.r('review')), '42501', 'NOT_AUTHORI
 select pg_temp.as_user('staff');
 select ok(calendar_private.is_notification_reviewer(pg_temp.cid('org-a')),
   'D2b: explicitly designated platform staff may review that organization');
+-- The existing platform guard refuses platform_admins writes from any end-user session,
+-- so the fixture change runs with no JWT (owner-level), then the staff session resumes.
+select pg_temp.no_session();
 delete from public.platform_admins where user_id = pg_temp.cid('user-staff');
+select pg_temp.as_user('staff');
 select ok(not calendar_private.is_notification_reviewer(pg_temp.cid('org-a')),
   'platform_staff designation lapses when the user is no longer a platform admin');
 select pg_temp.as_user('rev-1');
