@@ -1,1 +1,14 @@
 @AGENTS.md
+
+## Claude ↔ Codex handoff protocol
+
+Read `AGENTS.md` (referenced above) as the shared source of truth for repository boundaries and validation requirements. The two agents collaborate through **GitHub issues and draft pull requests**, not through assumptions about each other's local files or private conversations.
+
+- A GitHub issue carrying `needs-codex` requests a Codex investigation, code change, or verification. An issue carrying `needs-claude` requests Claude's independent investigation, implementation proposal, or review. Keep exactly **one** routing label active while one agent owns the next action. Switch labels only when writing a complete handoff comment and assigning the next agent; remove the previous routing label.
+- Use `.github/ISSUE_TEMPLATE/codex-handoff.md` for a new request and the issue comment format defined in `AGENTS.md` for later handoffs. Name the repository, issue/PR, exact branch and full commit SHA, verified changed files, tests and logs (including failures/retries), open questions, and the **specific next action**. State clearly whether work is local-only, pushed, draft, validated, approved, staged, or deployed.
+- Claude must never claim access to Codex's local edits (or vice versa) unless the actual files/commits are accessible and verified. Preserve original patch SHA and dependency order when importing local work. Do not infer that a draft PR or a green historical run validates a newer head.
+- **Never share a writable branch between concurrent agents.** Use separate isolated branches, draft PRs, and explicit diff reconciliation. An agent receiving a handoff inspects current head and branch/base before acting, then reports its own validation evidence.
+- Keep security-sensitive design, authentication/RLS changes, encryption/key handling, rate-limit trust boundaries, credential changes, production deployment, payment rules, PR #2 merge, and real family/payment data behind existing director and independent-security approval gates. Handoff labels are task routing, **not authorization**.
+- When blocked, state the blocker and safe independent work; don't claim silent background execution. Notify the director only on verified milestones or actionable blockers.
+
+For this raffle project, the nonproduction Phase 1 integration branch and protected staging are not a general merge target. Consult `docs/PROJECT_STATE.md` and live GitHub/Netlify evidence every time. Preserve public REQUEST-only supporter pages, approved offline cash/check workflow, multi-guardian isolation, immutable ledgers, and physical drawing. Before an approved nonproduction promotion require exact reviewed diff, full fresh DB/RLS/security/concurrency/audit, lint/types/unit/build and retry-free browser acceptance; after promotion require exact-head normal CI, Hosted QA login/public privacy smoke and matching published READY staging.
