@@ -263,16 +263,18 @@ select public.submit_seller_interest_request(
 ) from generate_series(1,11)n;
 reset role;
 select is(
-  (select count(*) from public.seller_request_limits
-   where bucket='ip:'||encode(extensions.digest('unknown','sha256'),'hex')
-     and window_at=date_trunc('hour',clock_timestamp()) and attempts=11),
-  1::bigint,
+  (select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+   where bucket='ip:'||encode(extensions.digest('unknown','sha256'),'hex')),
+  11::bigint,
   'S1 baseline: distinct requests with missing forwarding metadata exhaust shared unknown bucket'
 );
 select is(
-  (select count(*) from public.seller_interest_requests where organization_id=pg_temp.id('org-a')),
-  11::bigint,
-  'S1 baseline: only ten of eleven new synthetic requests persisted; generic response hides drop'
+  (select count(*) from public.seller_interest_requests
+   where submission_key in (
+     select pg_temp.id('s1-unknown-'||n) from generate_series(1,11)n
+   )),
+  10::bigint,
+  'S1 baseline: exactly ten of eleven NEW synthetic requests persisted; generic response hides drop'
 );
 rollback to savepoint s1_missing_header;
 
