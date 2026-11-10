@@ -8,6 +8,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Single lead and current status
+
+Read [STATUS.md](STATUS.md) first, then this file and the active issue/PR. Codex is the lead for planning, implementation, integration and status upkeep. Claude is a specialist for a specific, explicitly scoped review in a fresh session, not a second coordinator or mandatory reviewer of every change. Existing required security/payment reviews remain required. Neither this guidance nor a routing label starts an external session or grants new authority.
+
+Update STATUS after a material decision, result, blocker or actual handoff. Record the source/date, exact revision when relevant, one next owner/action and an agreed date or clearly provisional checkpoint. Distinguish proposed, local-only, tested, merged, deployed and accepted. Decisions from another private chat are known only when relayed or otherwise available through an authorized source. Do not claim automatic chat synchronization. Keep detailed evidence on the existing issue; avoid duplicate coordination tasks and unchanged polling reports.
+
+Preserve approved scope and existing permission, privacy, security, validation and release gates. Changes to dates or feature cuts are proposals until supported by a decision. This documentation is not a merge, launch or live-data approval.
+
 # Raffle Hub — project notes for agents
 
 - Read `docs/architecture.md` first; `docs/Raffle-Hub-Developer-Blueprint.pdf` is the product spec.
@@ -82,3 +90,4 @@ These safeguards apply to approved raffle slices on their own branch; they do no
 - Keep Draft PR #19 separate from PR #15's personal-link/security decisions. Batch 1's notification outbox contract is not a deployed sending system.
 - Batch 2 SQL, worker/provider identities, public personal links, sender/DNS settings, live payments, real donor emails and hosted migrations require distinct explicit approval.
 - Preserve protected production and Aspire South branches. Shared handoff documentation does not approve feature integration, an application-branch merge, deployment or expansion of either project's scope.
+
