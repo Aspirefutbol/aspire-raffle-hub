@@ -6,6 +6,8 @@ labels: ["needs-codex"]
 assignees: []
 ---
 
+> Read `STATUS.md` first. Codex remains the lead; `needs-claude` is only for an explicitly assigned specialist review, not automatic handback after every change.
+
 > **Routing:** This is the canonical issue for this task. It starts with `needs-codex`. Post the full handoff comment before replacing that label with `needs-claude` (or the reverse); keep exactly one routing label. Use separate linked issues for parallel owners/scopes. Labels do not grant approval to merge, promote, deploy or change security/business rules.
 
 ## Owner, goal and boundaries
@@ -68,3 +70,4 @@ assignees: []
 **Expected handback / required checks:**
 
 **Receiving-owner acknowledgement and date:**
+
