@@ -12,6 +12,19 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  */
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// Run only against the disposable LOCAL Supabase stack. Any other configured URL
+// (for example the hosted staging URL some workflows export) means "skip", never
+// "connect"; the guard in beforeAll below stays as a second layer.
+const LOCAL_HOSTS = ["localhost", "127.0.0.1"];
+function isLocalDatabaseUrl(value: string | undefined) {
+  if (!value) return false;
+  try {
+    return LOCAL_HOSTS.includes(new URL(value).hostname);
+  } catch {
+    return false;
+  }
+}
+const runAgainstLocalDb = isLocalDatabaseUrl(url);
 const socket = process.env.DOCKER_HOST ?? "unix:///var/run/docker.sock";
 const RUN = randomUUID().slice(0, 8);
 
@@ -89,7 +102,7 @@ const refundOpen = (label: string, holdSeconds: number) => [
 const LABELS = Array.from({ length: 40 }, (_, i) => `p${i}`);
 let policyBefore = "";
 
-describe.skipIf(!url)("Batch 2A outbox concurrency on disposable local DB", () => {
+describe.skipIf(!runAgainstLocalDb)("Batch 2A outbox concurrency on disposable local DB", () => {
   beforeAll(async () => {
     if (!url || !["localhost", "127.0.0.1"].includes(new URL(url).hostname)) throw new Error("Outbox concurrency tests refuse hosted databases.");
     if (!/^unix:\/\/\/[^\s?#\0]+$/.test(socket)) throw new Error("Only a local Docker socket is permitted.");
@@ -148,7 +161,7 @@ describe.skipIf(!url)("Batch 2A outbox concurrency on disposable local DB", () =
   }, 180_000);
 
   afterAll(async () => {
-    if (!url || !policyBefore) return;
+    if (!runAgainstLocalDb || !policyBefore) return;
     const p = JSON.parse(policyBefore);
     await psql([`update calendar_private.notification_policy set provider_idempotency_window = ${lit(p.provider_idempotency_window)}::interval,
       idempotency_safety_margin = ${lit(p.idempotency_safety_margin)}::interval, lease_interval = ${lit(p.lease_interval)}::interval`]);
