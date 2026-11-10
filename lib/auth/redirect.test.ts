@@ -26,6 +26,12 @@ describe("safeNextPath", () => {
     "/\t/evil.example",
     "/\r/evil.example",
     "/\n/evil.example",
+    "/?%0d%0aSet-Cookie:x=1",
+    "/?tab=%09",
+    "/#%0aLocation:https://evil.example",
+    "/?cr=%250d",
+    "/?backslash=%5c",
+    "/?line=hello\r\nSet-Cookie:x=1",
   ])("rejects unsafe or ambiguous redirect %s", (value) => {
     expect(safeNextPath(value)).toBe("/");
   });
