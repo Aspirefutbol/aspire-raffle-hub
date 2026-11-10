@@ -129,7 +129,7 @@ test("F7: the action bar never covers a tapped day, even at the end of the calen
     await page.setViewportSize({ width, height });
     await page.goto("/calendar/aspire-south");
     const day = page.getByTestId("calendar-day-31");
-    await day.scrollIntoViewIfNeeded();
+    await day.evaluate(el => el.scrollIntoView({ block: "center" }));
     const b = await box(day);
     const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("[data-testid]")?.getAttribute("data-testid"), { x: b.x + b.width / 2, y: b.y + b.height / 2 });
     expect(hit, `${width}×${height}: centre of day 31 is the tile itself`).toBe("calendar-day-31");

@@ -258,7 +258,7 @@ export function AspireSouthCalendarPreview() {
     <main lang={language} className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-4xl px-3 pb-6 pt-2 sm:px-4 sm:pt-3">
         {/* Compact identity + progress: everything a parent or donor needs above the calendar. */}
-        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[1rem] border border-line bg-surface p-3 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4">
+        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4">
           <div className="order-1 min-w-0 flex-1">
             <p data-testid="calendar-identity" className="truncate text-xs font-semibold text-brand-700">
               {t.player}: {preview.participant.displayName} · {t.team}: {preview.participant.teamName}
@@ -282,13 +282,13 @@ export function AspireSouthCalendarPreview() {
             </div>
           </details>
           <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-sm text-ink">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <p className="text-xs text-ink min-[360px]:text-sm">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</span>{" "}
                 <strong className="tabular">{money(progress.raisedCents)}</strong>{" "}
                 <span className="text-xs text-muted"><span className="sr-only">{t.goal} </span>/ {money(preview.goalCents)}</span>
               </p>
-              <p data-testid="sponsored-day-progress" className="text-sm font-semibold text-ink">
+              <p data-testid="sponsored-day-progress" className="text-xs font-semibold text-ink min-[360px]:text-sm">
                 {progress.sponsoredCount} / 31 {t.daysFunded}
               </p>
             </div>
@@ -320,13 +320,13 @@ export function AspireSouthCalendarPreview() {
         </section>
 
         {step === "calendar" && (
-          <section aria-labelledby="calendar-choose-heading" className="mt-2 rounded-[1rem] border border-line bg-surface p-3 shadow-card sm:p-4">
+          <section aria-labelledby="calendar-choose-heading" className="mt-1.5 rounded-[1rem] border border-line bg-surface px-3 pb-3 pt-2.5 shadow-card sm:mt-2 sm:p-4">
             <div className="flex items-baseline justify-between gap-2">
-              <h2 id="calendar-choose-heading" className="text-base font-bold text-ink">{t.choose}</h2>
+              <h2 id="calendar-choose-heading" className="text-sm font-bold text-ink sm:text-base">{t.choose}</h2>
               <p className="text-xs text-muted">{t.priceRange}</p>
             </div>
 
-            <div data-testid="calendar-day-grid" className="mt-2 grid grid-cols-5 gap-1 min-[360px]:grid-cols-6 min-[390px]:grid-cols-7 sm:gap-2">
+            <div data-testid="calendar-day-grid" className="mt-1.5 grid grid-cols-5 gap-1 min-[360px]:grid-cols-6 min-[390px]:grid-cols-7 sm:mt-2 sm:gap-2">
               {allCalendarDays().map((day) => {
                 const isSponsored = sponsoredDays.has(day);
                 const paidMultiplier = progress.paidMultiplierByDay.get(day);
@@ -345,7 +345,7 @@ export function AspireSouthCalendarPreview() {
                     onClick={() => toggleDay(day)}
                     aria-pressed={isSelected}
                     className={[
-                      "relative flex h-12 min-w-0 flex-col items-center justify-center rounded-card border text-center transition lg:h-16",
+                      "relative flex h-11 min-w-0 scroll-mb-20 flex-col items-center justify-center rounded-card border text-center transition sm:h-12 lg:h-16",
                       isSponsored
                         ? "cursor-not-allowed border-emerald-300 bg-emerald-50 text-emerald-950"
                         : isSelected
@@ -359,7 +359,7 @@ export function AspireSouthCalendarPreview() {
                         {paidMultiplier}×<span className="sr-only"> · {impactName}</span>
                       </span>
                     )}
-                    <span className="text-lg font-bold leading-5 tabular sm:text-xl">{day}</span>
+                    <span className="text-base font-bold leading-5 tabular sm:text-lg lg:text-xl">{day}</span>
                     <span className="text-[11px] leading-3">{"$" + day}</span>
                   </button>
                 );
@@ -409,13 +409,13 @@ export function AspireSouthCalendarPreview() {
             {/* Sticky inside this card only: it follows the calendar on small screens and never covers content below the card. */}
             <div
               data-testid="calendar-action-bar"
-              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4"
+              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2"
             >
               <div className="min-w-0 flex-1" aria-live="polite">
                 {selected.length === 0 ? (
                   <p className="text-sm text-muted">{t.tapHint}</p>
                 ) : (
-                  <button type="button" onClick={showImpactChoices} className="flex min-h-12 w-full flex-col items-start justify-center text-left">
+                  <button type="button" onClick={showImpactChoices} className="flex min-h-11 w-full flex-col items-start justify-center text-left">
                     <span className="text-sm font-bold tabular text-ink">{t.selectionSummary(selected.length)} · {money(quote.totalCents)}</span>
                     <span className="text-xs text-brand-700 underline">{multiplier}× {multiplierLabels[language][multiplier]} · {t.changeImpact}</span>
                   </button>
@@ -425,7 +425,7 @@ export function AspireSouthCalendarPreview() {
                 type="button"
                 disabled={selected.length === 0}
                 onClick={() => setStep("supporter")}
-                className="min-h-12 shrink-0 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 shrink-0 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-12"
               >
                 {t.continue}
               </button>
