@@ -5,7 +5,7 @@
 ## Raffle Hub
 **Done means, proposed:** Aspire can run its single approved raffle through family sharing, authorized offline cash/check sales, ticket/money reconciliation and the approved external drawing, with secure access and a usable parent phone journey.
 
-**Current:** The historic hosted rehearsal is recorded in #2; #2 remains draft/unmerged. Current integration is `0a72ba4e8e1068e5648f565ae7682abb38d617dc`. Security candidates #34 and #40 are separate, open drafts; their isolated checks do not establish a combined secure release. Public supporter pages remain request-only, not checkout or ticket issuance.
+**Current:** The historic hosted rehearsal is recorded in #2; #2 remains draft/unmerged. Current integration is `0a72ba4e8e1068e5648f565ae7682abb38d617dc`. Security candidates #34 and #40 are separate, open drafts. The existing verification worker now reports a local combined synthetic pass: 280 route/action/template checks plus 36 Chromium and 36 WebKit flows; authentication remained simulated. This does not establish a combined real-auth release. Public supporter pages remain request-only, not checkout or ticket issuance.
 
 **Must-have:**
 - Reconcile current security/auth candidates and verify the combined exact source, database permissions, family isolation, token recovery/revocation, retries and audit/financial integrity.
@@ -17,16 +17,16 @@
 
 **Decisions:** 2026-11-10: the Director prioritized completing the Aspire raffle as soon as possible and deferred the larger business until this and South are complete. Current approved money flow remains offline cash/check, not online raffle payments.
 
-**Next / owner / date:** Existing Codex raffle security/readiness owner: reconcile #34 + #40 and return the shortest complete launch-blocker list. **Proposed next checkpoint: 2026-11-11; owner commitment and launch date not confirmed.**
+**Next / owner / date:** Existing Codex raffle security/readiness owner: move the combined #34 + #40 candidate to the existing disposable authentication stack and return the remaining launch-blocker list. **Proposed next checkpoint: 2026-11-11; owner commitment and launch date not confirmed.**
 
 ## Aspire South Calendar
 **Done means, proposed:** Aspire South families can share their calendar and donors can sponsor available days through the approved Stripe flow, with correct amounts, reliable confirmation and no exposed private data.
 
-**Current:** #42 is merged into `feat/calendar-fundraiser-aspire-south` at `909e7647530a197f2f5fd9ddf43be003140bdeb9`; parent-reported post-merge CI and a fictional-data preview passed. #19 remains unmerged. Local rehearsal reproduced a retry mismatch and skipped database-dependent tests; this does not prove live payments or database acceptance. Existing notification and device gates remain open.
+**Current:** #42 is merged into `feat/calendar-fundraiser-aspire-south` at `909e7647530a197f2f5fd9ddf43be003140bdeb9`; parent-reported post-merge CI and a fictional-data preview passed. #19 remains unmerged. The existing South worker now reports local retry fix `a518cd5`, with 29 focused tests, 329 broader tests and the build passing; 11 database-dependent tests were skipped. The remote remains `909e764`; the fix is not published, and actual Stripe/PostgreSQL acceptance remains open. Existing notification and device gates remain open.
 
 **Must-have:**
 - Reuse the existing Aspire calendar as the Director directed; identify the exact source and avoid rebuilding generic multi-club infrastructure.
-- Verify day availability, totals, duplicate/retry handling, payment result reconciliation and notification reliability on the intended candidate. Fix the reproduced retry mismatch.
+- Verify day availability, totals, duplicate/retry handling, payment result reconciliation and notification reliability on the intended candidate. Carry forward the tested local retry fix and verify actual database/payment behavior.
 - Finish the outstanding small-screen identity/focus fixes and physical-device acceptance.
 - Complete the separately approved hosted/payment/privacy/operations checks and obtain launch approval before live collection or messages.
 
@@ -34,7 +34,7 @@
 
 **Decisions:** 2026-11-10: the Director chose the already-built Aspire calendar for South now, with the larger business revisited after South and the raffle are complete. #42 approval covered its calendar integration/synthetic preview, not production launch.
 
-**Next / owner / date:** Existing Codex South owner: verify the reuse baseline, finish retry/notification acceptance and return the remaining launch steps. **Proposed next checkpoint: 2026-11-11; owner commitment and launch date not confirmed.**
+**Next / owner / date:** Existing Codex South owner: carry forward local fix `a518cd5`, complete actual synthetic TEST payment/database and notification acceptance, and return the remaining launch steps. **Proposed next checkpoint: 2026-11-11; owner commitment and launch date not confirmed.**
 
 Sources: [Raffle #2](https://github.com/Aspirefutbol/aspire-raffle-hub/pull/2), [#34](https://github.com/Aspirefutbol/aspire-raffle-hub/pull/34), [#40](https://github.com/Aspirefutbol/aspire-raffle-hub/pull/40), [South #19](https://github.com/Aspirefutbol/aspire-raffle-hub/pull/19), [#42](https://github.com/Aspirefutbol/aspire-raffle-hub/pull/42), the Director's 2026-11-10 chat decisions. No new tests, merges, payments or deployment performed for this audit.
 
