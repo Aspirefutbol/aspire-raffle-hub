@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { publicEnv } from "@/lib/env";
@@ -47,13 +48,22 @@ export async function sendMagicLink(_prev: LoginState, formData: FormData): Prom
     email: parsed.data.email,
     options: {
       shouldCreateUser: false, // accounts are provisioned by an organization, not self-signup
-      // Email template appends &token_hash=…&type=magiclink (verified server-side in /auth/confirm).
-      emailRedirectTo: `${origin.replace(/\/$/, "")}/auth/confirm?next=${encodeURIComponent(safeNextPath(parsed.data.next))}`,
+      // Canonical token-bearing email URLs are derived from SiteURL by the template.
+      emailRedirectTo: `${origin.replace(/\/$/, "")}/auth/confirm`,
     },
   });
   // Same message whether or not the account exists (no account enumeration).
   if (error && error.status !== 400 && error.status !== 422) {
     return { error: "We couldn't send a link right now. Please try again shortly.", email };
   }
+  // Short-lived browser-only deep link state; never include it in a bearer-token email.
+  const cookieStore = await cookies();
+  cookieStore.set("rh_auth_next", safeNextPath(parsed.data.next), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/auth/confirm",
+    maxAge: 900,
+    secure: origin.startsWith("https://"),
+  });
   return { info: `If ${parsed.data.email} has an account, a sign-in link is on its way.`, email };
 }
