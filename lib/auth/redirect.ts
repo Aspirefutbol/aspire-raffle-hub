@@ -8,9 +8,11 @@ export function safeNextPath(value: unknown, fallback = "/"): string {
   const pathname = value.split(/[?#]/, 1)[0] ?? "";
   if (
     value.startsWith("//") ||
-    /[\\\u0000-\u001f\u007f]/.test(pathname) ||
-    /%(?:0[0-9a-f]|1[0-9a-f]|7f|5c|2f)/i.test(pathname) ||
-    /%(?:25(?:0[0-9a-f]|1[0-9a-f]|7f|5c|2f))/i.test(pathname)
+    /[\\\u0000-\u001f\u007f]/.test(value) ||
+    /%(?:0[0-9a-f]|1[0-9a-f]|7f|5c)/i.test(value) ||
+    /%2f/i.test(pathname) ||
+    /%(?:25(?:0[0-9a-f]|1[0-9a-f]|7f|5c))/i.test(value) ||
+    /%252f/i.test(pathname)
   ) return fallback;
 
   try {
