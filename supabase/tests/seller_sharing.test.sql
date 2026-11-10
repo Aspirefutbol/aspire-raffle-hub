@@ -278,6 +278,48 @@ select is(
 );
 rollback to savepoint s1_missing_header;
 
+-- S1: the idempotency key is checked before rate-limit charging. All
+-- experiments use RFC 5737 synthetic IPs and roll back with the savepoint.
+savepoint s1_duplicate_request;
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"203.0.113.77"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-repeat'),
+  '{"name":"Synthetic repeat","email":"repeat@example.test","contact":"email","quantity":1}'::jsonb
+) from generate_series(1,11);
+reset role;
+select is((select count(*) from public.seller_interest_requests
+           where submission_key=pg_temp.id('s1-repeat')),1::bigint,
+          'S1 dedupe: eleven retries of same request persist exactly one');
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.77','sha256'),'hex')),1::bigint,
+          'S1 dedupe: repeated submission key charges IP bucket only once');
+rollback to savepoint s1_duplicate_request;
+
+-- S1: SQL deliberately takes the RIGHTMOST forwarded IP rather than allowing
+-- the caller to choose the first hop. This does not establish gateway trust.
+savepoint s1_forwarded_hops;
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"198.51.100.88, 203.0.113.78"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-hop-a'),
+  '{"name":"Synthetic hop A","email":"hopa@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"192.0.2.55, 203.0.113.78"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-hop-b'),
+  '{"name":"Synthetic hop B","email":"hopb@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.78','sha256'),'hex')),2::bigint,
+          'S1 hops: forged leading XFF entries share rightmost-hop bucket');
+rollback to savepoint s1_forwarded_hops;
+
 -- Limits are durable and atomic even if the caller changes idempotency keys.
 reset role;
 select set_config('request.headers','{"x-forwarded-for":"192.0.2.1"}',true);
