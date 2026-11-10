@@ -83,6 +83,12 @@ const copy = {
     secureBody: "Synthetic Aspire South data only. No live donor data or payment credentials are used on this preview route.",
     required: "Please complete your name and email before continuing.",
     day: "Day",
+    demoBadge: "Demo · fictional player · no payments",
+    priceRange: "$1–$31 per day",
+    tapHint: "Tap a day to start",
+    selectionSummary: (count: number) => `${count} ${count === 1 ? "day" : "days"}`,
+    changeImpact: "Change impact",
+    progressDetails: "Season progress",
   },
   es: {
     brand: "Aspire South",
@@ -142,6 +148,12 @@ const copy = {
     secureBody: "Solo datos de prueba de Aspire South. Esta vista previa no utiliza datos reales de donantes ni credenciales de pago.",
     required: "Completa tu nombre y correo electrónico antes de continuar.",
     day: "Día",
+    demoBadge: "Demostración · jugador ficticio · sin pagos",
+    priceRange: "$1–$31 por día",
+    tapHint: "Toca un día para empezar",
+    selectionSummary: (count: number) => `${count} ${count === 1 ? "día" : "días"}`,
+    changeImpact: "Cambiar impacto",
+    progressDetails: "Progreso de la temporada",
   },
 } as const;
 
@@ -235,40 +247,54 @@ export function AspireSouthCalendarPreview() {
     );
   }
 
+  function showImpactChoices() {
+    // Instant scroll respects reduced-motion preferences; focus moves to the choices.
+    const target = document.getElementById("calendar-impact");
+    target?.scrollIntoView({ block: "center" });
+    target?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+  }
+
   return (
-    <main className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">{t.brand}</p>
-            <p className="mt-1 text-xs text-muted">{t.kicker}</p>
+    <main lang={language} className="min-h-screen bg-canvas">
+      <div className="mx-auto max-w-4xl px-3 pb-6 pt-2 sm:px-4 sm:pt-3">
+        {/* Compact identity + progress: everything a parent or donor needs above the calendar. */}
+        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4">
+          <div className="order-1 min-w-0 flex-1">
+            <p data-testid="calendar-identity" className="truncate text-xs font-semibold text-brand-700">
+              {t.player}: {preview.participant.displayName} · {t.team}: {preview.participant.teamName}
+            </p>
+            <h1 className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-ink lg:text-2xl">{t.title}</h1>
           </div>
           <button
             type="button"
             onClick={() => setLanguage(language === "en" ? "es" : "en")}
-            className="min-h-11 rounded-control border border-line-strong bg-surface px-4 text-sm font-semibold text-ink shadow-card"
+            className="order-2 min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink sm:order-4"
           >
             {t.language}
           </button>
-        </header>
-
-        <section className="mt-6 overflow-hidden rounded-[1rem] border border-line bg-surface shadow-card">
-          <div className="border-b border-line bg-brand-900 px-5 py-6 text-white sm:px-8">
-            <p className="text-sm font-semibold text-brand-200">{t.player}: {preview.participant.displayName} · {t.team}: {preview.participant.teamName}</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t.title}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-100 sm:text-base">{t.subtitle}</p>
-          </div>
-          <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:p-8">
-            <div>
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</p>
-                  <p className="mt-1 text-2xl font-bold tabular text-ink">{money(progress.raisedCents)}</p>
-                </div>
-                <p className="text-sm text-muted">{t.goal}: {money(preview.goalCents)}</p>
-              </div>
+          <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem]">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold">
+              <span aria-hidden="true">ⓘ</span>{t.demoBadge}
+            </summary>
+            <div className="pb-3 text-xs leading-5">
+              <p className="font-semibold">{t.secure}</p>
+              <p className="mt-1">{t.secureBody}</p>
+            </div>
+          </details>
+          <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <p className="text-xs text-ink min-[360px]:text-sm">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</span>{" "}
+                <strong className="tabular">{money(progress.raisedCents)}</strong>{" "}
+                <span className="text-xs text-muted"><span className="sr-only">{t.goal} </span>/ {money(preview.goalCents)}</span>
+              </p>
+              <p data-testid="sponsored-day-progress" className="text-xs font-semibold text-ink min-[360px]:text-sm">
+                {progress.sponsoredCount} / 31 {t.daysFunded}
+              </p>
+            </div>
+            <div className="mt-1.5 grid gap-1">
               <div
-                className="mt-3 h-2 overflow-hidden rounded-full bg-line"
+                className="h-1.5 overflow-hidden rounded-full bg-line"
                 role="progressbar"
                 aria-label={t.raised}
                 aria-valuemin={0}
@@ -278,18 +304,8 @@ export function AspireSouthCalendarPreview() {
               >
                 <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress.percentOfGoal}%` }} />
               </div>
-              <div data-testid="paid-impact-breakdown" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted">
-                <p>{t.baseValue}: <strong className="font-semibold text-ink">{money(progress.baseCents)}</strong></p>
-                <p>{t.addedImpact}: <strong className="font-semibold text-ink">{money(progress.additionalImpactCents)}</strong></p>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <p data-testid="sponsored-day-progress" className="text-sm font-semibold text-ink">
-                  {progress.sponsoredCount} / 31 {t.daysFunded}
-                </p>
-                <p className="text-xs text-muted">{Math.round(progress.dayCompletionPercent)}%</p>
-              </div>
               <div
-                className="mt-2 h-2 overflow-hidden rounded-full bg-line"
+                className="h-1.5 overflow-hidden rounded-full bg-line"
                 role="progressbar"
                 aria-label={t.daysFunded}
                 aria-valuemin={0}
@@ -297,74 +313,27 @@ export function AspireSouthCalendarPreview() {
                 aria-valuenow={progress.sponsoredCount}
                 aria-valuetext={`${progress.sponsoredCount} / 31 ${t.daysFunded}`}
               >
-                <div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${progress.dayCompletionPercent}%` }} />
-              </div>
-              {progress.isComplete ? (
-                <div data-testid="calendar-complete" role="status" className="mt-4 rounded-card border border-emerald-300 bg-emerald-50 px-4 py-3 text-emerald-950">
-                  <p className="font-bold">✓ {t.calendarComplete}</p>
-                  <p className="mt-1 text-sm">{t.completionMessage}</p>
-                </div>
-              ) : (
-                <p
-                  data-testid="calendar-milestone"
-                  role="status"
-                  aria-live="polite"
-                  className={["mt-4 rounded-card border px-4 py-3 text-sm font-medium",
-                    progress.sponsoredCount >= 8
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-950"
-                      : "border-line bg-canvas text-ink-soft",
-                  ].join(" ")}
-                >
-                  {progress.sponsoredCount >= 8 && <span aria-hidden="true">✓ </span>}
-                  {milestone}
-                </p>
-              )}
-              {nextMilestone && (
-                <p data-testid="calendar-next-milestone" className="mt-2 text-xs font-semibold text-emerald-900" aria-live="polite">
-                  {t.nextMilestone(nextMilestone.remaining, nextMilestone.target)}
-                </p>
-              )}
-            </div>
-            <div className="rounded-control border border-line bg-canvas px-4 py-3 text-sm text-ink-soft">
-              <p className="font-semibold text-ink">{t.secure}</p>
-              <p className="mt-1 max-w-xs text-xs leading-5">{t.secureBody}</p>
-              <div className="mt-3 border-t border-line pt-3">
-                <p className="text-xs font-semibold text-ink">{t.scenario}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(["partial", "first", "half", "final", "complete"] as const).map(option => (
-                    <button key={option} type="button" data-testid={`scenario-${option}`}
-                      aria-pressed={scenario === option}
-                      onClick={() => showScenario(option)}
-                      className={`min-h-11 rounded-control border px-3 text-xs font-semibold ${scenario === option ? "border-brand-500 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink"}`}>
-                      {scenarioLabels[option]}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-muted">{t.scenarioHelp}</p>
+                <div className="h-full rounded-full bg-emerald-600" style={{ width: `${progress.dayCompletionPercent}%` }} />
               </div>
             </div>
           </div>
         </section>
 
         {step === "calendar" && (
-          <section className="mt-6 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
-            <h2 className="text-xl font-bold text-ink">{t.choose}</h2>
-            <p className="mt-1 text-sm text-muted">{t.hint}</p>
-            {progress.isComplete && (
-              <p data-testid="calendar-sold-out" role="status" className="mt-4 rounded-card border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-950">
-                {t.allDaysSponsored}
-              </p>
-            )}
+          <section aria-labelledby="calendar-choose-heading" className="mt-1.5 rounded-[1rem] border border-line bg-surface px-3 pb-3 pt-2.5 shadow-card sm:mt-2 sm:p-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 id="calendar-choose-heading" className="text-sm font-bold text-ink sm:text-base">{t.choose}</h2>
+              <p className="text-xs text-muted">{t.priceRange}</p>
+            </div>
 
-            <div className="mt-6 grid grid-cols-3 gap-2 min-[360px]:grid-cols-4 sm:grid-cols-7 sm:gap-3">
+            <div data-testid="calendar-day-grid" className="mt-1.5 grid grid-cols-5 gap-1 min-[360px]:grid-cols-6 min-[390px]:grid-cols-7 sm:mt-2 sm:gap-2">
               {allCalendarDays().map((day) => {
                 const isSponsored = sponsoredDays.has(day);
                 const paidMultiplier = progress.paidMultiplierByDay.get(day);
-                const impactLabel = isSponsored && paidMultiplier && paidMultiplier > 1
-                  ? paidMultiplier >= 4
-                    ? `${paidMultiplier}× · ${multiplierLabels[language][paidMultiplier]}`
-                    : `${paidMultiplier}× · ${t.impactBadge}`
+                const impactName = isSponsored && paidMultiplier && paidMultiplier > 1
+                  ? paidMultiplier >= 4 ? multiplierLabels[language][paidMultiplier] : t.impactBadge
                   : null;
+                const impactLabel = impactName ? `${paidMultiplier}× · ${impactName}` : null;
                 const isSelected = selected.includes(day);
                 return (
                   <button
@@ -376,7 +345,7 @@ export function AspireSouthCalendarPreview() {
                     onClick={() => toggleDay(day)}
                     aria-pressed={isSelected}
                     className={[
-                      "min-h-20 rounded-card border p-2 text-left transition sm:min-h-24",
+                      "relative flex h-11 min-w-0 scroll-mb-20 flex-col items-center justify-center rounded-card border text-center transition sm:h-12 lg:h-16",
                       isSponsored
                         ? "cursor-not-allowed border-emerald-300 bg-emerald-50 text-emerald-950"
                         : isSelected
@@ -384,28 +353,32 @@ export function AspireSouthCalendarPreview() {
                           : "border-line bg-surface text-ink hover:border-brand-300 hover:bg-brand-50/40",
                     ].join(" ")}
                   >
-                    <span className="block break-words text-[10px] font-semibold leading-4 sm:text-xs">
-                      {isSponsored && <span aria-hidden="true">✓ </span>}
-                      {isSponsored ? t.sponsored : isSelected ? t.selected : t.available}
-                    </span>
-                    <span className="mt-2 block text-2xl font-bold tabular">{day}</span>
-                    <span className="block text-xs">{"$" + day}</span>
+                    {isSponsored && <span aria-hidden="true" className="absolute left-1 top-0.5 text-[10px] font-bold leading-3">✓</span>}
                     {impactLabel && (
-                      <span data-testid={`day-impact-${day}`} className="mt-1 block break-words rounded border border-amber-300 bg-amber-50 px-1 py-0.5 text-[10px] font-bold leading-3 text-amber-950">
-                        {impactLabel}
+                      <span data-testid={`day-impact-${day}`} className="absolute right-0.5 top-0.5 rounded border border-amber-300 bg-amber-50 px-0.5 text-[9px] font-bold leading-3 text-amber-950">
+                        {paidMultiplier}×<span className="sr-only"> · {impactName}</span>
                       </span>
                     )}
+                    <span className="text-base font-bold leading-5 tabular sm:text-lg lg:text-xl">{day}</span>
+                    <span className="text-[11px] leading-3">{"$" + day}</span>
                   </button>
                 );
               })}
             </div>
 
+            {progress.isComplete && (
+              <p data-testid="calendar-sold-out" role="status" className="mt-3 rounded-card border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-950">
+                {t.allDaysSponsored}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-muted">{t.hint}</p>
+
             {selected.length > 0 && (
-              <div className="mt-6 rounded-card border border-line bg-canvas p-4">
+              <div id="calendar-impact" className="mt-3 rounded-card border border-line bg-canvas p-3 sm:p-4">
                 <h3 className="text-base font-bold text-ink">{t.impactTitle}</h3>
                 <p className="mt-1 text-sm text-muted">{t.impactHelp}</p>
 
-                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {([1, 2, 3] as CalendarMultiplier[]).map(multiplierButton)}
                 </div>
 
@@ -416,7 +389,7 @@ export function AspireSouthCalendarPreview() {
                   </div>
                 </details>
 
-                <div className="mt-4 grid gap-3 rounded-control border border-line bg-surface p-4 sm:grid-cols-3">
+                <div className="mt-3 grid gap-3 rounded-control border border-line bg-surface p-3 sm:grid-cols-3 sm:p-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t.baseValue}</p>
                     <p className="mt-1 text-lg font-bold tabular text-ink">{money(quote.baseCents)}</p>
@@ -433,12 +406,26 @@ export function AspireSouthCalendarPreview() {
               </div>
             )}
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            {/* Sticky inside this card only: it follows the calendar on small screens and never covers content below the card. */}
+            <div
+              data-testid="calendar-action-bar"
+              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2"
+            >
+              <div className="min-w-0 flex-1" aria-live="polite">
+                {selected.length === 0 ? (
+                  <p className="text-sm text-muted">{t.tapHint}</p>
+                ) : (
+                  <button type="button" onClick={showImpactChoices} className="flex min-h-11 w-full flex-col items-start justify-center text-left">
+                    <span className="text-sm font-bold tabular text-ink">{t.selectionSummary(selected.length)} · {money(quote.totalCents)}</span>
+                    <span className="text-xs text-brand-700 underline">{multiplier}× {multiplierLabels[language][multiplier]} · {t.changeImpact}</span>
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 disabled={selected.length === 0}
                 onClick={() => setStep("supporter")}
-                className="min-h-12 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 shrink-0 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-12"
               >
                 {t.continue}
               </button>
@@ -447,7 +434,7 @@ export function AspireSouthCalendarPreview() {
         )}
 
         {step === "supporter" && (
-          <section className="mt-6 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
+          <section className="mt-2 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
             <h2 className="text-xl font-bold text-ink">{t.supporter}</h2>
             <p className="mt-1 text-sm text-muted">{t.supporterHelp}</p>
             <p data-testid="synthetic-contact-warning" className="mt-3 rounded-control border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{t.syntheticContactHelp}</p>
@@ -477,7 +464,7 @@ export function AspireSouthCalendarPreview() {
         )}
 
         {step === "review" && (
-          <section className="mt-6 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
+          <section className="mt-2 rounded-[1rem] border border-line bg-surface p-5 shadow-card sm:p-8">
             <h2 className="text-xl font-bold text-ink">{t.review}</h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="rounded-card border border-line bg-canvas p-4">
@@ -511,12 +498,59 @@ export function AspireSouthCalendarPreview() {
         )}
 
         {step === "complete" && (
-          <section className="mt-6 rounded-[1rem] border border-emerald-200 bg-emerald-50 p-5 shadow-card sm:p-8">
+          <section className="mt-2 rounded-[1rem] border border-emerald-200 bg-emerald-50 p-5 shadow-card sm:p-8">
             <h2 className="text-2xl font-bold text-emerald-950">{t.complete}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-emerald-950">{t.completeHelp}</p>
             <button type="button" onClick={() => setStep("review")} className="mt-5 min-h-11 rounded-control border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-950">{t.back}</button>
           </section>
         )}
+        {/* Season details and director demo controls: available on every step, below the main interaction. */}
+        <section aria-label={t.progressDetails} className="mt-3 rounded-[1rem] border border-line bg-surface p-3 shadow-card sm:p-4">
+          <p className="text-sm text-muted">{t.subtitle}</p>
+          <div data-testid="paid-impact-breakdown" className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
+            <p>{t.baseValue}: <strong className="font-semibold text-ink">{money(progress.baseCents)}</strong></p>
+            <p>{t.addedImpact}: <strong className="font-semibold text-ink">{money(progress.additionalImpactCents)}</strong></p>
+          </div>
+          {progress.isComplete ? (
+            <div data-testid="calendar-complete" role="status" className="mt-3 rounded-card border border-emerald-300 bg-emerald-50 px-4 py-3 text-emerald-950">
+              <p className="font-bold">✓ {t.calendarComplete}</p>
+              <p className="mt-1 text-sm">{t.completionMessage}</p>
+            </div>
+          ) : (
+            <p
+              data-testid="calendar-milestone"
+              role="status"
+              aria-live="polite"
+              className={["mt-3 rounded-card border px-4 py-3 text-sm font-medium",
+                progress.sponsoredCount >= 8
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+                  : "border-line bg-canvas text-ink-soft",
+              ].join(" ")}
+            >
+              {progress.sponsoredCount >= 8 && <span aria-hidden="true">✓ </span>}
+              {milestone}
+            </p>
+          )}
+          {nextMilestone && (
+            <p data-testid="calendar-next-milestone" className="mt-2 text-xs font-semibold text-emerald-900" aria-live="polite">
+              {t.nextMilestone(nextMilestone.remaining, nextMilestone.target)}
+            </p>
+          )}
+          <div className="mt-3 border-t border-line pt-3">
+            <p className="text-xs font-semibold text-ink">{t.scenario}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(["partial", "first", "half", "final", "complete"] as const).map(option => (
+                <button key={option} type="button" data-testid={`scenario-${option}`}
+                  aria-pressed={scenario === option}
+                  onClick={() => showScenario(option)}
+                  className={`min-h-11 rounded-control border px-3 text-xs font-semibold ${scenario === option ? "border-brand-500 bg-brand-50 text-brand-900" : "border-line bg-surface text-ink"}`}>
+                  {scenarioLabels[option]}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs leading-5 text-muted">{t.scenarioHelp}</p>
+          </div>
+        </section>
       </div>
     </main>
   );
