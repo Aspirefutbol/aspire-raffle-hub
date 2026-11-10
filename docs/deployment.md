@@ -43,10 +43,11 @@ before the Aspire pilot launches; see [the pilot backlog](./raffle-pilot-backlog
 Staging must exist **before** any ticket or money workflow ships.
 
 1. **Supabase project** (staging): create it, note the project ref and database password.
-   - Auth → URL configuration: Site URL = staging URL; redirect URLs = `https://<staging>/**`.
+   - Auth → URL configuration: Site URL = canonical staging HTTPS URL, without trailing slash; restrict redirect URLs to the exact canonical `/auth/confirm` endpoint (plus only separately reviewed necessary entries). Avoid preview/alias wildcards that could be attacker-controlled.
    - Auth → Providers → Email: keep the provider on, turn **off "Allow new users to sign up"**.
-   - Auth → Email templates: paste `supabase/templates/invite.html` and `magic_link.html`
-     (they link to `/auth/confirm` with `token_hash`).
+   - Auth → Email templates: after separate director and qualified security-review approval, configure the canonical token-hash templates for **magic link, invite, recovery and email change** from `supabase/templates/` for this specific hosted project. Confirm email-change behavior against the hosted GoTrue version; avoid treating the `type` query parameter as authorization.
+   - Record redacted before/after Site URL, allowed redirects, and template evidence for staging and production **separately**. Verify a club-controlled synthetic mailbox before onboarding anyone. Never put token-bearing links in issue comments or logs.
+   - **NEVER run `supabase config push` against hosted projects:** `supabase/config.toml` is for local development and contains localhost auth redirects, link-expiry/password settings and local templates. Hosted email templates/allow-list must be changed only through an approved dashboard procedure.
    - Configure custom SMTP before inviting real people (the built-in mailer is rate-limited).
 2. **Netlify site** (staging): create an empty site (no Git auto-build needed; the workflow deploys).
    Site environment variables:
