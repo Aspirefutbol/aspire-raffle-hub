@@ -6,6 +6,16 @@ import { publicEnv } from "@/lib/env";
 const PUBLIC_PATHS = ["/login", "/auth", "/s"];
 
 /**
+ * Public preview has synthetic values only and cannot reserve days or collect
+ * payment. Deliberately EXACT path matching: do not open other /calendar paths,
+ * especially future parent/admin pages or reservation/checkout endpoints.
+ */
+export function isPublicPath(path: string): boolean {
+  return path === "/calendar/aspire-south" ||
+    PUBLIC_PATHS.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
+/**
  * The hostname the browser actually requested. Behind a proxy or under
  * `next start`, nextUrl can reflect the internal bind address, so prefer the
  * forwarded/Host header. Spoofing it can only trigger a redirect to the
@@ -32,6 +42,12 @@ function requestHostname(request: NextRequest): string {
  */
 export function canonicalizeNetlifyDeployUrl(request: NextRequest, siteUrl?: string): NextResponse | null {
   if (!siteUrl) return null;
+
+  // The synthetic Aspire South director preview is deliberately public,
+  // contains fictional data only, and cannot reserve days or collect payment.
+  // Keep this exact route on the deploy alias so reviewers can inspect a
+  // non-production build without redirecting to the shared staging site.
+  if (request.nextUrl.pathname === "/calendar/aspire-south") return null;
 
   const canonical = new URL(siteUrl);
   const requestHost = requestHostname(request);
@@ -73,7 +89,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+  const isPublic = isPublicPath(path);
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
