@@ -247,6 +247,35 @@ select throws_ok($$insert into public.seller_interest_requests(organization_id,c
 reset role;
 select throws_ok($$insert into public.seller_request_events(organization_id,request_id,status,sale_id) values(pg_temp.id('org-a'),pg_temp.request_id(),'completed',pg_temp.sale('different-player'))$$,'23503',null,'table boundary rejects cross-participant sale association even for a privileged writer');
 select throws_ok($$insert into public.seller_request_events(organization_id,request_id,status) values(pg_temp.id('org-a'),pg_temp.request_id(),'completed')$$,'23514',null,'table boundary requires a sale for completed status');
+-- S1 CHARACTERIZATION ONLY: absent forwarding metadata produces one global
+-- "unknown" per-IP bucket for distinct synthetic requests. This deliberately
+-- describes baseline SQL behavior; it does NOT simulate a real Netlify request,
+-- prove the hosted proxy chain, or propose/authorize a rate-limit fix.
+savepoint s1_missing_header;
+reset role;
+select set_config('request.headers','{}',true);
+delete from public.seller_request_limits
+where bucket='ip:'||encode(extensions.digest('unknown','sha256'),'hex');
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(), pg_temp.id('s1-unknown-'||n),
+  jsonb_build_object('name','Synthetic unknown '||n,'email','unknown@example.test','contact','email','quantity',1)
+) from generate_series(1,11)n;
+reset role;
+select is(
+  (select count(*) from public.seller_request_limits
+   where bucket='ip:'||encode(extensions.digest('unknown','sha256'),'hex')
+     and window_at=date_trunc('hour',clock_timestamp()) and attempts=11),
+  1::bigint,
+  'S1 baseline: distinct requests with missing forwarding metadata exhaust shared unknown bucket'
+);
+select is(
+  (select count(*) from public.seller_interest_requests where organization_id=pg_temp.id('org-a')),
+  11::bigint,
+  'S1 baseline: only ten of eleven new synthetic requests persisted; generic response hides drop'
+);
+rollback to savepoint s1_missing_header;
+
 -- Limits are durable and atomic even if the caller changes idempotency keys.
 reset role;
 select set_config('request.headers','{"x-forwarded-for":"192.0.2.1"}',true);
