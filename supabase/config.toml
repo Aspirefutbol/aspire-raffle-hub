@@ -426,3 +426,13 @@ content_path = "./supabase/templates/invite.html"
 [auth.email.template.magic_link]
 subject = "Your Raffle Hub sign-in link"
 content_path = "./supabase/templates/magic_link.html"
+
+# Local Supabase only. Hosted Auth templates/settings must be changed separately,
+# with director and human security-review approval; NEVER supabase config push.
+[auth.email.template.recovery]
+subject = "Reset your Raffle Hub password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your Raffle Hub email change"
+content_path = "./supabase/templates/email_change.html"
