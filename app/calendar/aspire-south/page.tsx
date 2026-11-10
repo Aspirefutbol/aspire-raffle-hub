@@ -14,7 +14,7 @@ export default async function AspireSouthCalendarPage({ searchParams }: {
   const query = await searchParams;
   const family = query.view === "family";
   return <>
-    <nav aria-label="Preview views / Vistas de demostración" className="mx-auto flex max-w-4xl flex-wrap gap-x-5 gap-y-1 px-4 pt-4 text-sm">
+    <nav aria-label="Preview views / Vistas de demostración" className="mx-auto flex max-w-4xl flex-wrap gap-x-4 px-3 pt-1 text-sm sm:px-4">
       <Link href="/calendar/aspire-south" aria-current={!family ? "page" : undefined} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">Calendar / Calendario</Link>
       <Link href="/calendar/aspire-south?view=family" aria-current={family ? "page" : undefined} data-testid="calendar-family-preview-link" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">Family sharing / Compartir</Link>
     </nav>

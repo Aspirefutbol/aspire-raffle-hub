@@ -9,6 +9,7 @@ import { aspireSouthSyntheticPreview, syntheticCalendarProgress } from "@/lib/ca
 const copy = {
   en: {
     title: "My calendar", language: "Español", raised: "Raised", sponsored: "days sponsored",
+    demoBadge: "Demo preview — fictional player only, nothing is sent",
     demo: "Family tools preview — fictional player only. This does not create or recover a real player link, reserve days, or send donor emails.",
     share: "Share My Calendar", copy: "Copy Link", qr: "Show QR Code", more: "More sharing options",
     email: "Email invitation", whatsapp: "WhatsApp", download: "Download demo QR code",
@@ -23,6 +24,7 @@ const copy = {
   },
   es: {
     title: "Mi calendario", language: "English", raised: "Recaudado", sponsored: "días patrocinados",
+    demoBadge: "Vista de demostración — jugador ficticio, no se envía nada",
     demo: "Vista previa familiar: solo un jugador ficticio. No crea ni recupera un enlace real, no reserva días ni envía correos a donantes.",
     share: "Compartir mi calendario", copy: "Copiar enlace", qr: "Mostrar código QR", more: "Más opciones para compartir",
     email: "Invitación por correo", whatsapp: "WhatsApp", download: "Descargar QR de demostración",
@@ -100,21 +102,28 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
     catch { setFeedback("error"); }
   }
 
-  return <main lang={language} className="mx-auto max-w-4xl space-y-5 px-4 py-6" data-testid="calendar-family-preview">
-    <header className="flex items-start justify-between gap-3">
-      <div><p className="text-sm font-semibold text-brand-700">Aspire South</p><h1 className="mt-1 text-3xl font-bold">{t.title}</h1></div>
-      <button type="button" onClick={changeLanguage} disabled={busy} className={actionClass}>{t.language}</button>
-    </header>
-    <p className="rounded-card border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" data-testid="calendar-family-demo-warning">{t.demo}</p>
-    <section className="rounded-card border border-line bg-surface p-5 shadow-card">
-      <h2 className="text-xl font-bold">{fixture.participant.displayName}</h2>
-      <p className="mt-1 text-sm text-muted">{fixture.participant.teamName}</p>
-      <div className="my-5 flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-sm text-muted">{t.raised}</p><p className="text-3xl font-bold">${progress.raisedCents / 100}</p></div>
+  return <main lang={language} className="mx-auto max-w-4xl space-y-3 px-3 pb-6 pt-2 sm:px-4" data-testid="calendar-family-preview">
+    <section className="rounded-card border border-line bg-surface p-3 shadow-card sm:p-4">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold text-brand-700">Aspire South · {fixture.participant.displayName} · {fixture.participant.teamName}</p>
+          <h1 className="mt-0.5 text-xl font-bold leading-tight sm:text-2xl">{t.title}</h1>
+        </div>
+        <button type="button" onClick={changeLanguage} disabled={busy} className="min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink disabled:opacity-50">{t.language}</button>
+      </header>
+      <details className="mt-2 rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950" data-testid="calendar-family-demo-warning">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold"><span aria-hidden="true">ⓘ</span>{t.demoBadge}</summary>
+        <p className="pb-3 text-xs leading-5">{t.demo}</p>
+      </details>
+      <div className="mt-2 flex items-baseline justify-between gap-3">
+        <p className="text-sm"><span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</span> <strong className="text-xl tabular">${progress.raisedCents / 100}</strong></p>
         <p className="text-sm font-semibold">{progress.sponsoredCount} / 31 {t.sponsored}</p>
       </div>
-      <button type="button" onClick={() => void perform("share")} disabled={busy} className="min-h-12 w-full rounded-control bg-brand-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{t.share}</button>
-      <div className="mt-3 grid grid-cols-2 gap-3">
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
+        <div className="h-full rounded-full bg-emerald-600" style={{ width: `${progress.dayCompletionPercent}%` }} />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <button type="button" onClick={() => void perform("share")} disabled={busy} className="col-span-2 min-h-12 w-full rounded-control bg-brand-600 px-4 py-3 font-semibold text-white disabled:opacity-50 sm:col-span-1">{t.share}</button>
         <button type="button" onClick={() => void perform("copy")} disabled={busy} className={actionClass}>{t.copy}</button>
         <button type="button" onClick={() => void perform("qr")} disabled={busy} className={actionClass}>{t.qr}</button>
       </div>
@@ -133,7 +142,7 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
       <p className="mt-4 text-sm text-muted">{t.sharingNote}</p>
       <p className="mt-2 text-xs text-muted">{t.privacy}</p>
     </section>
-    <details className="rounded-card border border-line bg-surface p-5" data-testid="calendar-confirmation-preview">
+    <details className="rounded-card border border-line bg-surface p-4" data-testid="calendar-confirmation-preview">
       <summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold">{t.emailTitle}</summary>
       <p className="mt-2 rounded-control bg-canvas p-3 text-sm">{t.emailNote}</p>
       <p className="mt-4 text-sm font-semibold">{t.subject}: {confirmation.subject}</p>
