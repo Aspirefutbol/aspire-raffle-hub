@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import QRCode from "qrcode";
 import { calendarPreviewShareContent, calendarTestConfirmationContent, type CalendarLanguage } from "@/lib/calendar/communication-content";
 import { aspireSouthSyntheticPreview, syntheticCalendarProgress } from "@/lib/calendar/synthetic-preview";
@@ -103,10 +104,14 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
   }
 
   return <main lang={language} className="mx-auto max-w-4xl space-y-3 px-3 pb-6 pt-2 sm:px-4" data-testid="calendar-family-preview">
+    <nav aria-label="Preview views / Vistas de demostración" className="flex h-11 items-center gap-2 text-sm">
+      <Link href={`/calendar/aspire-south${language === "es" ? "?lang=es" : ""}`} className="inline-flex min-h-11 items-center rounded-control px-3 font-semibold text-brand-700 underline">{language === "es" ? "Calendario" : "Calendar"}</Link>
+      <Link href={`/calendar/aspire-south?view=family${language === "es" ? "&lang=es" : ""}`} aria-current="page" data-testid="calendar-family-preview-link" className="inline-flex min-h-11 items-center rounded-control bg-brand-50 px-3 font-semibold text-brand-800 underline">{language === "es" ? "Compartir" : "Family sharing"}</Link>
+    </nav>
     <section className="rounded-card border border-line bg-surface p-3 shadow-card sm:p-4">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-xs font-semibold text-brand-700">Aspire South · {fixture.participant.displayName} · {fixture.participant.teamName}</p>
+          <p className="break-words text-xs font-semibold leading-4 text-brand-700">Aspire South · {fixture.participant.displayName} · {fixture.participant.teamName}</p>
           <h1 className="mt-0.5 text-xl font-bold leading-tight sm:text-2xl">{t.title}</h1>
         </div>
         <button type="button" onClick={changeLanguage} disabled={busy} className="min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink disabled:opacity-50">{t.language}</button>

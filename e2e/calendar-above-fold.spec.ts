@@ -15,6 +15,7 @@ const VIEWPORTS: Viewport[] = [
   { name: "phone-360x640", width: 360, height: 640, columns: 6, allDaysVisible: false },
   { name: "phone-390x664", width: 390, height: 664, columns: 7, allDaysVisible: true },
   { name: "phone-430x740", width: 430, height: 740, columns: 7, allDaysVisible: true },
+  { name: "phone-landscape-667x320", width: 667, height: 320, columns: 7, allDaysVisible: false },
   { name: "phone-landscape-844x340", width: 844, height: 340, columns: 7, allDaysVisible: false },
   { name: "ipad-portrait-768x954", width: 768, height: 954, columns: 7, allDaysVisible: true },
   { name: "ipad-landscape-1024x695", width: 1024, height: 695, columns: 7, allDaysVisible: true },
@@ -195,4 +196,30 @@ test("F8: the QR code appears after one tap", async ({ page }) => {
   await page.goto("/calendar/aspire-south?view=family");
   await page.getByRole("button", { name: "Show QR Code", exact: true }).click();
   await expect(page.getByRole("img", { name: "Calendar preview QR code", exact: true })).toBeVisible();
+});
+
+test("Issue #41: Spanish donor link opens in Spanish and family tab preserves locale", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto("/calendar/aspire-south?lang=es");
+  await expect(page.getByRole("heading", { name: "Patrocina un Día" })).toBeVisible();
+  await page.getByTestId("calendar-family-preview-link").click();
+  await expect(page).toHaveURL(/view=family&lang=es/);
+  await expect(page.getByRole("heading", { name: "Mi calendario" })).toBeVisible();
+});
+
+test("Issue #41: selected days use a checkmark as well as color", async ({ page }) => {
+  await page.goto("/calendar/aspire-south");
+  const day = page.getByTestId("calendar-day-3");
+  await day.click();
+  await expect(day).toHaveAttribute("aria-pressed", "true");
+  await expect(day.locator('[aria-hidden="true"]')).toContainText("✓");
+});
+
+test("Issue #41: completed calendar removes the misleading Continue action", async ({ page }) => {
+  await page.goto("/calendar/aspire-south");
+  await page.getByRole("button", { name: "Complete calendar" }).click();
+  await expect(page.getByTestId("calendar-complete-alert")).toBeVisible();
+  await expect(page.getByTestId("calendar-action-bar")).toContainText("Calendar Complete!");
+  await expect(page.getByTestId("calendar-action-bar")).not.toContainText("Tap a day to start");
+  await expect(page.getByTestId("calendar-action-bar").getByRole("button", { name: "Continue" })).toHaveCount(0);
 });
