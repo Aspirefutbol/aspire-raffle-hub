@@ -79,7 +79,7 @@ export async function addOrInviteMember(
 export async function sendInvitationEmail(email: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const admin = createAdminClient();
   // Hosted email templates always use their configured canonical SiteURL for token URLs.
-  const redirectTo = `${siteUrl()}/auth/confirm`;
+  const redirectTo = `${siteUrl()}/auth/confirm?src=email`;
   const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
   if (!error) return { ok: true };
 
