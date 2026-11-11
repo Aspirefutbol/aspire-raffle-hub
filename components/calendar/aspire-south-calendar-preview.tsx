@@ -420,7 +420,7 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
             {/* Sticky inside this card only: it follows the calendar on small screens and never covers content below the card. */}
             <div
               data-testid="calendar-action-bar"
-              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2"
+              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2 [@media(max-height:380px)]:fixed [@media(max-height:380px)]:bottom-0 [@media(max-height:380px)]:left-0 [@media(max-height:380px)]:right-0 [@media(max-height:380px)]:mx-0 [@media(max-height:380px)]:mb-0 [@media(max-height:380px)]:z-30 [@media(max-height:380px)]:rounded-none"
             >
               <div className="min-w-0 flex-1" aria-live="polite">
                 {progress.isComplete ? (
