@@ -263,7 +263,7 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
           <Link href={`/calendar/aspire-south?view=family${language === "es" ? "&lang=es" : ""}`} data-testid="calendar-family-preview-link" className="inline-flex min-h-11 items-center rounded-control px-3 font-semibold text-brand-700 underline">{language === "es" ? "Compartir" : "Family sharing"}</Link>
         </nav>
         {/* Compact identity + progress: everything a parent or donor needs above the calendar. */}
-        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4">
+        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4 [@media(max-height:380px)]:grid [@media(max-height:380px)]:grid-cols-[minmax(0,1fr)_auto] [@media(max-height:380px)]:gap-1 [@media(max-height:380px)]:p-2">
           <div className="order-1 min-w-0 flex-1">
             <p data-testid="calendar-identity" className="break-words text-xs font-semibold leading-4 text-brand-700">
               {t.player}: {preview.participant.displayName} · {t.team}: {preview.participant.teamName}
@@ -273,11 +273,11 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
           <button
             type="button"
             onClick={() => setLanguage(language === "en" ? "es" : "en")}
-            className="order-2 min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink sm:order-4"
+            className="order-2 min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink sm:order-4 [@media(max-height:380px)]:order-4"
           >
             {t.language}
           </button>
-          <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem]">
+          <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem] [@media(max-height:380px)]:order-3 [@media(max-height:380px)]:max-w-none">
             <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold">
               <span aria-hidden="true">ⓘ</span>{t.demoBadge}
             </summary>
@@ -286,7 +286,7 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
               <p className="mt-1">{t.secureBody}</p>
             </div>
           </details>
-          <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0">
+          <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0 [@media(max-height:380px)]:order-2 [@media(max-height:380px)]:w-56">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
               <p className="text-xs text-ink min-[360px]:text-sm">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</span>{" "}
