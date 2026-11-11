@@ -49,7 +49,7 @@ export async function sendMagicLink(_prev: LoginState, formData: FormData): Prom
     options: {
       shouldCreateUser: false, // accounts are provisioned by an organization, not self-signup
       // Canonical token-bearing email URLs are derived from SiteURL by the template.
-      emailRedirectTo: `${origin.replace(/\/$/, "")}/auth/confirm`,
+      emailRedirectTo: `${origin.replace(/\/$/, "")}/auth/confirm?src=email`,
     },
   });
   // Same message whether or not the account exists (no account enumeration).
