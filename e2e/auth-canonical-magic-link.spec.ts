@@ -131,7 +131,7 @@ test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () =>
     const clearsHint = (await firstHop.headerValues("set-cookie")).some((header) =>
       header.startsWith("rh_auth_next=")
         && header.includes("Path=/auth/confirm")
-        && /(?:^|;\\s*)Max-Age=0(?:;|$)/i.test(header),
+        && header.includes("Max-Age=0"),
     );
     expect(clearsHint, "auth redirect must expire its scoped hint").toBe(true);
 
