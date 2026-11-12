@@ -70,6 +70,53 @@ test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () =>
     }
   });
 
+  test("rejected link clears scoped hint through an actual browser redirect", async ({ page }) => {
+    guardLocal();
+
+    // Compare the failed-link route with the successful Mailpit route using
+    // the same real browser cookie jar. APIRequestContext alone is insufficient
+    // evidence of browser cookie deletion.
+    await page.context().addCookies([{
+      name: "rh_auth_next",
+      value: intendedPath,
+      domain: "localhost",
+      path: "/auth/confirm",
+      httpOnly: true,
+      sameSite: "Lax",
+    }]);
+    const before = await page.context().cookies();
+    expect(before.some((cookie) =>
+      cookie.name === "rh_auth_next" && cookie.path === "/auth/confirm",
+    )).toBe(true);
+
+    const firstHop = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.origin === new URL(baseUrl).origin
+        && url.pathname === "/auth/confirm"
+        && url.searchParams.get("type") === "magiclink";
+    });
+    await page.goto("/auth/confirm?type=magiclink");
+    const redirect = await firstHop;
+    expect([302, 303, 307, 308]).toContain(redirect.status());
+    expect(redirect.headers()["cache-control"]).toContain("no-store");
+    expect(redirect.headers()["referrer-policy"]).toBe("no-referrer");
+    const location = new URL(redirect.headers()["location"] ?? "/", baseUrl);
+    expect(location.origin).toBe(new URL(baseUrl).origin);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("error")).toBe("link");
+    expect(location.searchParams.has("token_hash")).toBe(false);
+    await expect(page).toHaveURL(/\\/login\\?error=link$/);
+
+    // If this succeeds but the Mailpit success path still fails, the evidence
+    // narrows the defect to the successful verification path. Do not weaken
+    // either check or print cookie contents to diagnose the failure.
+    await expect.poll(async () =>
+      (await page.context().cookies()).some((cookie) =>
+        cookie.name === "rh_auth_next" && cookie.path === "/auth/confirm",
+      ),
+    ).toBe(false);
+  });
+
   test("Mailpit token link is canonical, ignores forged emailed next, retains browser-local deep link and cannot replay", async ({ page }) => {
     guardLocal();
     const before = new Set(await messageIds());
