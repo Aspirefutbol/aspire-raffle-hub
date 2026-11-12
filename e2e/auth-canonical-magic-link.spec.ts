@@ -40,8 +40,11 @@ async function redirectWithoutFollowing(page: Page, path: string) {
   return { location, response };
 }
 
+// Disable browser recordings for this token-bearing acceptance file only. Playwright
+// fixture overrides must be top-level, before describe groups, to avoid a new-worker error.
+test.use({ trace: "off", screenshot: "off", video: "off" });
+
 test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () => {
-  test.use({ trace: "off", screenshot: "off", video: "off" });
 
   test("absent and unsupported token paths reject email-borne next and clear a scoped hint", async ({ page }) => {
     guardLocal();
