@@ -80,7 +80,7 @@ test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () =>
     expect(hint?.httpOnly).toBe(true);
     expect(hint?.path).toBe("/auth/confirm");
     expect(hint?.sameSite).toBe("Lax");
-    expect(hint?.value).toBe(intendedPath);
+    expect(decodeURIComponent(hint?.value ?? "")).toBe(intendedPath);
 
     let messageId = "";
     await expect.poll(async () => {
