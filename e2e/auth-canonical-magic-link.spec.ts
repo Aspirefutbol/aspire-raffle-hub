@@ -125,9 +125,15 @@ test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () =>
     expect(firstLocation.pathname).toBe(intendedPath);
     expect(firstLocation.searchParams.has("token_hash")).toBe(false);
     expect(firstLocation.searchParams.has("next")).toBe(false);
-    const sentCookies = firstHop.headers()["set-cookie"] ?? "";
-    expect(sentCookies.includes("rh_auth_next=")).toBe(true);
-    expect(sentCookies.includes("Path=/auth/confirm")).toBe(true);
+    // Browser response.headers() intentionally omits sensitive Set-Cookie.
+    // Read only the specific header values and assert booleans to avoid printing
+    // session cookies or one-time auth data in failing CI logs.
+    const clearsHint = (await firstHop.headerValues("set-cookie")).some((header) =>
+      header.startsWith("rh_auth_next=")
+        && header.includes("Path=/auth/confirm")
+        && /(?:^|;\\s*)Max-Age=0(?:;|$)/i.test(header),
+    );
+    expect(clearsHint, "auth redirect must expire its scoped hint").toBe(true);
 
     await page.waitForURL((url) => url.pathname === intendedPath);
     await expect.poll(async () =>
