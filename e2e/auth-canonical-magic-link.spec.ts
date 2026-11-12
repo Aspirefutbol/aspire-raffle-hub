@@ -33,7 +33,9 @@ async function redirectWithoutFollowing(page: Page, path: string) {
   expect([302, 303, 307, 308]).toContain(response.status());
   expect(response.headers()["cache-control"]).toContain("no-store");
   expect(response.headers()["referrer-policy"]).toBe("no-referrer");
-  const location = new URL(response.headers()["location"], baseUrl);
+  const locationHeader = response.headers()["location"];
+  expect(locationHeader).toBeTruthy();
+  const location = new URL(locationHeader ?? "/", baseUrl);
   expect(location.origin).toBe(new URL(baseUrl).origin);
   return { location, response };
 }
