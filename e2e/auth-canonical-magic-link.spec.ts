@@ -105,14 +105,36 @@ test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () =>
     expect(link.searchParams.has("next")).toBe(false);
     link.searchParams.set("next", "https://attacker.invalid/steal");
 
-    const { location } = await redirectWithoutFollowing(page, link.toString());
-    expect(location.pathname).toBe(intendedPath);
-    expect(location.searchParams.has("token_hash")).toBe(false);
-    expect(location.searchParams.has("next")).toBe(false);
-    expect((await page.context().cookies()).some((cookie) => cookie.name === "rh_auth_next"))
-      .toBe(false);
+    // Follow the one-time token with an actual browser navigation. A request made
+    // through Playwright's APIRequestContext does not exercise browser redirect /
+    // cookie processing the same way as opening the link from email.
+    const firstHopPromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.origin === new URL(baseUrl).origin
+        && url.pathname === "/auth/confirm"
+        && url.searchParams.has("token_hash");
+    });
+    // Avoid embedding the one-time token in navigation assertion failures or logs.
+    await page.evaluate((target: string) => { window.location.assign(target); }, link.toString());
+    const firstHop = await firstHopPromise;
+    expect([302, 303, 307, 308].includes(firstHop.status())).toBe(true);
+    expect(firstHop.headers()["cache-control"]?.includes("no-store")).toBe(true);
+    expect(firstHop.headers()["referrer-policy"]).toBe("no-referrer");
+    const firstLocation = new URL(firstHop.headers()["location"] ?? "/", baseUrl);
+    expect(firstLocation.origin).toBe(new URL(baseUrl).origin);
+    expect(firstLocation.pathname).toBe(intendedPath);
+    expect(firstLocation.searchParams.has("token_hash")).toBe(false);
+    expect(firstLocation.searchParams.has("next")).toBe(false);
+    const sentCookies = firstHop.headers()["set-cookie"] ?? "";
+    expect(sentCookies.includes("rh_auth_next=")).toBe(true);
+    expect(sentCookies.includes("Path=/auth/confirm")).toBe(true);
 
-    await page.goto(intendedPath);
+    await page.waitForURL((url) => url.pathname === intendedPath);
+    await expect.poll(async () =>
+      (await page.context().cookies()).some((cookie) =>
+        cookie.name === "rh_auth_next" && cookie.path === "/auth/confirm",
+      ),
+    ).toBe(false);
     await expect(page).not.toHaveURL(/\/login(?:\?|$)/);
 
     const replay = await redirectWithoutFollowing(page, link.toString());
