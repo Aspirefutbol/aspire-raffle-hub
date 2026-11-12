@@ -105,7 +105,7 @@ test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () =>
     expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("error")).toBe("link");
     expect(location.searchParams.has("token_hash")).toBe(false);
-    await expect(page).toHaveURL(/\\/login\\?error=link$/);
+    await expect(page).toHaveURL(new URL("/login?error=link", baseUrl).toString());
 
     // If this succeeds but the Mailpit success path still fails, the evidence
     // narrows the defect to the successful verification path. Do not weaken
