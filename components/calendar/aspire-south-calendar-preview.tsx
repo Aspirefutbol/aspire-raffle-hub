@@ -257,14 +257,14 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
 
   return (
     <main lang={language} className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-4xl px-3 pb-6 pt-2 sm:px-4 sm:pt-3 [@media(max-height:380px)]:grid [@media(max-height:380px)]:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] [@media(max-height:380px)]:items-start [@media(max-height:380px)]:gap-x-2">
-        <nav aria-label="Preview views / Vistas de demostración" className="mb-1 flex h-11 items-center gap-2 text-sm [@media(max-height:380px)]:col-span-2">
+      <div className="mx-auto max-w-4xl px-3 pb-6 pt-2 sm:px-4 sm:pt-3 sm:[@media(max-height:380px)]:grid sm:[@media(max-height:380px)]:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:[@media(max-height:380px)]:items-start sm:[@media(max-height:380px)]:gap-x-2">
+        <nav aria-label="Preview views / Vistas de demostración" className="mb-1 flex h-11 items-center gap-2 text-sm sm:[@media(max-height:380px)]:col-span-2">
           <Link href={`/calendar/aspire-south${language === "es" ? "?lang=es" : ""}`} aria-current="page" className="inline-flex min-h-11 items-center rounded-control bg-brand-50 px-3 font-semibold text-brand-800 underline">{language === "es" ? "Calendario" : "Calendar"}</Link>
           <Link href={`/calendar/aspire-south?view=family${language === "es" ? "&lang=es" : ""}`} data-testid="calendar-family-preview-link" className="inline-flex min-h-11 items-center rounded-control px-3 font-semibold text-brand-700 underline">{language === "es" ? "Compartir" : "Family sharing"}</Link>
         </nav>
         {/* Compact identity + progress: everything a parent or donor needs above the calendar. */}
-        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4 [@media(max-height:380px)]:grid [@media(max-height:380px)]:grid-cols-[minmax(0,1fr)_auto] [@media(max-height:380px)]:gap-1 [@media(max-height:380px)]:p-2 [@media(max-height:380px)]:col-start-1 [@media(max-height:380px)]:min-w-0">
-          <div className="order-1 min-w-0 flex-1">
+        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4 sm:[@media(max-height:380px)]:flex sm:[@media(max-height:380px)]:flex-col sm:[@media(max-height:380px)]:items-stretch sm:[@media(max-height:380px)]:gap-1 sm:[@media(max-height:380px)]:p-2 sm:[@media(max-height:380px)]:col-start-1 sm:[@media(max-height:380px)]:min-w-0">
+          <div className="order-1 min-w-0 flex-1 sm:[@media(max-height:380px)]:flex-none">
             <p data-testid="calendar-identity" className="break-words text-xs font-semibold leading-4 text-brand-700">
               {t.player}: {preview.participant.displayName} · {t.team}: {preview.participant.teamName}
             </p>
@@ -273,11 +273,11 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
           <button
             type="button"
             onClick={() => setLanguage(language === "en" ? "es" : "en")}
-            className="order-2 min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink sm:order-4 [@media(max-height:380px)]:order-4"
+            className="order-2 min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink sm:order-4 sm:[@media(max-height:380px)]:order-4 sm:[@media(max-height:380px)]:w-full"
           >
             {t.language}
           </button>
-          <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem] [@media(max-height:380px)]:order-3 [@media(max-height:380px)]:max-w-none">
+          <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem] sm:[@media(max-height:380px)]:order-3 sm:[@media(max-height:380px)]:max-w-none sm:[@media(max-height:380px)]:basis-auto">
             <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold">
               <span aria-hidden="true">ⓘ</span>{t.demoBadge}
             </summary>
@@ -286,7 +286,7 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
               <p className="mt-1">{t.secureBody}</p>
             </div>
           </details>
-          <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0 [@media(max-height:380px)]:order-2 [@media(max-height:380px)]:w-full [@media(max-height:380px)]:col-span-2">
+          <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0 sm:[@media(max-height:380px)]:order-2 sm:[@media(max-height:380px)]:w-full sm:[@media(max-height:380px)]:basis-auto">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
               <p className="text-xs text-ink min-[360px]:text-sm">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</span>{" "}
@@ -325,7 +325,7 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
         </section>
 
         {step === "calendar" && (
-          <section aria-labelledby="calendar-choose-heading" className="mt-1.5 rounded-[1rem] border border-line bg-surface px-3 pb-3 pt-2.5 shadow-card sm:mt-2 sm:p-4 [@media(max-height:380px)]:col-start-2 [@media(max-height:380px)]:row-start-2 [@media(max-height:380px)]:mt-0 [@media(max-height:380px)]:min-w-0 [@media(max-height:380px)]:p-2">
+          <section aria-labelledby="calendar-choose-heading" className="mt-1.5 rounded-[1rem] border border-line bg-surface px-3 pb-3 pt-2.5 shadow-card sm:mt-2 sm:p-4 sm:[@media(max-height:380px)]:col-start-2 sm:[@media(max-height:380px)]:row-start-2 sm:[@media(max-height:380px)]:mt-0 sm:[@media(max-height:380px)]:min-w-0 sm:[@media(max-height:380px)]:p-2">
             {progress.isComplete && (
               <p data-testid="calendar-complete-alert" role="status" className="mb-2 rounded-control bg-emerald-50 px-2 py-1.5 text-sm font-bold text-emerald-950">✓ {t.calendarComplete}</p>
             )}
@@ -420,7 +420,7 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
             {/* Sticky inside this card only: it follows the calendar on small screens and never covers content below the card. */}
             <div
               data-testid="calendar-action-bar"
-              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2 [@media(max-height:380px)]:fixed [@media(max-height:380px)]:bottom-0 [@media(max-height:380px)]:left-0 [@media(max-height:380px)]:right-0 [@media(max-height:380px)]:mx-0 [@media(max-height:380px)]:mb-0 [@media(max-height:380px)]:z-30 [@media(max-height:380px)]:rounded-none"
+              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2 sm:[@media(max-height:380px)]:fixed sm:[@media(max-height:380px)]:bottom-0 sm:[@media(max-height:380px)]:left-0 sm:[@media(max-height:380px)]:right-0 sm:[@media(max-height:380px)]:mx-0 sm:[@media(max-height:380px)]:mb-0 sm:[@media(max-height:380px)]:z-30 sm:[@media(max-height:380px)]:rounded-none"
             >
               <div className="min-w-0 flex-1" aria-live="polite">
                 {progress.isComplete ? (
