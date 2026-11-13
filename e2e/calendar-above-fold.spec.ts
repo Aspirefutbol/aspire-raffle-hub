@@ -56,11 +56,15 @@ test.describe("donor view: calendar, progress and action without scrolling (F1�
         if (vp.allDaysVisible) await expectWithin(page.getByTestId("calendar-day-31"), 0, barTop, "F1 all 31 days");
 
         // F2–F4: identity, progress, language and demo disclosure in the first screen.
+        // In short landscape the footer is fixed: mere within-viewport bounds
+        // would miss controls hidden *under* the footer. Require F3/F4 to end
+        // above its top edge, not simply above the viewport bottom.
         await expectWithin(page.getByTestId("calendar-identity"), 0, vp.height, "F2 identity");
         await expectWithin(page.getByTestId("calendar-progress"), 0, vp.height, "F2 progress");
         await expectWithin(page.getByTestId("sponsored-day-progress"), 0, vp.height, "F2 days x/31");
-        await expectWithin(page.getByRole("button", { name: lang === "es" ? "English" : "Español", exact: true }), 0, vp.height, "F3 language");
-        await expectWithin(page.getByTestId("calendar-demo-badge"), 0, vp.height, "F4 demo badge");
+        const unobscuredBottom = Math.min(vp.height, barTop);
+        await expectWithin(page.getByRole("button", { name: lang === "es" ? "English" : "Español", exact: true }), 0, unobscuredBottom, "F3 language unobscured");
+        await expectWithin(page.getByTestId("calendar-demo-badge"), 0, unobscuredBottom, "F4 demo badge unobscured");
 
         // F6: no sideways scroll; every day tile is at least 44×44.
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
