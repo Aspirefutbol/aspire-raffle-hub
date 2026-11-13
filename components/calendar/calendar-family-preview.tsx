@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import QRCode from "qrcode";
 import { calendarPreviewShareContent, calendarTestConfirmationContent, type CalendarLanguage } from "@/lib/calendar/communication-content";
 import { aspireSouthSyntheticPreview, syntheticCalendarProgress } from "@/lib/calendar/synthetic-preview";
@@ -16,7 +17,7 @@ const copy = {
     qrAlt: "Calendar preview QR code", linkLabel: "Demo calendar link",
     messageLabel: "Demo invitation — select and copy", copied: "Copied. The message and link are for demonstration only.",
     shared: "Sharing completed by your device. This remains a demo link, not a live fundraiser.",
-    manual: "Automatic sharing is unavailable. Select and copy the demo invitation below.",
+    manual: "Automatic copying or sharing is unavailable. Select and copy the demo content below.",
     error: "Sharing could not be prepared. No link was created or replaced.",
     sharingNote: "Use these controls to review sharing with your team, not to ask donors for money. Live player-specific links remain gated by guardian authorization and security review.",
     emailTitle: "Donor confirmation preview", subject: "Subject", emailNote: "Sample only: this message has not been sent. Live delivery needs the approved sender, verified payment integration, and a tested delivery queue.",
@@ -31,7 +32,7 @@ const copy = {
     qrAlt: "Código QR del calendario de demostración", linkLabel: "Enlace del calendario de demostración",
     messageLabel: "Invitación de demostración: selecciona y copia", copied: "Copiado. El mensaje y el enlace son solo de demostración.",
     shared: "Tu dispositivo completó la acción de compartir. Este sigue siendo un enlace de demostración, no una campaña activa.",
-    manual: "No se puede compartir automáticamente. Selecciona y copia la invitación de demostración.",
+    manual: "No se puede copiar ni compartir automáticamente. Selecciona y copia el contenido de demostración.",
     error: "No se pudo preparar el enlace. No se creó ni reemplazó ningún enlace.",
     sharingNote: "Usa estos controles para revisar cómo compartir con tu equipo, no para solicitar dinero. Los enlaces personales requieren autorización del adulto responsable y revisión de seguridad.",
     emailTitle: "Ejemplo de confirmación al donante", subject: "Asunto", emailNote: "Solo un ejemplo: este mensaje no se ha enviado. El envío real requiere un remitente aprobado, integración del pago verificado y una cola de envío probada.",
@@ -92,7 +93,7 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
     } catch (error) {
       if (!(error instanceof Error && error.name === "AbortError")) {
         setFeedback(prepared && kind !== "qr" ? "manual" : "error");
-        if (prepared && kind !== "qr") setManualText(prepared.invitation);
+        if (prepared && kind !== "qr") setManualText(kind === "copy" ? prepared.url : prepared.invitation);
       }
     } finally { working.current = false; setBusy(false); }
   }
@@ -103,10 +104,14 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
   }
 
   return <main lang={language} className="mx-auto max-w-4xl space-y-3 px-3 pb-6 pt-2 sm:px-4" data-testid="calendar-family-preview">
+    <nav aria-label="Preview views / Vistas de demostración" className="flex h-11 items-center gap-2 text-sm">
+      <Link href={`/calendar/aspire-south${language === "es" ? "?lang=es" : ""}`} className="inline-flex min-h-11 items-center rounded-control px-3 font-semibold text-brand-700 underline">{language === "es" ? "Calendario" : "Calendar"}</Link>
+      <Link href={`/calendar/aspire-south?view=family${language === "es" ? "&lang=es" : ""}`} aria-current="page" data-testid="calendar-family-preview-link" className="inline-flex min-h-11 items-center rounded-control bg-brand-50 px-3 font-semibold text-brand-800 underline">{language === "es" ? "Compartir" : "Family sharing"}</Link>
+    </nav>
     <section className="rounded-card border border-line bg-surface p-3 shadow-card sm:p-4">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-xs font-semibold text-brand-700">Aspire South · {fixture.participant.displayName} · {fixture.participant.teamName}</p>
+          <p className="break-words text-xs font-semibold leading-4 text-brand-700">Aspire South · {fixture.participant.displayName} · {fixture.participant.teamName}</p>
           <h1 className="mt-0.5 text-xl font-bold leading-tight sm:text-2xl">{t.title}</h1>
         </div>
         <button type="button" onClick={changeLanguage} disabled={busy} className="min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink disabled:opacity-50">{t.language}</button>
@@ -133,7 +138,7 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
         <a className="inline-flex min-h-11 items-center text-sm underline" href={content.whatsappHref} target="_blank" rel="noopener noreferrer">{t.whatsapp}</a>
       </div>}
       {feedback && <p role="status" className="mt-3 text-sm">{t[feedback]}</p>}
-      {manualText && <label className="mt-3 block text-sm">{t.messageLabel}<textarea readOnly value={manualText} onFocus={event => event.currentTarget.select()} className="mt-1 min-h-32 w-full rounded-control border border-line p-3" /></label>}
+      {manualText && <label className="mt-3 block text-sm">{manualText === content?.url ? t.linkLabel : t.messageLabel}<textarea readOnly value={manualText} onFocus={event => event.currentTarget.select()} className="mt-1 min-h-32 w-full rounded-control border border-line p-3" /></label>}
       {qr && <div className="mt-4 space-y-2">
         <Image src={qr} unoptimized width={240} height={240} alt={t.qrAlt} className="h-auto max-w-full" />
         <a className="inline-flex min-h-11 items-center text-sm underline" href={qr} download="aspire-south-demo-calendar-qr.png">{t.download}</a>

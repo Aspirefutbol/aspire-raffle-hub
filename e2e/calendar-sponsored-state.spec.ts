@@ -70,7 +70,8 @@ test("full synthetic calendar has a celebratory bilingual completion state and n
   await expect(page.getByRole("progressbar", { name: "days sponsored" }))
     .toHaveAttribute("aria-valuetext", "31 / 31 days sponsored");
   await expect(page.getByTestId("calendar-day-31")).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(0);
+  await expect(page.getByTestId("calendar-action-bar")).toContainText("Calendar Complete!");
 
   await page.getByRole("button", { name: "Español" }).click();
   await expect(page.getByTestId("calendar-complete")).toContainText("¡Calendario completo!");

@@ -68,7 +68,11 @@ export function calendarPreviewShareContent(origin: string, language: CalendarLa
   if ((!local && !preview) || base.username || base.password || base.search || base.hash || base.pathname !== "/") {
     throw new Error("An isolated calendar preview origin is required.");
   }
-  const url = new URL("/calendar/aspire-south", base.origin).toString();
+  const donorUrl = new URL("/calendar/aspire-south", base.origin);
+  // A Spanish-language synthetic invitation and its QR must open in Spanish.
+  // No private guardian token, buyer detail or recipient state is added.
+  if (language === "es") donorUrl.searchParams.set("lang", "es");
+  const url = donorUrl.toString();
   const title = language === "es" ? "[DEMO] Calendario de Aspire South" : "[DEMO] Aspire South calendar";
   const text = language === "es"
     ? "Mira este calendario ficticio de Aspire South. Solo demostración: no acepta pagos. Puedes cambiar entre inglés y español en la página."

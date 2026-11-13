@@ -15,6 +15,7 @@ const VIEWPORTS: Viewport[] = [
   { name: "phone-360x640", width: 360, height: 640, columns: 6, allDaysVisible: false },
   { name: "phone-390x664", width: 390, height: 664, columns: 7, allDaysVisible: true },
   { name: "phone-430x740", width: 430, height: 740, columns: 7, allDaysVisible: true },
+  { name: "phone-landscape-667x320", width: 667, height: 320, columns: 7, allDaysVisible: false },
   { name: "phone-landscape-844x340", width: 844, height: 340, columns: 7, allDaysVisible: false },
   { name: "ipad-portrait-768x954", width: 768, height: 954, columns: 7, allDaysVisible: true },
   { name: "ipad-landscape-1024x695", width: 1024, height: 695, columns: 7, allDaysVisible: true },
@@ -55,11 +56,15 @@ test.describe("donor view: calendar, progress and action without scrolling (F1�
         if (vp.allDaysVisible) await expectWithin(page.getByTestId("calendar-day-31"), 0, barTop, "F1 all 31 days");
 
         // F2–F4: identity, progress, language and demo disclosure in the first screen.
+        // In short landscape the footer is fixed: mere within-viewport bounds
+        // would miss controls hidden *under* the footer. Require F3/F4 to end
+        // above its top edge, not simply above the viewport bottom.
         await expectWithin(page.getByTestId("calendar-identity"), 0, vp.height, "F2 identity");
         await expectWithin(page.getByTestId("calendar-progress"), 0, vp.height, "F2 progress");
         await expectWithin(page.getByTestId("sponsored-day-progress"), 0, vp.height, "F2 days x/31");
-        await expectWithin(page.getByRole("button", { name: lang === "es" ? "English" : "Español", exact: true }), 0, vp.height, "F3 language");
-        await expectWithin(page.getByTestId("calendar-demo-badge"), 0, vp.height, "F4 demo badge");
+        const unobscuredBottom = Math.min(vp.height, barTop);
+        await expectWithin(page.getByRole("button", { name: lang === "es" ? "English" : "Español", exact: true }), 0, unobscuredBottom, "F3 language unobscured");
+        await expectWithin(page.getByTestId("calendar-demo-badge"), 0, unobscuredBottom, "F4 demo badge unobscured");
 
         // F6: no sideways scroll; every day tile is at least 44×44.
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -73,7 +78,14 @@ test.describe("donor view: calendar, progress and action without scrolling (F1�
         await page.screenshot({ path: `${SHOTS}/above-fold-donor-${vp.name}-${lang}.png` });
 
         // F5: tapping a visible day keeps the action bar in view with count, total and multiplier.
-        await page.getByTestId("calendar-day-3").click();
+        const selectedDay = page.getByTestId("calendar-day-3");
+        await selectedDay.click();
+        // Wait for the actual selected state, not a mid-transition screenshot.
+        // Brand-700 background and white foreground must both reach their
+        // final values: immediate screenshots made the tile appear washed out.
+        await expect(selectedDay).toHaveAttribute("aria-pressed", "true");
+        await expect(selectedDay).toHaveCSS("background-color", "rgb(29, 63, 216)");
+        await expect(selectedDay).toHaveCSS("color", "rgb(255, 255, 255)");
         expect(await scrollY(page), "selecting a first-row day does not scroll").toBe(0);
         await expect(bar).toContainText("$3");
         await expect(bar).toContainText(lang === "es" ? "1 día" : "1 day");
@@ -195,4 +207,77 @@ test("F8: the QR code appears after one tap", async ({ page }) => {
   await page.goto("/calendar/aspire-south?view=family");
   await page.getByRole("button", { name: "Show QR Code", exact: true }).click();
   await expect(page.getByRole("img", { name: "Calendar preview QR code", exact: true })).toBeVisible();
+});
+
+test("Issue #41: Spanish donor link opens in Spanish and family tab preserves locale", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto("/calendar/aspire-south?lang=es");
+  await expect(page.getByRole("heading", { name: "Patrocina un Día" })).toBeVisible();
+  await page.getByTestId("calendar-family-preview-link").click();
+  await expect(page).toHaveURL(/view=family&lang=es/);
+  await expect(page.getByRole("heading", { name: "Mi calendario" })).toBeVisible();
+});
+
+test("Issue #41: copied family links round-trip into the donor language (synthetic only)", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  for (const lang of ["en", "es"] as const) {
+    await page.goto(`/calendar/aspire-south?view=family&lang=${lang}`);
+    const familyOrigin = new URL(page.url()).origin;
+    await page.getByRole("button", { name: lang === "es" ? "Copiar enlace" : "Copy Link", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText(lang === "es" ? "Copiado" : "Copied");
+    const copied = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+    expect(copied.origin, "link remains on the isolated synthetic preview origin").toBe(familyOrigin);
+    expect(copied.pathname).toBe("/calendar/aspire-south");
+    expect(copied.searchParams.get("lang")).toBe(lang === "es" ? "es" : null);
+    expect(copied.searchParams.has("view")).toBe(false);
+    expect(copied.searchParams.has("token")).toBe(false);
+    await page.goto(copied.toString());
+    await expect(page.getByRole("heading", { name: lang === "es" ? "Patrocina un Día" : "Sponsor a Day" })).toBeVisible();
+    await expect(page.getByTestId("calendar-demo-badge")).toBeVisible();
+  }
+});
+
+test("Issue #41: unavailable clipboard exposes a copyable donor URL, not an invitation", async ({ page }) => {
+  for (const lang of ["en", "es"] as const) {
+    await page.goto(`/calendar/aspire-south?view=family&lang=${lang}`);
+    // Reproduce the secure-context/permissions fallback common on mobile browsers.
+    await page.evaluate(() => Object.defineProperty(navigator, "clipboard", {
+      configurable: true, value: undefined,
+    }));
+    await page.getByRole("button", {
+      name: lang === "es" ? "Copiar enlace" : "Copy Link", exact: true,
+    }).click();
+    await expect(page.getByRole("status")).toContainText(
+      lang === "es" ? "No se puede copiar" : "Automatic copying",
+    );
+    const manualLink = page.getByRole("textbox", {
+      name: lang === "es" ? "Enlace del calendario de demostración" : "Demo calendar link",
+    });
+    await expect(manualLink).toBeVisible();
+    const value = await manualLink.inputValue();
+    const url = new URL(value);
+    expect(url.origin).toBe(new URL(page.url()).origin);
+    expect(url.pathname).toBe("/calendar/aspire-south");
+    expect(url.searchParams.get("lang")).toBe(lang === "es" ? "es" : null);
+    expect(url.searchParams.has("view")).toBe(false);
+    expect(url.searchParams.has("token")).toBe(false);
+    expect(value).not.toContain(String.fromCharCode(10));
+  }
+});
+
+test("Issue #41: selected days use a checkmark as well as color", async ({ page }) => {
+  await page.goto("/calendar/aspire-south");
+  const day = page.getByTestId("calendar-day-3");
+  await day.click();
+  await expect(day).toHaveAttribute("aria-pressed", "true");
+  await expect(day.locator('[aria-hidden="true"]')).toContainText("✓");
+});
+
+test("Issue #41: completed calendar removes the misleading Continue action", async ({ page }) => {
+  await page.goto("/calendar/aspire-south");
+  await page.getByRole("button", { name: "Complete calendar" }).click();
+  await expect(page.getByTestId("calendar-complete-alert")).toBeVisible();
+  await expect(page.getByTestId("calendar-action-bar")).toContainText("Calendar Complete!");
+  await expect(page.getByTestId("calendar-action-bar")).not.toContainText("Tap a day to start");
+  await expect(page.getByTestId("calendar-action-bar").getByRole("button", { name: "Continue" })).toHaveCount(0);
 });

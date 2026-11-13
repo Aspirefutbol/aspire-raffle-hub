@@ -11,7 +11,8 @@ describe("calendar communication content", () => {
   it("keeps English and Spanish invitations explicitly synthetic and recipient-free", () => {
     for (const language of ["en", "es"] as const) {
       const result = calendarPreviewShareContent(origin, language);
-      expect(result.url).toBe(`${origin}/calendar/aspire-south`);
+      expect(result.url).toBe(`${origin}/calendar/aspire-south${language === "es" ? "?lang=es" : ""}`);
+      expect(result.invitation).toContain(result.url);
       expect(result.title).toContain("[DEMO]");
       expect(result.text).toContain(language === "es" ? "no acepta pagos" : "does not accept payments");
       expect(new URL(result.emailHref).searchParams.get("body")).toBe(result.invitation);

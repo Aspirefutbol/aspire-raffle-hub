@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, feat/phase-1-fundraising-slice]
+    branches: [main, feat/phase-1-fundraising-slice, feat/calendar-fundraiser-aspire-south]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -33,7 +33,9 @@ jobs:
 
   database:
     name: Database (migrations, pgTAP, types) + E2E
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 cannot install Chromium dependencies on ubuntu-26.04.
+    # Keep the browser/database acceptance job on a supported runner.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

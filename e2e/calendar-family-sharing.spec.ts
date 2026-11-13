@@ -22,18 +22,21 @@ test("family preview exposes simple sharing and a bilingual unsent confirmation"
   expect(posts).toEqual([]);
 });
 
-test("clipboard failure gives a clearly marked manual demo invitation", async ({ page }) => {
+test("clipboard failure exposes a safe manual demo calendar URL", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("blocked"); } } });
   });
   await page.goto(route);
   await page.getByRole("button", { name: "Copy Link", exact: true }).click();
-  const manual = page.getByRole("textbox", { name: "Demo invitation — select and copy", exact: true });
-  await expect(manual).toHaveValue(/\[DEMO\]/);
-  await expect(manual).toHaveValue(/does not accept payments/);
+  await expect(page.getByTestId("calendar-family-demo-warning")).toContainText("fictional player only");
+  await expect(page.getByRole("status")).toContainText("demo content");
+  const manual = page.getByRole("textbox", { name: "Demo calendar link", exact: true });
+  const expected = new URL("/calendar/aspire-south", page.url()).toString();
+  await expect(manual).toHaveValue(expected);
   const text = await manual.inputValue();
   expect(text).not.toContain("view=family");
   expect(text).not.toContain("token=");
+  expect(text).not.toContain("#private");
 });
 
 test("native sharing and QR contain only the sanitized public demonstration URL", async ({ page }) => {

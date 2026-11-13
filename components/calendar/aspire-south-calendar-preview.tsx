@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   allCalendarDays,
   calendarImpactQuote,
@@ -84,6 +85,7 @@ const copy = {
     required: "Please complete your name and email before continuing.",
     day: "Day",
     demoBadge: "Demo · fictional player · no payments",
+    demoBadgeShort: "Demo · no payments",
     priceRange: "$1–$31 per day",
     tapHint: "Tap a day to start",
     selectionSummary: (count: number) => `${count} ${count === 1 ? "day" : "days"}`,
@@ -149,6 +151,7 @@ const copy = {
     required: "Completa tu nombre y correo electrónico antes de continuar.",
     day: "Día",
     demoBadge: "Demostración · jugador ficticio · sin pagos",
+    demoBadgeShort: "Demo · sin pagos",
     priceRange: "$1–$31 por día",
     tapHint: "Toca un día para empezar",
     selectionSummary: (count: number) => `${count} ${count === 1 ? "día" : "días"}`,
@@ -159,8 +162,8 @@ const copy = {
 
 const preview = aspireSouthSyntheticPreview;
 
-export function AspireSouthCalendarPreview() {
-  const [language, setLanguage] = useState<Language>("en");
+export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initialLanguage?: Language }) {
+  const [language, setLanguage] = useState<Language>(initialLanguage);
   const [scenario, setScenario] = useState<PreviewScenario>("partial");
   const [step, setStep] = useState<Step>("calendar");
   const [selected, setSelected] = useState<number[]>([]);
@@ -256,11 +259,15 @@ export function AspireSouthCalendarPreview() {
 
   return (
     <main lang={language} className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-4xl px-3 pb-6 pt-2 sm:px-4 sm:pt-3">
+      <div className="mx-auto max-w-4xl px-3 pb-6 pt-2 sm:px-4 sm:pt-3 sm:[@media(max-height:380px)]:grid sm:[@media(max-height:380px)]:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:[@media(max-height:380px)]:items-start sm:[@media(max-height:380px)]:gap-x-2">
+        <nav aria-label="Preview views / Vistas de demostración" className="mb-1 flex h-11 items-center gap-2 text-sm sm:[@media(max-height:380px)]:col-span-2">
+          <Link href={`/calendar/aspire-south${language === "es" ? "?lang=es" : ""}`} aria-current="page" className="inline-flex min-h-11 items-center rounded-control bg-brand-50 px-3 font-semibold text-brand-800 underline">{language === "es" ? "Calendario" : "Calendar"}</Link>
+          <Link href={`/calendar/aspire-south?view=family${language === "es" ? "&lang=es" : ""}`} data-testid="calendar-family-preview-link" className="inline-flex min-h-11 items-center rounded-control px-3 font-semibold text-brand-700 underline">{language === "es" ? "Compartir" : "Family sharing"}</Link>
+        </nav>
         {/* Compact identity + progress: everything a parent or donor needs above the calendar. */}
-        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4">
-          <div className="order-1 min-w-0 flex-1">
-            <p data-testid="calendar-identity" className="truncate text-xs font-semibold text-brand-700">
+        <section data-testid="calendar-summary" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[1rem] border border-line bg-surface px-3 py-2.5 shadow-card sm:flex-nowrap sm:gap-4 sm:p-4 sm:[@media(max-height:380px)]:grid sm:[@media(max-height:380px)]:grid-cols-[minmax(0,1fr)_auto] sm:[@media(max-height:380px)]:items-stretch sm:[@media(max-height:380px)]:gap-1 sm:[@media(max-height:380px)]:p-2 sm:[@media(max-height:380px)]:col-start-1 sm:[@media(max-height:380px)]:min-w-0">
+          <div className="order-1 min-w-0 flex-1 sm:[@media(max-height:380px)]:col-span-2">
+            <p data-testid="calendar-identity" className="break-words text-xs font-semibold leading-4 text-brand-700">
               {t.player}: {preview.participant.displayName} · {t.team}: {preview.participant.teamName}
             </p>
             <h1 className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-ink lg:text-2xl">{t.title}</h1>
@@ -268,20 +275,20 @@ export function AspireSouthCalendarPreview() {
           <button
             type="button"
             onClick={() => setLanguage(language === "en" ? "es" : "en")}
-            className="order-2 min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink sm:order-4"
+            className="order-2 min-h-11 shrink-0 rounded-control border border-line-strong bg-surface px-3 text-sm font-semibold text-ink sm:order-4 sm:[@media(max-height:380px)]:order-4 sm:[@media(max-height:380px)]:col-start-2 sm:[@media(max-height:380px)]:row-start-3"
           >
             {t.language}
           </button>
-          <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem]">
+          <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem] sm:[@media(max-height:380px)]:order-3 sm:[@media(max-height:380px)]:max-w-none sm:[@media(max-height:380px)]:basis-auto sm:[@media(max-height:380px)]:col-start-1 sm:[@media(max-height:380px)]:row-start-3 sm:[@media(max-height:380px)]:min-w-0">
             <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold">
-              <span aria-hidden="true">ⓘ</span>{t.demoBadge}
+              <span aria-hidden="true">ⓘ</span><span className="sm:[@media(max-height:380px)]:hidden">{t.demoBadge}</span><span className="hidden sm:[@media(max-height:380px)]:inline">{t.demoBadgeShort}</span>
             </summary>
             <div className="pb-3 text-xs leading-5">
               <p className="font-semibold">{t.secure}</p>
               <p className="mt-1">{t.secureBody}</p>
             </div>
           </details>
-          <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0">
+          <div data-testid="calendar-progress" className="order-4 basis-full sm:order-2 sm:basis-56 sm:shrink-0 sm:[@media(max-height:380px)]:order-2 sm:[@media(max-height:380px)]:w-full sm:[@media(max-height:380px)]:basis-auto sm:[@media(max-height:380px)]:col-span-2">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
               <p className="text-xs text-ink min-[360px]:text-sm">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.raised}</span>{" "}
@@ -320,7 +327,10 @@ export function AspireSouthCalendarPreview() {
         </section>
 
         {step === "calendar" && (
-          <section aria-labelledby="calendar-choose-heading" className="mt-1.5 rounded-[1rem] border border-line bg-surface px-3 pb-3 pt-2.5 shadow-card sm:mt-2 sm:p-4">
+          <section aria-labelledby="calendar-choose-heading" className="mt-1.5 rounded-[1rem] border border-line bg-surface px-3 pb-3 pt-2.5 shadow-card sm:mt-2 sm:p-4 sm:[@media(max-height:380px)]:col-start-2 sm:[@media(max-height:380px)]:row-start-2 sm:[@media(max-height:380px)]:mt-0 sm:[@media(max-height:380px)]:min-w-0 sm:[@media(max-height:380px)]:p-2">
+            {progress.isComplete && (
+              <p data-testid="calendar-complete-alert" role="status" className="mb-2 rounded-control bg-emerald-50 px-2 py-1.5 text-sm font-bold text-emerald-950">✓ {t.calendarComplete}</p>
+            )}
             <div className="flex items-baseline justify-between gap-2">
               <h2 id="calendar-choose-heading" className="text-sm font-bold text-ink sm:text-base">{t.choose}</h2>
               <p className="text-xs text-muted">{t.priceRange}</p>
@@ -345,22 +355,25 @@ export function AspireSouthCalendarPreview() {
                     onClick={() => toggleDay(day)}
                     aria-pressed={isSelected}
                     className={[
-                      "relative flex h-11 min-w-0 scroll-mb-20 flex-col items-center justify-center rounded-card border text-center transition sm:h-12 lg:h-16",
+                      "relative flex h-11 min-w-0 scroll-mb-16 flex-col items-center justify-center rounded-card border text-center transition sm:h-12 lg:h-16",
                       isSponsored
                         ? "cursor-not-allowed border-emerald-300 bg-emerald-50 text-emerald-950"
                         : isSelected
-                          ? "border-brand-400 bg-brand-50 text-brand-900 ring-2 ring-brand-200"
+                          ? "border-2 border-brand-700 bg-brand-700 text-white"
                           : "border-line bg-surface text-ink hover:border-brand-300 hover:bg-brand-50/40",
                     ].join(" ")}
                   >
                     {isSponsored && <span aria-hidden="true" className="absolute left-1 top-0.5 text-[10px] font-bold leading-3">✓</span>}
-                    {impactLabel && (
-                      <span data-testid={`day-impact-${day}`} className="absolute right-0.5 top-0.5 rounded border border-amber-300 bg-amber-50 px-0.5 text-[9px] font-bold leading-3 text-amber-950">
-                        {paidMultiplier}×<span className="sr-only"> · {impactName}</span>
-                      </span>
-                    )}
                     <span className="text-base font-bold leading-5 tabular sm:text-lg lg:text-xl">{day}</span>
-                    <span className="text-[11px] leading-3">{"$" + day}</span>
+                    <span className="flex max-w-full items-center justify-center gap-0.5 text-[11px] leading-3">
+                      <span>{"$" + day}</span>
+                      {isSelected && <span aria-hidden="true" className="font-bold">✓</span>}
+                      {impactLabel && (
+                        <span data-testid={`day-impact-${day}`} className="rounded border border-amber-300 bg-amber-50 px-0.5 text-[9px] font-bold text-amber-950">
+                          {paidMultiplier}×<span className="sr-only"> · {impactName}</span>
+                        </span>
+                      )}
+                    </span>
                   </button>
                 );
               })}
@@ -409,10 +422,12 @@ export function AspireSouthCalendarPreview() {
             {/* Sticky inside this card only: it follows the calendar on small screens and never covers content below the card. */}
             <div
               data-testid="calendar-action-bar"
-              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2"
+              className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex items-center gap-3 rounded-b-[1rem] border-t border-line bg-surface px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:-mx-4 sm:-mb-4 sm:px-4 sm:pt-2 sm:[@media(max-height:380px)]:fixed sm:[@media(max-height:380px)]:bottom-0 sm:[@media(max-height:380px)]:left-0 sm:[@media(max-height:380px)]:right-0 sm:[@media(max-height:380px)]:mx-0 sm:[@media(max-height:380px)]:mb-0 sm:[@media(max-height:380px)]:z-30 sm:[@media(max-height:380px)]:rounded-none"
             >
               <div className="min-w-0 flex-1" aria-live="polite">
-                {selected.length === 0 ? (
+                {progress.isComplete ? (
+                  <p className="text-sm font-bold text-emerald-950">✓ {t.calendarComplete}</p>
+                ) : selected.length === 0 ? (
                   <p className="text-sm text-muted">{t.tapHint}</p>
                 ) : (
                   <button type="button" onClick={showImpactChoices} className="flex min-h-11 w-full flex-col items-start justify-center text-left">
@@ -421,14 +436,14 @@ export function AspireSouthCalendarPreview() {
                   </button>
                 )}
               </div>
-              <button
+              {!progress.isComplete && <button
                 type="button"
                 disabled={selected.length === 0}
                 onClick={() => setStep("supporter")}
                 className="min-h-11 shrink-0 rounded-control bg-brand-600 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-12"
               >
                 {t.continue}
-              </button>
+              </button>}
             </div>
           </section>
         )}
