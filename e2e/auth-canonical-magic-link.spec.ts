@@ -177,11 +177,34 @@ test.describe("N1/N1-B canonical auth route acceptance (local synthetic)", () =>
     // the scoped HttpOnly hint existed before the link, and it must be gone
     // after a successful real navigation. Do not surface session headers.
     await page.waitForURL((url) => url.pathname === intendedPath);
-    await expect.poll(async () =>
-      (await page.context().cookies()).some((cookie) =>
-        cookie.name === "rh_auth_next" && cookie.path === "/auth/confirm",
-      ),
-    ).toBe(false);
+    // Metadata-only diagnostic: never log cookie values, one-time tokens,
+    // session headers or a token-bearing URL.
+    const hintDeletionHeaders = (await firstHop.headersArray())
+      .filter(({ name, value }) => name.toLowerCase() === "set-cookie"
+        && /^rh_auth_next=/i.test(value.trimStart()))
+      .map(({ value }) => ({
+        path: /(?:^|;)\s*path=([^;]+)/i.exec(value)?.[1] ?? null,
+        domain: /(?:^|;)\s*domain=([^;]+)/i.exec(value)?.[1] ?? null,
+        maxAge: /(?:^|;)\s*max-age=([^;]+)/i.exec(value)?.[1] ?? null,
+        expires: /(?:^|;)\s*expires=([^;]+)/i.exec(value)?.[1] ?? null,
+        sameSite: /(?:^|;)\s*samesite=([^;]+)/i.exec(value)?.[1] ?? null,
+        secure: /(?:^|;)\s*secure(?:;|$)/i.test(value),
+      }));
+    await expect.poll(async () => {
+      const remaining = (await page.context().cookies())
+        .filter((cookie) => cookie.name === "rh_auth_next" && cookie.path === "/auth/confirm")
+        .map((cookie) => ({
+          domain: cookie.domain,
+          path: cookie.path,
+          httpOnly: cookie.httpOnly,
+          secure: cookie.secure,
+          sameSite: cookie.sameSite,
+          hasExpiry: cookie.expires > 0,
+        }));
+      return remaining.length === 0
+        ? "cleared"
+        : JSON.stringify({ remaining, hintDeletionHeaders });
+    }).toBe("cleared");
     await expect(page).not.toHaveURL(/\/login(?:\?|$)/);
 
     const replay = await redirectWithoutFollowing(page, link.toString());
