@@ -218,6 +218,25 @@ test("Issue #41: Spanish donor link opens in Spanish and family tab preserves lo
   await expect(page.getByRole("heading", { name: "Mi calendario" })).toBeVisible();
 });
 
+test("Issue #41: copied family links round-trip into the donor language (synthetic only)", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  for (const lang of ["en", "es"] as const) {
+    await page.goto(`/calendar/aspire-south?view=family&lang=${lang}`);
+    const familyOrigin = new URL(page.url()).origin;
+    await page.getByRole("button", { name: lang === "es" ? "Copiar enlace" : "Copy Link", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText(lang === "es" ? "Copiado" : "Copied");
+    const copied = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+    expect(copied.origin, "link remains on the isolated synthetic preview origin").toBe(familyOrigin);
+    expect(copied.pathname).toBe("/calendar/aspire-south");
+    expect(copied.searchParams.get("lang")).toBe(lang === "es" ? "es" : null);
+    expect(copied.searchParams.has("view")).toBe(false);
+    expect(copied.searchParams.has("token")).toBe(false);
+    await page.goto(copied.toString());
+    await expect(page.getByRole("heading", { name: lang === "es" ? "Patrocina un Día" : "Sponsor a Day" })).toBeVisible();
+    await expect(page.getByTestId("calendar-demo-badge")).toBeVisible();
+  }
+});
+
 test("Issue #41: selected days use a checkmark as well as color", async ({ page }) => {
   await page.goto("/calendar/aspire-south");
   const day = page.getByTestId("calendar-day-3");
