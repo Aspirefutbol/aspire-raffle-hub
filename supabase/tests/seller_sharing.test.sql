@@ -247,6 +247,109 @@ select throws_ok($$insert into public.seller_interest_requests(organization_id,c
 reset role;
 select throws_ok($$insert into public.seller_request_events(organization_id,request_id,status,sale_id) values(pg_temp.id('org-a'),pg_temp.request_id(),'completed',pg_temp.sale('different-player'))$$,'23503',null,'table boundary rejects cross-participant sale association even for a privileged writer');
 select throws_ok($$insert into public.seller_request_events(organization_id,request_id,status) values(pg_temp.id('org-a'),pg_temp.request_id(),'completed')$$,'23514',null,'table boundary requires a sale for completed status');
+-- S1 CHARACTERIZATION ONLY: absent forwarding metadata produces one global
+-- "unknown" per-IP bucket for distinct synthetic requests. This deliberately
+-- describes baseline SQL behavior; it does NOT simulate a real Netlify request,
+-- prove the hosted proxy chain, or propose/authorize a rate-limit fix.
+savepoint s1_missing_header;
+reset role;
+select set_config('request.headers','{}',true);
+delete from public.seller_request_limits
+where bucket='ip:'||encode(extensions.digest('unknown','sha256'),'hex');
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(), pg_temp.id('s1-unknown-'||n),
+  jsonb_build_object('name','Synthetic unknown '||n,'email','unknown@example.test','contact','email','quantity',1)
+) from generate_series(1,11)n;
+reset role;
+select is(
+  (select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+   where bucket='ip:'||encode(extensions.digest('unknown','sha256'),'hex')),
+  11::bigint,
+  'S1 baseline: distinct requests with missing forwarding metadata exhaust shared unknown bucket'
+);
+select is(
+  (select count(*) from public.seller_interest_requests
+   where submission_key in (
+     select pg_temp.id('s1-unknown-'||n) from generate_series(1,11)n
+   )),
+  10::bigint,
+  'S1 baseline: exactly ten of eleven NEW synthetic requests persisted; generic response hides drop'
+);
+rollback to savepoint s1_missing_header;
+
+-- S1: the idempotency key is checked before rate-limit charging. All
+-- experiments use RFC 5737 synthetic IPs and roll back with the savepoint.
+savepoint s1_duplicate_request;
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"203.0.113.77"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-repeat'),
+  '{"name":"Synthetic repeat","email":"repeat@example.test","contact":"email","quantity":1}'::jsonb
+) from generate_series(1,11);
+reset role;
+select is((select count(*) from public.seller_interest_requests
+           where submission_key=pg_temp.id('s1-repeat')),1::bigint,
+          'S1 dedupe: eleven retries of same request persist exactly one');
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.77','sha256'),'hex')),1::bigint,
+          'S1 dedupe: repeated submission key charges IP bucket only once');
+rollback to savepoint s1_duplicate_request;
+
+-- S1: SQL deliberately takes the RIGHTMOST forwarded IP rather than allowing
+-- the caller to choose the first hop. This does not establish gateway trust.
+savepoint s1_forwarded_hops;
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"198.51.100.88, 203.0.113.78"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-hop-a'),
+  '{"name":"Synthetic hop A","email":"hopa@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"192.0.2.55, 203.0.113.78"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-hop-b'),
+  '{"name":"Synthetic hop B","email":"hopb@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.78','sha256'),'hex')),2::bigint,
+          'S1 hops: forged leading XFF entries share rightmost-hop bucket');
+rollback to savepoint s1_forwarded_hops;
+
+-- S1 positive control: distinct synthetic RIGHTMOST forwarded IPs produce
+-- distinct SQL buckets. This is an isolated database fixture, NOT proof that
+-- hosted Netlify/Supabase forwards a trustworthy real client address.
+savepoint s1_distinct_rightmost_hops;
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"198.51.100.88, 203.0.113.79"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-distinct-a'),
+  '{"name":"Synthetic distinct A","email":"distinct-a@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"198.51.100.88, 203.0.113.80"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-distinct-b'),
+  '{"name":"Synthetic distinct B","email":"distinct-b@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.79','sha256'),'hex')),
+          1::bigint,'S1 positive control: first rightmost IP has its own bucket');
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.80','sha256'),'hex')),
+          1::bigint,'S1 positive control: second rightmost IP has a separate bucket');
+select is((select count(*) from public.seller_interest_requests
+           where submission_key in (pg_temp.id('s1-distinct-a'),pg_temp.id('s1-distinct-b'))),
+          2::bigint,'S1 positive control: both distinct synthetic requests persist');
+rollback to savepoint s1_distinct_rightmost_hops;
+
 -- Limits are durable and atomic even if the caller changes idempotency keys.
 reset role;
 select set_config('request.headers','{"x-forwarded-for":"192.0.2.1"}',true);
