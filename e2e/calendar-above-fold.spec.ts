@@ -78,7 +78,14 @@ test.describe("donor view: calendar, progress and action without scrolling (F1‚Ä
         await page.screenshot({ path: `${SHOTS}/above-fold-donor-${vp.name}-${lang}.png` });
 
         // F5: tapping a visible day keeps the action bar in view with count, total and multiplier.
-        await page.getByTestId("calendar-day-3").click();
+        const selectedDay = page.getByTestId("calendar-day-3");
+        await selectedDay.click();
+        // Wait for the actual selected state, not a mid-transition screenshot.
+        // Brand-700 background and white foreground must both reach their
+        // final values: immediate screenshots made the tile appear washed out.
+        await expect(selectedDay).toHaveAttribute("aria-pressed", "true");
+        await expect(selectedDay).toHaveCSS("background-color", "rgb(29, 63, 216)");
+        await expect(selectedDay).toHaveCSS("color", "rgb(255, 255, 255)");
         expect(await scrollY(page), "selecting a first-row day does not scroll").toBe(0);
         await expect(bar).toContainText("$3");
         await expect(bar).toContainText(lang === "es" ? "1 d√≠a" : "1 day");
