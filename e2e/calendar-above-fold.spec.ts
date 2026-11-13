@@ -261,7 +261,7 @@ test("Issue #41: unavailable clipboard exposes a copyable donor URL, not an invi
     expect(url.searchParams.get("lang")).toBe(lang === "es" ? "es" : null);
     expect(url.searchParams.has("view")).toBe(false);
     expect(url.searchParams.has("token")).toBe(false);
-    expect(value).not.toContain("\\n");
+    expect(value).not.toContain(String.fromCharCode(10));
   }
 });
 
