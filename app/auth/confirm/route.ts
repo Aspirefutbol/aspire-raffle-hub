@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
     // Exact Path is required to clear a cookie scoped to /auth/confirm.
     response.cookies.set(NEXT_COOKIE, "", {
       path: COOKIE_PATH,
+      // Force an explicit past expiry: a blank session cookie is not deletion.
+      // The real-browser Mailpit test verifies that this cookie is removed.
       maxAge: 0,
+      expires: new Date(0),
       httpOnly: true,
       sameSite: "lax",
       secure: canonicalOrigin.startsWith("https://"),
