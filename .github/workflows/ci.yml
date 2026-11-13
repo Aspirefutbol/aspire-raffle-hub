@@ -33,7 +33,9 @@ jobs:
 
   database:
     name: Database (migrations, pgTAP, types) + E2E
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 --with-deps does not support Ubuntu 26.04 (current latest runner).
+    # Pin only the browser-bearing job until Playwright supports that runner.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
