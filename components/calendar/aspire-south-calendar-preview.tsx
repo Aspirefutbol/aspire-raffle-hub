@@ -85,6 +85,7 @@ const copy = {
     required: "Please complete your name and email before continuing.",
     day: "Day",
     demoBadge: "Demo · fictional player · no payments",
+    demoBadgeShort: "Demo · no payments",
     priceRange: "$1–$31 per day",
     tapHint: "Tap a day to start",
     selectionSummary: (count: number) => `${count} ${count === 1 ? "day" : "days"}`,
@@ -150,6 +151,7 @@ const copy = {
     required: "Completa tu nombre y correo electrónico antes de continuar.",
     day: "Día",
     demoBadge: "Demostración · jugador ficticio · sin pagos",
+    demoBadgeShort: "Demo · sin pagos",
     priceRange: "$1–$31 por día",
     tapHint: "Toca un día para empezar",
     selectionSummary: (count: number) => `${count} ${count === 1 ? "día" : "días"}`,
@@ -279,7 +281,7 @@ export function AspireSouthCalendarPreview({ initialLanguage = "en" }: { initial
           </button>
           <details data-testid="calendar-demo-badge" className="order-3 basis-full rounded-control border border-amber-300 bg-amber-50 px-3 text-amber-950 sm:basis-auto sm:max-w-[13rem] sm:[@media(max-height:380px)]:order-3 sm:[@media(max-height:380px)]:max-w-none sm:[@media(max-height:380px)]:basis-auto sm:[@media(max-height:380px)]:col-start-1 sm:[@media(max-height:380px)]:row-start-3 sm:[@media(max-height:380px)]:min-w-0">
             <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold">
-              <span aria-hidden="true">ⓘ</span>{t.demoBadge}
+              <span aria-hidden="true">ⓘ</span><span className="sm:[@media(max-height:380px)]:hidden">{t.demoBadge}</span><span className="hidden sm:[@media(max-height:380px)]:inline">{t.demoBadgeShort}</span>
             </summary>
             <div className="pb-3 text-xs leading-5">
               <p className="font-semibold">{t.secure}</p>
