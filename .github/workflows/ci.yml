@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, feat/phase-1-fundraising-slice]
+    branches: [main, feat/phase-1-fundraising-slice, feat/calendar-fundraiser-aspire-south]
 
 concurrency:
   group: ci-${{ github.ref }}
