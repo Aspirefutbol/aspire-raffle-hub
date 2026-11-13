@@ -237,6 +237,34 @@ test("Issue #41: copied family links round-trip into the donor language (synthet
   }
 });
 
+test("Issue #41: unavailable clipboard exposes a copyable donor URL, not an invitation", async ({ page }) => {
+  for (const lang of ["en", "es"] as const) {
+    await page.goto(`/calendar/aspire-south?view=family&lang=${lang}`);
+    // Reproduce the secure-context/permissions fallback common on mobile browsers.
+    await page.evaluate(() => Object.defineProperty(navigator, "clipboard", {
+      configurable: true, value: undefined,
+    }));
+    await page.getByRole("button", {
+      name: lang === "es" ? "Copiar enlace" : "Copy Link", exact: true,
+    }).click();
+    await expect(page.getByRole("status")).toContainText(
+      lang === "es" ? "No se puede copiar" : "Automatic copying",
+    );
+    const manualLink = page.getByRole("textbox", {
+      name: lang === "es" ? "Enlace del calendario de demostración" : "Demo calendar link",
+    });
+    await expect(manualLink).toBeVisible();
+    const value = await manualLink.inputValue();
+    const url = new URL(value);
+    expect(url.origin).toBe(new URL(page.url()).origin);
+    expect(url.pathname).toBe("/calendar/aspire-south");
+    expect(url.searchParams.get("lang")).toBe(lang === "es" ? "es" : null);
+    expect(url.searchParams.has("view")).toBe(false);
+    expect(url.searchParams.has("token")).toBe(false);
+    expect(value).not.toContain("\\n");
+  }
+});
+
 test("Issue #41: selected days use a checkmark as well as color", async ({ page }) => {
   await page.goto("/calendar/aspire-south");
   const day = page.getByTestId("calendar-day-3");
