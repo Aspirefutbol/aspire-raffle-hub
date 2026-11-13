@@ -17,7 +17,7 @@ const copy = {
     qrAlt: "Calendar preview QR code", linkLabel: "Demo calendar link",
     messageLabel: "Demo invitation — select and copy", copied: "Copied. The message and link are for demonstration only.",
     shared: "Sharing completed by your device. This remains a demo link, not a live fundraiser.",
-    manual: "Automatic sharing is unavailable. Select and copy the demo invitation below.",
+    manual: "Automatic copying or sharing is unavailable. Select and copy the demo content below.",
     error: "Sharing could not be prepared. No link was created or replaced.",
     sharingNote: "Use these controls to review sharing with your team, not to ask donors for money. Live player-specific links remain gated by guardian authorization and security review.",
     emailTitle: "Donor confirmation preview", subject: "Subject", emailNote: "Sample only: this message has not been sent. Live delivery needs the approved sender, verified payment integration, and a tested delivery queue.",
@@ -32,7 +32,7 @@ const copy = {
     qrAlt: "Código QR del calendario de demostración", linkLabel: "Enlace del calendario de demostración",
     messageLabel: "Invitación de demostración: selecciona y copia", copied: "Copiado. El mensaje y el enlace son solo de demostración.",
     shared: "Tu dispositivo completó la acción de compartir. Este sigue siendo un enlace de demostración, no una campaña activa.",
-    manual: "No se puede compartir automáticamente. Selecciona y copia la invitación de demostración.",
+    manual: "No se puede copiar ni compartir automáticamente. Selecciona y copia el contenido de demostración.",
     error: "No se pudo preparar el enlace. No se creó ni reemplazó ningún enlace.",
     sharingNote: "Usa estos controles para revisar cómo compartir con tu equipo, no para solicitar dinero. Los enlaces personales requieren autorización del adulto responsable y revisión de seguridad.",
     emailTitle: "Ejemplo de confirmación al donante", subject: "Asunto", emailNote: "Solo un ejemplo: este mensaje no se ha enviado. El envío real requiere un remitente aprobado, integración del pago verificado y una cola de envío probada.",
@@ -93,7 +93,7 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
     } catch (error) {
       if (!(error instanceof Error && error.name === "AbortError")) {
         setFeedback(prepared && kind !== "qr" ? "manual" : "error");
-        if (prepared && kind !== "qr") setManualText(prepared.invitation);
+        if (prepared && kind !== "qr") setManualText(kind === "copy" ? prepared.url : prepared.invitation);
       }
     } finally { working.current = false; setBusy(false); }
   }
@@ -138,7 +138,7 @@ export function CalendarFamilyPreview({ initialLanguage = "en" }: { initialLangu
         <a className="inline-flex min-h-11 items-center text-sm underline" href={content.whatsappHref} target="_blank" rel="noopener noreferrer">{t.whatsapp}</a>
       </div>}
       {feedback && <p role="status" className="mt-3 text-sm">{t[feedback]}</p>}
-      {manualText && <label className="mt-3 block text-sm">{t.messageLabel}<textarea readOnly value={manualText} onFocus={event => event.currentTarget.select()} className="mt-1 min-h-32 w-full rounded-control border border-line p-3" /></label>}
+      {manualText && <label className="mt-3 block text-sm">{manualText === content?.url ? t.linkLabel : t.messageLabel}<textarea readOnly value={manualText} onFocus={event => event.currentTarget.select()} className="mt-1 min-h-32 w-full rounded-control border border-line p-3" /></label>}
       {qr && <div className="mt-4 space-y-2">
         <Image src={qr} unoptimized width={240} height={240} alt={t.qrAlt} className="h-auto max-w-full" />
         <a className="inline-flex min-h-11 items-center text-sm underline" href={qr} download="aspire-south-demo-calendar-qr.png">{t.download}</a>
