@@ -320,6 +320,36 @@ select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_l
           'S1 hops: forged leading XFF entries share rightmost-hop bucket');
 rollback to savepoint s1_forwarded_hops;
 
+-- S1 positive control: distinct synthetic RIGHTMOST forwarded IPs produce
+-- distinct SQL buckets. This is an isolated database fixture, NOT proof that
+-- hosted Netlify/Supabase forwards a trustworthy real client address.
+savepoint s1_distinct_rightmost_hops;
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"198.51.100.88, 203.0.113.79"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-distinct-a'),
+  '{"name":"Synthetic distinct A","email":"distinct-a@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select set_config('request.headers','{"x-forwarded-for":"198.51.100.88, 203.0.113.80"}',true);
+set local role anon;
+select public.submit_seller_interest_request(
+  pg_temp.token(),pg_temp.id('s1-distinct-b'),
+  '{"name":"Synthetic distinct B","email":"distinct-b@example.test","contact":"email","quantity":1}'::jsonb
+);
+reset role;
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.79','sha256'),'hex')),
+          1::bigint,'S1 positive control: first rightmost IP has its own bucket');
+select is((select coalesce(sum(attempts),0)::bigint from public.seller_request_limits
+           where bucket='ip:'||encode(extensions.digest('203.0.113.80','sha256'),'hex')),
+          1::bigint,'S1 positive control: second rightmost IP has a separate bucket');
+select is((select count(*) from public.seller_interest_requests
+           where submission_key in (pg_temp.id('s1-distinct-a'),pg_temp.id('s1-distinct-b'))),
+          2::bigint,'S1 positive control: both distinct synthetic requests persist');
+rollback to savepoint s1_distinct_rightmost_hops;
+
 -- Limits are durable and atomic even if the caller changes idempotency keys.
 reset role;
 select set_config('request.headers','{"x-forwarded-for":"192.0.2.1"}',true);
