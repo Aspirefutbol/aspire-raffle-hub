@@ -78,8 +78,8 @@ export async function addOrInviteMember(
 /** Sends (or re-sends) the Supabase Auth invitation email. */
 export async function sendInvitationEmail(email: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const admin = createAdminClient();
-  // Email templates append &token_hash=…&type=invite|magiclink.
-  const redirectTo = `${siteUrl()}/auth/confirm?next=%2Fwelcome`;
+  // Hosted email templates always use their configured canonical SiteURL for token URLs.
+  const redirectTo = `${siteUrl()}/auth/confirm?src=email`;
   const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
   if (!error) return { ok: true };
 
